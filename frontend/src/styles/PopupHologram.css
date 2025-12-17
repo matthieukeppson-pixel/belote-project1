@@ -1,0 +1,74 @@
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 20, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup-card-hologram {
+  position: relative;
+  width: 380px;
+  padding: 2px;
+  border-radius: 20px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 255, 0.4),
+    rgba(0, 80, 255, 0.4)
+  );
+
+  box-shadow: 0 0 40px rgba(0, 200, 255, 0.8);
+}
+
+.popup-card-border-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  border: 2px solid rgba(0, 255, 255, 0.7);
+}
+
+.popup-card-inner {
+  background: rgba(5, 10, 30, 0.95);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.popup-title {
+  text-align: center;
+  margin-bottom: 10px;
+  color: cyan;
+  text-shadow: 0 0 10px cyan;
+}
+
+.popup-message {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.popup-btn {
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: none;
+}
+
+.popup-btn-confirm {
+  background: cyan;
+  color: black;
+}
+
+.popup-btn-cancel {
+  background: #333;
+  color: white;
+}
+

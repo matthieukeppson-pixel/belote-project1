@@ -1,0 +1,153 @@
+/* =============================== */
+/*  WRAPPER GLOBAL DE LA TABLE     */
+/*  (NE PREND PLUS LE PLEIN ÉCRAN) */
+/* =============================== */
+
+.table-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: 0;              /* IMPORTANT : ne plus voler le 100vh */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url("/table_background.jpg") no-repeat center center / cover;
+}
+
+/* =============================== */
+/*  CONTENEUR EXACT DE LA TABLE    */
+/* =============================== */
+
+.table-center {
+  position: relative;
+  width: 613px;   /* largeur réelle validée */
+  height: 611px;  /* hauteur réelle validée */
+  margin: 0 auto;
+}
+
+/* =============================== */
+/*  IMAGE DU TAPIS                 */
+/* =============================== */
+
+.table-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+/* =============================== */
+/*  POSITIONS DES SIÈGES           */
+/* =============================== */
+
+.seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Nord */
+.seat-north {
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Sud */
+.seat-south {
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Est */
+.seat-east {
+  right: -55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Ouest */
+.seat-west {
+  left: -55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* =============================== */
+/*  AVATARS + HALO ROUGE VÉRO      */
+/* =============================== */
+
+.seat-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Avatar joueur */
+.seat-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  /* Bordure rouge élégante */
+  border: 2px solid #ff2a2a;
+
+  /* Halo rouge puissant */
+  box-shadow:
+    0 0 10px rgba(255, 40, 40, 0.9),
+    0 0 25px rgba(255, 0, 0, 0.6),
+    0 0 45px rgba(255, 0, 0, 0.4);
+}
+
+/* Nom du joueur */
+.seat-name {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* =============================== */
+/*  SIÈGE VIDE                     */
+/* =============================== */
+
+.seat-label {
+  padding: 4px 10px;
+  background: rgba(20, 20, 50, 0.8);
+  color: white;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 2px solid rgba(255, 80, 80, 0.6);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

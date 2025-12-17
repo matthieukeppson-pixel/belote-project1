@@ -1,0 +1,124 @@
+/* ============================
+   CONTENEUR DU PROFIL (MODAL)
+   ============================ */
+.profil-modal-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* FENÊTRE DU PROFIL */
+.profil-modal {
+  background: rgba(0, 10, 40, 0.8);
+  padding: 25px 35px;
+  border-radius: 18px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 0 25px rgba(0, 150, 255, 0.5);
+  width: 330px;
+  animation: slideUp 0.28s ease-out;
+}
+
+.profil-modal h2 {
+  margin-bottom: 18px;
+  font-size: 24px;
+  text-shadow: 0 0 6px black;
+}
+
+/* ============================
+   AVATAR DU PROFIL
+   ============================ */
+.profil-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(0,150,255,0.7);
+  box-shadow: 0 0 22px rgba(0,150,255,0.6);
+  margin-bottom: 10px;
+  transition: 0.25s;
+}
+
+.profil-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 28px rgba(0,150,255,0.8);
+}
+
+/* ============================
+   PSEUDO
+   ============================ */
+.profil-modal p {
+  margin-top: 5px;
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+/* ============================
+   BOUTON CHANGEMENT PHOTO
+   ============================ */
+.upload-btn {
+  background: rgba(0, 120, 255, 0.35);
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-block;
+  margin-bottom: 18px;
+  box-shadow: 0 0 14px rgba(0,120,255,0.45);
+  transition: 0.2s;
+}
+
+.upload-btn:hover {
+  background: rgba(0,120,255,0.5);
+  transform: scale(1.04);
+}
+
+.upload-btn input {
+  display: none;
+}
+
+/* ============================
+   BOUTON FERMER
+   ============================ */
+.close-btn {
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 17px;
+  transition: 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.05);
+}
+
+/* ============================
+   ANIMATIONS
+   ============================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+
+
+
