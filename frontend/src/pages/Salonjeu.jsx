@@ -1,23 +1,28 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import Profil from "./Profil";
 import "../styles/salonjeu.css";
 
 export default function SalonJeu({ pseudo }) {
-  const currentName =
-    pseudo || localStorage.getItem("pseudo") || "Joueur";
-
-  const navigate = useNavigate();
+  const currentName = pseudo || localStorage.getItem("pseudo") || "Joueur";
 
   const [messages, setMessages] = useState([]);
   const [players, setPlayers] = useState([]);
-  const [tables, setTables] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
+
+  // PROFIL
+  const [showProfil, setShowProfil] = useState(false);
+  const [avatar, setAvatar] = useState(
+    localStorage.getItem("avatar") || "/avatar_blue.png"
+  );
+
+  // avatar utilisé uniquement pour le join_salon
+  const initialAvatarRef = useRef(avatar);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
 
   /* ===============================
-     WEBSOCKET
+     WEBSOCKET (OUVERTURE UNIQUE)
   =============================== */
   useEffect(() => {
     let ws;
@@ -31,36 +36,24 @@ export default function SalonJeu({ pseudo }) {
           JSON.stringify({
             type: "join_salon",
             pseudo: currentName,
-            avatar: localStorage.getItem("avatar") || "/avatar_blue.png",
+            avatar: initialAvatarRef.current,
           })
         );
-
-        ws.send(JSON.stringify({ type: "get_players" }));
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        /* ===== JOUEURS ===== */
         if (data.type === "players") {
-          const normalizeAvatar = (avatar) => {
-            if (!avatar) return "/avatar_blue.png";
-            if (avatar.startsWith("/uploads/")) {
-              return `http://localhost:4001${avatar}`;
-            }
-            return avatar;
-          };
-
           setPlayers(
             (data.players || []).map((p) => ({
               name: p.name,
-              avatar: normalizeAvatar(p.avatar),
+              avatar: p.avatar || "/avatar_blue.png",
               online: true,
             }))
           );
         }
 
-        /* ===== MESSAGE NORMAL ===== */
         if (data.type === "message") {
           setMessages((prev) => [
             ...prev,
@@ -72,49 +65,50 @@ export default function SalonJeu({ pseudo }) {
           ]);
         }
 
-        /* ===== MESSAGE SYSTÈME TEMPORAIRE ===== */
         if (data.type === "system") {
           const id = Date.now() + Math.random();
 
           setMessages((prev) => [
             ...prev,
-            {
-              id,
-              text: data.text,
-              transient: true,
-            },
+            { id, text: data.text, transient: true },
           ]);
 
           setTimeout(() => {
-            setMessages((prev) =>
-              prev.filter((m) => m.id !== id)
-            );
+            setMessages((prev) => prev.filter((m) => m.id !== id));
           }, 3000);
         }
-
-        /* ===== TABLES (POUR LA SUITE) ===== */
-        if (data.type === "tables_update") {
-          setTables(Array.isArray(data.tables) ? data.tables : []);
-        }
       };
-
-      ws.onerror = () => {
-        console.warn("WebSocket indisponible");
-      };
-    } catch (e) {
-      console.warn("WebSocket non initialisé", e);
+    } catch {
+      console.warn("WebSocket indisponible");
     }
 
     return () => ws?.close();
   }, [currentName]);
 
   /* ===============================
+     SYNC AVATAR LIVE (SÉCURISÉ)
+  =============================== */
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (!ws) return;
+    if (ws.readyState !== WebSocket.OPEN) return;
+    if (!avatar) return;
+
+    ws.send(
+      JSON.stringify({
+        type: "update_avatar",
+        pseudo: currentName,
+        avatar,
+      })
+    );
+  }, [avatar, currentName]);
+
+  /* ===============================
      AUTO-SCROLL CHAT
   =============================== */
   useEffect(() => {
     if (chatBoxRef.current) {
-      chatBoxRef.current.scrollTop =
-        chatBoxRef.current.scrollHeight;
+      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -124,7 +118,10 @@ export default function SalonJeu({ pseudo }) {
   const sendMessage = () => {
     if (!inputMessage.trim()) return;
 
-    wsRef.current?.send(
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(
       JSON.stringify({
         type: "message",
         user: currentName,
@@ -133,10 +130,6 @@ export default function SalonJeu({ pseudo }) {
     );
 
     setInputMessage("");
-  };
-
-  const handleJoinTable = (tableId) => {
-    navigate(`/table/${tableId}`);
   };
 
   /* ===============================
@@ -148,35 +141,6 @@ export default function SalonJeu({ pseudo }) {
         {/* ================= TABLES ================= */}
         <div className="panel panel-side">
           <h1 className="panel-title">Tables</h1>
-
-          <div className="tables-list">
-            {tables.map((t) => {
-              const seatCount =
-                t.seats?.filter(Boolean).length || 0;
-
-              return (
-                <div key={t.id} className="table-card">
-                  <h2 className="table-title">
-                    Table {t.id}
-                  </h2>
-                  <p className="table-info">
-                    👥 Joueurs : {seatCount} / 4
-                  </p>
-                  <p className="table-info">
-                    🎮 En attente
-                  </p>
-                  <button
-                    className="btn-join"
-                    onClick={() =>
-                      handleJoinTable(t.id)
-                    }
-                  >
-                    Rejoindre
-                  </button>
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         {/* ================= CHAT ================= */}
@@ -193,21 +157,13 @@ export default function SalonJeu({ pseudo }) {
               >
                 {m.transient ? (
                   <>
-                    <span className="chat-emoji">
-                      ✨
-                    </span>
-                    <span className="chat-text">
-                      {m.text}
-                    </span>
+                    <span className="chat-emoji">✨</span>
+                    <span className="chat-text">{m.text}</span>
                   </>
                 ) : (
                   <>
-                    <span className="chat-user">
-                      {m.user} :
-                    </span>{" "}
-                    <span className="chat-text">
-                      {m.text}
-                    </span>
+                    <span className="chat-user">{m.user} :</span>
+                    <span className="chat-text">{m.text}</span>
                   </>
                 )}
               </div>
@@ -218,18 +174,11 @@ export default function SalonJeu({ pseudo }) {
             <input
               className="chat-input"
               value={inputMessage}
-              onChange={(e) =>
-                setInputMessage(e.target.value)
-              }
-              onKeyDown={(e) =>
-                e.key === "Enter" && sendMessage()
-              }
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Écrire un message…"
             />
-            <button
-              className="chat-send"
-              onClick={sendMessage}
-            >
+            <button className="chat-send" onClick={sendMessage}>
               Envoyer
             </button>
           </div>
@@ -244,29 +193,61 @@ export default function SalonJeu({ pseudo }) {
               <div
                 key={p.name}
                 className="player-card"
+                onClick={() => {
+                  if (p.name === currentName) {
+                    setShowProfil(true);
+                  }
+                }}
+                style={{
+                  cursor:
+                    p.name === currentName ? "pointer" : "default",
+                }}
               >
                 <span className="status-dot online" />
                 <img
                   src={p.avatar}
                   className="player-avatar"
                   alt=""
-                  aria-hidden="true"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "/avatar_blue.png";
-                  }}
+                  onError={(e) =>
+                    (e.currentTarget.src = "/avatar_blue.png")
+                  }
                 />
-                <div className="player-name">
-                  {p.name}
-                </div>
+                <div className="player-name">{p.name}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* ================= PROFIL MODAL ================= */}
+      {showProfil && (
+        <Profil
+          pseudo={currentName}
+          avatar={avatar}
+          setAvatar={(a) => {
+            setAvatar(a);
+            localStorage.setItem("avatar", a);
+          }}
+          onClose={() => setShowProfil(false)}
+        />
+      )}
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
