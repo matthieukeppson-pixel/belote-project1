@@ -15,11 +15,35 @@ export default function SalonJeu({ pseudo }) {
     localStorage.getItem("avatar") || "/avatar_blue.png"
   );
 
-  // avatar utilisé uniquement pour le join_salon
+  // avatar utilisé uniquement pour le join_salon (stable)
   const initialAvatarRef = useRef(avatar);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
+
+  // File d’attente pour envoyer update_avatar quand le WS n’est pas encore prêt
+  const pendingAvatarRef = useRef(null);
+
+
+
+  const sendUpdateAvatar = (nextAvatar) => {
+    const ws = wsRef.current;
+    if (!ws) return;
+
+    const payload = JSON.stringify({
+      type: "update_avatar",
+      pseudo: currentName,
+      avatar: nextAvatar,
+    });
+
+    // si pas encore OPEN, on met en attente (évite crash + évite perte)
+    if (ws.readyState !== WebSocket.OPEN) {
+      pendingAvatarRef.current = payload;
+      return;
+    }
+
+    ws.send(payload);
+  };
 
   /* ===============================
      WEBSOCKET (OUVERTURE UNIQUE)
@@ -32,6 +56,7 @@ export default function SalonJeu({ pseudo }) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        // join salon
         ws.send(
           JSON.stringify({
             type: "join_salon",
@@ -39,6 +64,12 @@ export default function SalonJeu({ pseudo }) {
             avatar: initialAvatarRef.current,
           })
         );
+
+        // si un update_avatar était en attente, on l’envoie maintenant
+        if (pendingAvatarRef.current) {
+          ws.send(pendingAvatarRef.current);
+          pendingAvatarRef.current = null;
+        }
       };
 
       ws.onmessage = (event) => {
@@ -68,10 +99,7 @@ export default function SalonJeu({ pseudo }) {
         if (data.type === "system") {
           const id = Date.now() + Math.random();
 
-          setMessages((prev) => [
-            ...prev,
-            { id, text: data.text, transient: true },
-          ]);
+          setMessages((prev) => [...prev, { id, text: data.text, transient: true }]);
 
           setTimeout(() => {
             setMessages((prev) => prev.filter((m) => m.id !== id));
@@ -86,21 +114,12 @@ export default function SalonJeu({ pseudo }) {
   }, [currentName]);
 
   /* ===============================
-     SYNC AVATAR LIVE (SÉCURISÉ)
+     SYNC AVATAR LIVE (FIABLE)
   =============================== */
   useEffect(() => {
-    const ws = wsRef.current;
-    if (!ws) return;
-    if (ws.readyState !== WebSocket.OPEN) return;
     if (!avatar) return;
-
-    ws.send(
-      JSON.stringify({
-        type: "update_avatar",
-        pseudo: currentName,
-        avatar,
-      })
-    );
+    sendUpdateAvatar(avatar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatar, currentName]);
 
   /* ===============================
@@ -151,9 +170,7 @@ export default function SalonJeu({ pseudo }) {
             {messages.map((m) => (
               <div
                 key={m.id}
-                className={`chat-message ${
-                  m.transient ? "chat-system" : ""
-                }`}
+                className={`chat-message ${m.transient ? "chat-system" : ""}`}
               >
                 {m.transient ? (
                   <>
@@ -199,8 +216,7 @@ export default function SalonJeu({ pseudo }) {
                   }
                 }}
                 style={{
-                  cursor:
-                    p.name === currentName ? "pointer" : "default",
+                  cursor: p.name === currentName ? "pointer" : "default",
                 }}
               >
                 <span className="status-dot online" />
@@ -208,9 +224,7 @@ export default function SalonJeu({ pseudo }) {
                   src={p.avatar}
                   className="player-avatar"
                   alt=""
-                  onError={(e) =>
-                    (e.currentTarget.src = "/avatar_blue.png")
-                  }
+                  onError={(e) => (e.currentTarget.src = "/avatar_blue.png")}
                 />
                 <div className="player-name">{p.name}</div>
               </div>
@@ -220,20 +234,22 @@ export default function SalonJeu({ pseudo }) {
       </div>
 
       {/* ================= PROFIL MODAL ================= */}
-      {showProfil && (
-        <Profil
-          pseudo={currentName}
-          avatar={avatar}
-          setAvatar={(a) => {
-            setAvatar(a);
-            localStorage.setItem("avatar", a);
-          }}
-          onClose={() => setShowProfil(false)}
-        />
-      )}
+{showProfil && (
+  <Profil
+    pseudo={currentName}
+    avatar={avatar}
+    setAvatar={(a) => {
+      setAvatar(a);
+      localStorage.setItem("avatar", a);
+    }}
+    onClose={() => setShowProfil(false)}
+  />
+)}
+
     </div>
   );
 }
+
 
 
 

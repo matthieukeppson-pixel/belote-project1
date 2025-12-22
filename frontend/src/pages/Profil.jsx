@@ -1,23 +1,47 @@
 import React, { useState } from "react";
 import "../styles/Profil.css";
 
-export default function Profil({ pseudo, onClose }) {
-  // Avatar stocké localement (par navigateur)
-  const [avatar, setAvatar] = useState(
-    localStorage.getItem("avatar") || "/avatar_blue.png"
-  );
+const BACKEND_HTTP = "http://localhost:4001";
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
+export default function Profil({ pseudo, avatar, setAvatar, onClose }) {
+  const [preview, setPreview] = useState(avatar || "/avatar_blue.png");
+  const [loading, setLoading] = useState(false);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = reader.result;
-      setAvatar(img);
-      localStorage.setItem("avatar", img);
-    };
-    reader.readAsDataURL(file);
+    // Aperçu immédiat
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
+
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const res = await fetch(`${BACKEND_HTTP}/api/upload-avatar`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!data?.avatar_url) throw new Error("Upload avatar échoué");
+
+      // ✅ URL ABSOLUE pour que 5173 puisse charger le fichier servi par 4001
+      const absoluteUrl = `${BACKEND_HTTP}${data.avatar_url}`;
+
+      setAvatar(absoluteUrl);
+      localStorage.setItem("avatar", absoluteUrl);
+      setPreview(absoluteUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors du changement d’avatar");
+      setPreview(avatar || "/avatar_blue.png");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,7 +50,7 @@ export default function Profil({ pseudo, onClose }) {
         <h2>Mon profil</h2>
 
         <img
-          src={avatar}
+          src={preview}
           alt="avatar"
           className="profil-avatar"
           onError={(e) => {
@@ -37,21 +61,24 @@ export default function Profil({ pseudo, onClose }) {
         <p className="profil-pseudo">{pseudo}</p>
 
         <label className="upload-btn">
-          Changer ma photo
+          {loading ? "Upload..." : "Changer ma photo"}
           <input
             type="file"
             accept="image/*"
             onChange={handleAvatarChange}
+            disabled={loading}
           />
         </label>
 
-        <button className="close-btn" onClick={onClose}>
+        <button className="close-btn" onClick={onClose} disabled={loading}>
           Fermer
         </button>
       </div>
     </div>
   );
 }
+
+
 
 
 
