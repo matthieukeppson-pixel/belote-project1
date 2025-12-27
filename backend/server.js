@@ -80,15 +80,15 @@ wss.on("connection", (ws) => {
       const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
       ws.pseudo = pseudo;
 
-      const avatar = String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
+      const avatar =
+        String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
 
       const existing = playersMap.get(pseudo);
       if (!existing) {
         playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
-        system(`${pseudo} a rejoint le salon`);
+        system(`⭐ Bienvenue ${pseudo} ⭐`);
       } else {
         existing.count += 1;
-        // si le client a un avatar, on le garde
         if (avatar) existing.avatar = avatar;
       }
 
@@ -98,12 +98,11 @@ wss.on("connection", (ws) => {
 
     // ----- MESSAGE CHAT -----
     if (msg.type === "message") {
-      const user = String(ws.pseudo || msg.user || "Joueur").trim() || "Joueur";
+      const user =
+        String(ws.pseudo || msg.user || "Joueur").trim() || "Joueur";
       const text = String(msg.text || "").trim();
       if (!text) return;
 
-      // IMPORTANT: le client n’ajoute pas localement.
-      // Le serveur est la source de vérité => 1 seul affichage chez tout le monde.
       broadcast({ type: "message", user, text });
       return;
     }
@@ -124,7 +123,9 @@ wss.on("connection", (ws) => {
 
     // ----- GET PLAYERS (optionnel) -----
     if (msg.type === "get_players") {
-      ws.send(JSON.stringify({ type: "players", players: playersArray() }));
+      ws.send(
+        JSON.stringify({ type: "players", players: playersArray() })
+      );
       return;
     }
   });
@@ -140,15 +141,15 @@ wss.on("connection", (ws) => {
     if (p.count <= 0) {
       playersMap.delete(ws.pseudo);
       broadcastPlayers();
-      system(`${ws.pseudo} a quitté le salon`);
+      system(`⭐ À bientôt ${ws.pseudo} ⭐`);
     } else {
-      // un autre onglet du même pseudo est encore ouvert
       broadcastPlayers();
     }
   });
 });
 
 wsServer.listen(WS_PORT);
+
 
 
 

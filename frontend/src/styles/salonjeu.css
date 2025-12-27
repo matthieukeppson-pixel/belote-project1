@@ -275,18 +275,20 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 180, 255, 0.7);
 }
-/* MESSAGE SYSTÈME TEMPORAIRE */
+/* Messages système */
 .chat-system {
-  opacity: 1;
-  animation: fadeOut 3s ease forwards;
-  color: #9fdcff;
-  font-style: italic;
   text-align: center;
+  color: #ffd966;          /* étoiles + texte */
+  font-size: 1.2rem;
+  font-weight: 600;
+  opacity: 1;
+  transition: opacity 1.5s ease;
 }
 
-.chat-emoji {
-  margin-right: 6px;
+.chat-system.fade-out {
+  opacity: 0;
 }
+
 
 /* FADE-OUT DOUX */
 @keyframes fadeOut {

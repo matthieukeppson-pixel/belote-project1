@@ -11,11 +11,10 @@ import "../styles/salonjeu.css";
  *
  * IMPORTANT anti-doublon :
  * - on n’ajoute jamais un message "localement" au moment de l’envoi
- * - on attend le broadcast serveur (type: "message")
+ * - on attend le broadcast serveur (type: "message" | "system")
  */
 
 export default function SalonJeu() {
-  // identité stable
   const currentName = localStorage.getItem("pseudo") || "Joueur";
 
   const [avatar] = useState(
@@ -29,19 +28,16 @@ export default function SalonJeu() {
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
 
-  // Tables locales (stables)
+  // Tables locales
   const tables = [
     { id: 1, joueurs: 2 },
     { id: 2, joueurs: 0 },
     { id: 3, joueurs: 0 },
   ];
 
-
-
   /* ===============================
-     WEBSOCKET – ouverture unique
+     WEBSOCKET (ouverture unique)
   ================================ */
-  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:4000");
     wsRef.current = ws;
@@ -54,7 +50,6 @@ export default function SalonJeu() {
           avatar,
         })
       );
-
       ws.send(JSON.stringify({ type: "get_players" }));
     };
 
@@ -91,22 +86,40 @@ export default function SalonJeu() {
       }
 
       if (data.type === "system") {
+        const id = `${Date.now()}-${Math.random()}`;
+
         setMessages((prev) => [
           ...prev,
           {
-            id: `${Date.now()}-${Math.random()}`,
+            id,
             kind: "system",
             text: data.text,
+            fadeOut: false,
           },
         ]);
+
+        // disparition douce après 3 secondes
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === id ? { ...m, fadeOut: true } : m
+            )
+          );
+        }, 3000);
+
+        return;
       }
+    };
+
+    ws.onerror = () => {
+      console.warn("WebSocket erreur");
     };
 
     return () => {
       ws.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* eslint-enable react-hooks/exhaustive-deps */
 
   /* ===============================
      AUTO-SCROLL CHAT
@@ -174,11 +187,11 @@ export default function SalonJeu() {
                 return (
                   <div
                     key={m.id}
-                    style={{ textAlign: "center", margin: "12px 0" }}
+                    className={`chat-message chat-system ${
+                      m.fadeOut ? "fade-out" : ""
+                    }`}
                   >
-                    <span style={{ color: "#ffffff", fontWeight: 600 }}>
-                      ⭐ {m.text.replace(/⭐/g, "").trim()} ⭐
-                    </span>
+                    <span className="chat-text">{m.text}</span>
                   </div>
                 );
               }
@@ -231,6 +244,7 @@ export default function SalonJeu() {
     </div>
   );
 }
+
 
 
 
