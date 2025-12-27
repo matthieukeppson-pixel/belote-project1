@@ -183,14 +183,18 @@
   overflow-y: auto;
   background: rgba(0, 40, 120, 0.25);
   border-radius: 18px;
-  padding: 18px;
+  padding: 8px 18px 18px 18px;
+
   margin-bottom: 12px;
 }
 
 .chat-message {
   font-size: 1.25rem;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+  line-height: 1.25;
 }
+
+
 
 .chat-user {
   font-weight: 700;
