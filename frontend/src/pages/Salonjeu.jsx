@@ -15,10 +15,10 @@ import "../styles/salonjeu.css";
  */
 
 export default function SalonJeu() {
-  // identité stable (pas de prompt dans le render)
+  // identité stable
   const currentName = localStorage.getItem("pseudo") || "Joueur";
 
-  const [avatar, setAvatar] = useState(
+  const [avatar] = useState(
     localStorage.getItem("avatar") || "/avatar_blue.png"
   );
 
@@ -29,7 +29,7 @@ export default function SalonJeu() {
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
 
-  // Tables locales (tu les synchroniseras plus tard)
+  // Tables locales (stables)
   const tables = [
     { id: 1, joueurs: 2 },
     { id: 2, joueurs: 0 },
@@ -37,15 +37,22 @@ export default function SalonJeu() {
   ];
 
   /* ===============================
-     MESSAGE BIENVENUE (pur, ESLint OK)
+     MESSAGE BIENVENUE LOCAL
   ================================ */
   useEffect(() => {
-    setMessages([{ id: "welcome", kind: "system", text: "Bienvenue dans le salon 🎴" }]);
-  }, []);
+    setMessages([
+      {
+        id: "welcome",
+        kind: "system",
+        text: `⭐ Bienvenue ${currentName} ⭐`,
+      },
+    ]);
+  }, [currentName]);
 
   /* ===============================
-     WEBSOCKET (ouverture unique)
+     WEBSOCKET – ouverture unique
   ================================ */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:4000");
     wsRef.current = ws;
@@ -58,7 +65,7 @@ export default function SalonJeu() {
           avatar,
         })
       );
-      // Optionnel : demande l'état des joueurs tout de suite
+
       ws.send(JSON.stringify({ type: "get_players" }));
     };
 
@@ -82,7 +89,6 @@ export default function SalonJeu() {
       }
 
       if (data.type === "message") {
-        // IMPORTANT : on ajoute uniquement ce que le serveur broadcast
         setMessages((prev) => [
           ...prev,
           {
@@ -104,20 +110,14 @@ export default function SalonJeu() {
             text: data.text,
           },
         ]);
-        return;
       }
-    };
-
-    ws.onerror = () => {
-      console.warn("WebSocket erreur");
     };
 
     return () => {
       ws.close();
     };
-    // On fige volontairement l’ouverture WS pour éviter reconnections
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   /* ===============================
      AUTO-SCROLL CHAT
@@ -128,7 +128,7 @@ export default function SalonJeu() {
   }, [messages]);
 
   /* ===============================
-     ENVOI MESSAGE (SANS DOUBLON)
+     ENVOI MESSAGE
   ================================ */
   const sendMessage = () => {
     const text = inputMessage.trim();
@@ -137,7 +137,6 @@ export default function SalonJeu() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    // NE PAS setMessages ici => sinon doublon chez l’expéditeur
     ws.send(
       JSON.stringify({
         type: "message",
@@ -147,22 +146,6 @@ export default function SalonJeu() {
     );
 
     setInputMessage("");
-  };
-
-  /* ===============================
-     (Optionnel) update avatar via WS
-  ================================ */
-  const pushAvatarToServer = (nextAvatar) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    ws.send(
-      JSON.stringify({
-        type: "update_avatar",
-        pseudo: currentName,
-        avatar: nextAvatar,
-      })
-    );
   };
 
   /* ===============================
@@ -179,7 +162,9 @@ export default function SalonJeu() {
             {tables.map((table) => (
               <div key={table.id} className="table-card">
                 <div className="table-title">Table {table.id}</div>
-                <div className="table-info">Joueurs : {table.joueurs} / 4</div>
+                <div className="table-info">
+                  Joueurs : {table.joueurs} / 4
+                </div>
                 <div className="table-info">Statut : En attente</div>
 
                 <button className="btn-join" type="button">
@@ -198,8 +183,13 @@ export default function SalonJeu() {
             {messages.map((m) => {
               if (m.kind === "system") {
                 return (
-                  <div key={m.id} className="chat-message chat-system">
-                    <span className="chat-text">{m.text}</span>
+                  <div
+                    key={m.id}
+                    style={{ textAlign: "center", margin: "12px 0" }}
+                  >
+                    <span style={{ color: "#ffffff", fontWeight: 600 }}>
+                      ⭐ {m.text.replace(/⭐/g, "").trim()} ⭐
+                    </span>
                   </div>
                 );
               }
@@ -233,29 +223,15 @@ export default function SalonJeu() {
 
           <div className="players-list">
             {players.map((p) => (
-              <div
-                key={p.name}
-                className="player-card"
-                style={{
-                  cursor: p.name === currentName ? "pointer" : "default",
-                }}
-                onClick={() => {
-                  // Exemple: si tu veux tester un update avatar sans profil
-                  // uniquement sur soi
-                  if (p.name === currentName) {
-                    const next = avatar; // ici tu mettras un nouvel URL quand tu remettras le profil
-                    setAvatar(next);
-                    localStorage.setItem("avatar", next);
-                    pushAvatarToServer(next);
-                  }
-                }}
-              >
+              <div key={p.name} className="player-card">
                 <span className="status-dot online" />
                 <img
                   src={p.avatar}
                   className="player-avatar"
                   alt=""
-                  onError={(e) => (e.currentTarget.src = "/avatar_blue.png")}
+                  onError={(e) =>
+                    (e.currentTarget.src = "/avatar_blue.png")
+                  }
                 />
                 <div className="player-name">{p.name}</div>
               </div>
@@ -266,6 +242,12 @@ export default function SalonJeu() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 
