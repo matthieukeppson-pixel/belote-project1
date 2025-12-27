@@ -1,82 +1,54 @@
 import express from "express";
 import cors from "cors";
+import http from "http";
 import { WebSocketServer } from "ws";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-
-/* ===============================
-   HTTP (UPLOAD AVATAR)
-=============================== */
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
-app.use(express.json());
-
-// Static uploads
-const uploadsDir = path.join(__dirname, "uploads");
-const avatarsDir = path.join(uploadsDir, "avatars");
-if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
-
-app.use("/uploads", express.static(uploadsDir));
-
-// Multer (upload avatar)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase() || ".png";
-    const safeName = `avatar-${Date.now()}-${Math.random()
-      .toString(16)
-      .slice(2)}${ext}`;
-    cb(null, safeName);
-  },
-});
-const upload = multer({ storage });
-
-app.get("/", (req, res) => res.send("Backend Belote OK"));
-
-app.post("/api/upload-avatar", upload.single("avatar"), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "Aucun fichier envoyé" });
-
-    // URL accessible depuis le front
-    const avatar_url = `/uploads/avatars/${req.file.filename}`;
-    return res.json({ avatar_url });
-  } catch (e) {
-    return res.status(500).json({ error: "Erreur upload avatar" });
-  }
-});
+/**
+ * ARCHITECTURE (clair et stable)
+ * - HTTP: 4001 (optionnel)
+ * - WS:  4000 (salon temps réel)
+ * - Events WS:
+ *   - join_salon { pseudo, avatar }
+ *   - message    { text }
+ *   - update_avatar { avatar }
+ *   - server -> players { players: [{ name, avatar }] }
+ *   - server -> message { user, text }
+ *   - server -> system  { text }
+ */
 
 const HTTP_PORT = 4001;
+const WS_PORT = 4000;
+
+const app = express();
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
+
+app.get("/", (req, res) => res.send("Backend HTTP OK"));
+
 app.listen(HTTP_PORT, () => {
   console.log(`✅ Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
 });
 
-/* ===============================
-   WEBSOCKET (SALON)
-=============================== */
-const wss = new WebSocketServer({ port: 4000 });
-console.log("✅ WebSocket actif sur ws://localhost:4000");
+// ===============================
+// WEBSOCKET (SALON)
+// ===============================
+const wsServer = http.createServer();
+const wss = new WebSocketServer({ server: wsServer });
+
+console.log(`✅ WebSocket actif sur ws://localhost:${WS_PORT}`);
 
 // pseudo -> { name, avatar, count }
 const playersMap = new Map();
 
+/** Convertit la map en tableau sérialisable */
 function playersArray() {
   return Array.from(playersMap.values()).map((p) => ({
     name: p.name,
-    avatar: p.avatar,
+    avatar: p.avatar || "/avatar_blue.png",
   }));
 }
 
+/** Broadcast à tous les clients */
 function broadcast(payloadObj) {
   const payload = JSON.stringify(payloadObj);
   wss.clients.forEach((client) => {
@@ -86,6 +58,10 @@ function broadcast(payloadObj) {
 
 function broadcastPlayers() {
   broadcast({ type: "players", players: playersArray() });
+}
+
+function system(text) {
+  broadcast({ type: "system", text });
 }
 
 wss.on("connection", (ws) => {
@@ -101,48 +77,41 @@ wss.on("connection", (ws) => {
 
     // ----- JOIN SALON -----
     if (msg.type === "join_salon") {
-      const pseudo = (msg.pseudo || "Joueur").trim();
+      const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
       ws.pseudo = pseudo;
 
-      const avatar = (msg.avatar || "/avatar_blue.png").trim();
+      const avatar = String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
 
       const existing = playersMap.get(pseudo);
       if (!existing) {
         playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
+        system(`${pseudo} a rejoint le salon`);
       } else {
         existing.count += 1;
-        // si le client a un avatar (localStorage) on le prend
+        // si le client a un avatar, on le garde
         if (avatar) existing.avatar = avatar;
       }
 
       broadcastPlayers();
-
-      broadcast({
-        type: "system",
-        text: `${pseudo} a rejoint le salon`,
-      });
-
       return;
     }
 
     // ----- MESSAGE CHAT -----
     if (msg.type === "message") {
-      const user = (msg.user || ws.pseudo || "Joueur").trim();
-      const text = (msg.text || "").toString();
-      if (!text.trim()) return;
+      const user = String(ws.pseudo || msg.user || "Joueur").trim() || "Joueur";
+      const text = String(msg.text || "").trim();
+      if (!text) return;
 
-      broadcast({
-        type: "message",
-        user,
-        text,
-      });
+      // IMPORTANT: le client n’ajoute pas localement.
+      // Le serveur est la source de vérité => 1 seul affichage chez tout le monde.
+      broadcast({ type: "message", user, text });
       return;
     }
 
-    // ----- UPDATE AVATAR (SYNC) -----
+    // ----- UPDATE AVATAR -----
     if (msg.type === "update_avatar") {
-      const pseudo = (msg.pseudo || ws.pseudo || "").trim();
-      const avatar = (msg.avatar || "").trim();
+      const pseudo = String(msg.pseudo || ws.pseudo || "").trim();
+      const avatar = String(msg.avatar || "").trim();
       if (!pseudo || !avatar) return;
 
       const p = playersMap.get(pseudo);
@@ -153,7 +122,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    // ----- REQUEST PLAYERS (OPTIONNEL) -----
+    // ----- GET PLAYERS (optionnel) -----
     if (msg.type === "get_players") {
       ws.send(JSON.stringify({ type: "players", players: playersArray() }));
       return;
@@ -167,18 +136,25 @@ wss.on("connection", (ws) => {
     if (!p) return;
 
     p.count -= 1;
+
     if (p.count <= 0) {
       playersMap.delete(ws.pseudo);
       broadcastPlayers();
-      broadcast({
-        type: "system",
-        text: `${ws.pseudo} a quitté le salon`,
-      });
+      system(`${ws.pseudo} a quitté le salon`);
     } else {
+      // un autre onglet du même pseudo est encore ouvert
       broadcastPlayers();
     }
   });
 });
+
+wsServer.listen(WS_PORT);
+
+
+
+
+
+
 
 
 
