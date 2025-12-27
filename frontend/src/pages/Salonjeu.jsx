@@ -36,18 +36,7 @@ export default function SalonJeu() {
     { id: 3, joueurs: 0 },
   ];
 
-  /* ===============================
-     MESSAGE BIENVENUE LOCAL
-  ================================ */
-  useEffect(() => {
-    setMessages([
-      {
-        id: "welcome",
-        kind: "system",
-        text: `⭐ Bienvenue ${currentName} ⭐`,
-      },
-    ]);
-  }, [currentName]);
+
 
   /* ===============================
      WEBSOCKET – ouverture unique
