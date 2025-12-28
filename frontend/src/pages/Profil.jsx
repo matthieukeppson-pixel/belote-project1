@@ -1,45 +1,52 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "../styles/Profil.css";
 
-const STORAGE_KEY = "profile_photo_local";
+const AVATAR_KEY = "avatar";
 
-export default function Profil({ pseudo, onClose, onAvatarChanged }) {
-  const [preview, setPreview] = useState(
-    localStorage.getItem(STORAGE_KEY) || "/avatar_blue.png"
-  );
+export default function Profil({ pseudo, onClose }) {
+  const [preview, setPreview] = useState("/avatar_blue.png");
   const [loading, setLoading] = useState(false);
 
-  const handlePhotoChange = (e) => {
+  // Charger l’avatar au démarrage
+  useEffect(() => {
+    const saved = localStorage.getItem(AVATAR_KEY);
+    if (saved) setPreview(saved);
+  }, []);
+
+  const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image trop lourde (max 2 Mo)");
+    const maxSizeMb = 2;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      alert(`Image trop lourde (max ${maxSizeMb} Mo).`);
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
+      const toBase64 = (f) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(f);
+        });
 
+      const dataUrl = await toBase64(file);
+
+      // Effet immédiat
       setPreview(dataUrl);
-      localStorage.setItem(STORAGE_KEY, dataUrl);
 
-      if (typeof onAvatarChanged === "function") {
-        onAvatarChanged(dataUrl);
-      }
-
+      // ✅ Source de vérité unique
+      localStorage.setItem(AVATAR_KEY, dataUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors du chargement de la photo");
+    } finally {
       setLoading(false);
-    };
-
-    reader.onerror = () => {
-      alert("Erreur lors du chargement");
-      setLoading(false);
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -47,7 +54,14 @@ export default function Profil({ pseudo, onClose, onAvatarChanged }) {
       <div className="profil-modal">
         <h2>Mon profil</h2>
 
-        <img src={preview} alt="photo" className="profil-avatar" />
+        <img
+          src={preview}
+          alt="avatar"
+          className="profil-avatar"
+          onError={(e) => {
+            e.currentTarget.src = "/avatar_blue.png";
+          }}
+        />
 
         <p className="profil-pseudo">{pseudo}</p>
 
@@ -68,6 +82,7 @@ export default function Profil({ pseudo, onClose, onAvatarChanged }) {
     </div>
   );
 }
+
 
 
 
