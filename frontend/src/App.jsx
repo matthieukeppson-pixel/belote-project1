@@ -6,23 +6,60 @@ import SalonJeu from "./pages/Salonjeu.jsx";
 import Table from "./pages/Table.jsx";
 
 export default function App() {
-  const [pseudo, setPseudo] = useState(localStorage.getItem("pseudo") || "");
+  // État central utilisateur (pseudo + avatar_url)
+  const [user, setUser] = useState(() => {
+    // Nouveau stockage (prioritaire)
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch {
+        // si JSON corrompu, on retombe sur l'ancien
+      }
+    }
+
+    // Compatibilité ancienne (pseudo/ avatar séparés)
+    const pseudo = localStorage.getItem("pseudo") || "";
+    const avatar_url = null; // la source de vérité avatar = backend (on ne met pas d'URL absolue ici)
+    return { pseudo, avatar_url };
+  });
+
+  // Setter central sécurisé
+  const updateUser = (updates) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updates };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // ✅ Compatibilité: Accueil veut setPseudo(pseudo)
+  const setPseudo = (pseudo) => {
+    updateUser({ pseudo });
+    // On garde aussi l'ancien storage pour ne rien casser tant que tout n'est pas migré
+    localStorage.setItem("pseudo", pseudo);
+  };
 
   return (
     <Router>
       <Routes>
+        {/* Accueil inchangé */}
         <Route path="/" element={<Accueil setPseudo={setPseudo} />} />
-        <Route path="/salon" element={<SalonJeu pseudo={pseudo} />} />
 
-        {/* Table statique (étape 1) */}
+        {/* Salon moderne */}
+        <Route path="/salon" element={<SalonJeu user={user} />} />
+
+        {/* Table statique */}
         <Route path="/table" element={<Table />} />
 
-        {/* Table dynamique (plus tard) */}
+        {/* Table dynamique */}
         <Route path="/table/:id" element={<Table />} />
       </Routes>
     </Router>
   );
 }
+
+
 
 
 

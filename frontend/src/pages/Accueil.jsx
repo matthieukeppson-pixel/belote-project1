@@ -18,20 +18,27 @@ export default function Accueil({ setPseudo }) {
     <div className="accueil-root">
       <div className="accueil-content">
 
-        <div className="accueil-form">
+        <form
+          className="accueil-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            entrerSalon();
+          }}
+        >
           <input
             type="text"
             placeholder="Votre pseudo"
             value={pseudoLocal}
             onChange={(e) => setPseudoLocal(e.target.value)}
           />
-          <button onClick={entrerSalon}>Entrer</button>
-        </div>
+          <button type="submit">Entrer</button>
+        </form>
 
       </div>
     </div>
   );
 }
+
 
 
 

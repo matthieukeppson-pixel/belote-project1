@@ -12,14 +12,14 @@ import "../styles/salonjeu.css";
  * IMPORTANT anti-doublon :
  * - on n’ajoute jamais un message "localement" au moment de l’envoi
  * - on attend le broadcast serveur (type: "message" | "system")
+ *
+ * RÈGLE SALON (verrouillée) :
+ * - AVATAR BLEU UNIQUEMENT dans le salon
+ * - l’avatar rouge est réservé aux tables plus tard
  */
 
-export default function SalonJeu() {
-  const currentName = localStorage.getItem("pseudo") || "Joueur";
-
-  const [avatar] = useState(
-    localStorage.getItem("avatar") || "/avatar_blue.png"
-  );
+export default function SalonJeu({ user }) {
+  const currentName = user?.pseudo || "Joueur";
 
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -47,7 +47,7 @@ export default function SalonJeu() {
         JSON.stringify({
           type: "join_salon",
           pseudo: currentName,
-          avatar,
+          avatar: "/avatar_blue.png", // 🔒 avatar salon imposé
         })
       );
       ws.send(JSON.stringify({ type: "get_players" }));
@@ -65,7 +65,7 @@ export default function SalonJeu() {
         setPlayers(
           (data.players || []).map((p) => ({
             name: p.name,
-            avatar: p.avatar || "/avatar_blue.png",
+            avatar: "/avatar_blue.png", // 🔒 avatar salon unique
             online: true,
           }))
         );
@@ -228,12 +228,9 @@ export default function SalonJeu() {
               <div key={p.name} className="player-card">
                 <span className="status-dot online" />
                 <img
-                  src={p.avatar}
+                  src="/avatar_blue.png" // 🔒 salon = avatar bleu
                   className="player-avatar"
                   alt=""
-                  onError={(e) =>
-                    (e.currentTarget.src = "/avatar_blue.png")
-                  }
                 />
                 <div className="player-name">{p.name}</div>
               </div>
@@ -244,6 +241,7 @@ export default function SalonJeu() {
     </div>
   );
 }
+
 
 
 
