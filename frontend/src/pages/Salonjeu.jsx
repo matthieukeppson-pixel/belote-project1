@@ -12,7 +12,8 @@ export default function SalonJeu({ user }) {
   );
 
   const [players, setPlayers] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([]); // chat uniquement
+  const [systemMessages, setSystemMessages] = useState([]); // bannière en haut
   const [inputMessage, setInputMessage] = useState("");
   const [showProfil, setShowProfil] = useState(false);
 
@@ -70,15 +71,14 @@ export default function SalonJeu({ user }) {
         return;
       }
 
-      // ----- SYSTEM MESSAGE (fade + suppression) -----
+      // ----- SYSTEM MESSAGE (BANNIÈRE EN HAUT) -----
       if (data.type === "system") {
         const id = `${Date.now()}-${Math.random()}`;
 
-        setMessages((prev) => [
+        setSystemMessages((prev) => [
           ...prev,
           {
             id,
-            kind: "system",
             text: data.text,
             fadeOut: false,
           },
@@ -86,7 +86,7 @@ export default function SalonJeu({ user }) {
 
         // fade après 3 secondes
         setTimeout(() => {
-          setMessages((prev) =>
+          setSystemMessages((prev) =>
             prev.map((m) =>
               m.id === id ? { ...m, fadeOut: true } : m
             )
@@ -95,7 +95,7 @@ export default function SalonJeu({ user }) {
 
         // suppression définitive après 4 secondes
         setTimeout(() => {
-          setMessages((prev) =>
+          setSystemMessages((prev) =>
             prev.filter((m) => m.id !== id)
           );
         }, 4000);
@@ -181,28 +181,30 @@ export default function SalonJeu({ user }) {
         <div className="panel panel-center">
           <h2 className="panel-title">Tchat</h2>
 
-          <div className="chat-box" ref={chatBoxRef}>
-            {messages.map((m) => {
-              if (m.kind === "system") {
-                return (
-                  <div
-                    key={m.id}
-                    className={`chat-message chat-system ${
-                      m.fadeOut ? "fade-out" : ""
-                    }`}
-                  >
-                    <span className="chat-text">{m.text}</span>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={m.id} className="chat-message">
-                  <span className="chat-user">{m.user} :</span>
+          {/* ===== BANNIÈRE SYSTEME EN HAUT ===== */}
+          {systemMessages.length > 0 && (
+            <div className="system-banner">
+              {systemMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`chat-message chat-system ${
+                    m.fadeOut ? "fade-out" : ""
+                  }`}
+                >
                   <span className="chat-text">{m.text}</span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          )}
+
+          {/* ===== CHAT ===== */}
+          <div className="chat-box" ref={chatBoxRef}>
+            {messages.map((m) => (
+              <div key={m.id} className="chat-message">
+                <span className="chat-user">{m.user} :</span>
+                <span className="chat-text">{m.text}</span>
+              </div>
+            ))}
           </div>
 
           <div className="chat-input-zone">
@@ -257,6 +259,7 @@ export default function SalonJeu({ user }) {
     </div>
   );
 }
+
 
 
 

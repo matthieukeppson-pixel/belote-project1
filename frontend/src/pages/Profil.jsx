@@ -3,13 +3,13 @@ import "../styles/Profil.css";
 
 const STORAGE_KEY = "profile_photo_local";
 
-export default function Profil({ pseudo, onClose }) {
+export default function Profil({ pseudo, onClose, onAvatarChanged }) {
   const [preview, setPreview] = useState(
     localStorage.getItem(STORAGE_KEY) || "/avatar_blue.png"
   );
   const [loading, setLoading] = useState(false);
 
-  const handlePhotoChange = async (e) => {
+  const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -22,10 +22,18 @@ export default function Profil({ pseudo, onClose }) {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setPreview(reader.result);
-      localStorage.setItem(STORAGE_KEY, reader.result);
+      const dataUrl = reader.result;
+
+      setPreview(dataUrl);
+      localStorage.setItem(STORAGE_KEY, dataUrl);
+
+      if (typeof onAvatarChanged === "function") {
+        onAvatarChanged(dataUrl);
+      }
+
       setLoading(false);
     };
+
     reader.onerror = () => {
       alert("Erreur lors du chargement");
       setLoading(false);
@@ -39,11 +47,7 @@ export default function Profil({ pseudo, onClose }) {
       <div className="profil-modal">
         <h2>Mon profil</h2>
 
-        <img
-          src={preview}
-          alt="photo"
-          className="profil-avatar"
-        />
+        <img src={preview} alt="photo" className="profil-avatar" />
 
         <p className="profil-pseudo">{pseudo}</p>
 
@@ -64,6 +68,7 @@ export default function Profil({ pseudo, onClose }) {
     </div>
   );
 }
+
 
 
 
