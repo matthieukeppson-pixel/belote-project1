@@ -1,46 +1,37 @@
 import React, { useState } from "react";
 import "../styles/Profil.css";
 
-const BACKEND_HTTP = "http://localhost:4000";
+const STORAGE_KEY = "profile_photo_local";
 
-export default function Profil({ pseudo, avatar_url, setAvatarUrl, onClose }) {
+export default function Profil({ pseudo, onClose }) {
   const [preview, setPreview] = useState(
-    avatar_url ? `${BACKEND_HTTP}${avatar_url}` : "/avatar.png"
+    localStorage.getItem(STORAGE_KEY) || "/avatar_blue.png"
   );
   const [loading, setLoading] = useState(false);
 
-  const handleAvatarChange = async (e) => {
+  const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      setLoading(true);
-
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      const res = await fetch(`${BACKEND_HTTP}/api/upload-avatar`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!data?.avatar_url) throw new Error("Upload avatar échoué");
-
-      // 🔒 source de vérité = chemin relatif
-      setAvatarUrl(data.avatar_url);
-
-      // aperçu = conversion locale uniquement
-      setPreview(`${BACKEND_HTTP}${data.avatar_url}`);
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors du changement d’avatar");
-    } finally {
-      setLoading(false);
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image trop lourde (max 2 Mo)");
+      return;
     }
+
+    setLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreview(reader.result);
+      localStorage.setItem(STORAGE_KEY, reader.result);
+      setLoading(false);
+    };
+    reader.onerror = () => {
+      alert("Erreur lors du chargement");
+      setLoading(false);
+    };
+
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -50,21 +41,18 @@ export default function Profil({ pseudo, avatar_url, setAvatarUrl, onClose }) {
 
         <img
           src={preview}
-          alt="avatar"
+          alt="photo"
           className="profil-avatar"
-          onError={(e) => {
-            e.currentTarget.src = "/avatar.png";
-          }}
         />
 
         <p className="profil-pseudo">{pseudo}</p>
 
         <label className="upload-btn">
-          {loading ? "Upload..." : "Changer ma photo"}
+          {loading ? "Chargement..." : "Changer ma photo"}
           <input
             type="file"
             accept="image/*"
-            onChange={handleAvatarChange}
+            onChange={handlePhotoChange}
             disabled={loading}
           />
         </label>
@@ -76,6 +64,9 @@ export default function Profil({ pseudo, avatar_url, setAvatarUrl, onClose }) {
     </div>
   );
 }
+
+
+
 
 
 

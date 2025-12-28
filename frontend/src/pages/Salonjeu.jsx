@@ -1,21 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import "../styles/salonjeu.css";
+import Profil from "./Profil.jsx";
+
+const LOCAL_AVATAR_KEY = "profile_photo_local";
 
 /**
- * ARCHITECTURE (clair)
- * - UI (tables) : local, stable
- * - WS : source de vérité pour
- *   - players (liste joueurs)
- *   - system (join/leave)
- *   - message (chat)
- *
- * IMPORTANT anti-doublon :
- * - on n’ajoute jamais un message "localement" au moment de l’envoi
- * - on attend le broadcast serveur (type: "message" | "system")
- *
- * RÈGLE SALON (verrouillée) :
- * - AVATAR BLEU UNIQUEMENT dans le salon
- * - l’avatar rouge est réservé aux tables plus tard
+ * RÈGLE SALON — ÉTAPE 1 (locale)
+ * - Avatar par défaut : avatar_blue.png
+ * - SI le joueur a choisi une photo :
+ *   -> SON avatar dans le salon = photo locale
+ * - Les autres joueurs restent en avatar bleu
  */
 
 export default function SalonJeu({ user }) {
@@ -24,6 +18,7 @@ export default function SalonJeu({ user }) {
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [showProfil, setShowProfil] = useState(false);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
@@ -47,7 +42,6 @@ export default function SalonJeu({ user }) {
         JSON.stringify({
           type: "join_salon",
           pseudo: currentName,
-          avatar: "/avatar_blue.png", // 🔒 avatar salon imposé
         })
       );
       ws.send(JSON.stringify({ type: "get_players" }));
@@ -65,7 +59,6 @@ export default function SalonJeu({ user }) {
         setPlayers(
           (data.players || []).map((p) => ({
             name: p.name,
-            avatar: "/avatar_blue.png", // 🔒 avatar salon unique
             online: true,
           }))
         );
@@ -98,7 +91,6 @@ export default function SalonJeu({ user }) {
           },
         ]);
 
-        // disparition douce après 3 secondes
         setTimeout(() => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -106,8 +98,6 @@ export default function SalonJeu({ user }) {
             )
           );
         }, 3000);
-
-        return;
       }
     };
 
@@ -115,9 +105,7 @@ export default function SalonJeu({ user }) {
       console.warn("WebSocket erreur");
     };
 
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -228,9 +216,21 @@ export default function SalonJeu({ user }) {
               <div key={p.name} className="player-card">
                 <span className="status-dot online" />
                 <img
-                  src="/avatar_blue.png" // 🔒 salon = avatar bleu
+                  src={
+                    p.name === currentName
+                      ? localStorage.getItem(LOCAL_AVATAR_KEY) ||
+                        "/avatar_blue.png"
+                      : "/avatar_blue.png"
+                  }
                   className="player-avatar"
                   alt=""
+                  onClick={() =>
+                    p.name === currentName && setShowProfil(true)
+                  }
+                  style={{
+                    cursor:
+                      p.name === currentName ? "pointer" : "default",
+                  }}
                 />
                 <div className="player-name">{p.name}</div>
               </div>
@@ -238,9 +238,19 @@ export default function SalonJeu({ user }) {
           </div>
         </div>
       </div>
+
+      {/* ================= PROFIL ================= */}
+      {showProfil && (
+        <Profil
+          pseudo={currentName}
+          onClose={() => setShowProfil(false)}
+        />
+      )}
     </div>
   );
 }
+
+
 
 
 
