@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/salonjeu.css";
 import Profil from "./Profil.jsx";
 
@@ -7,12 +8,12 @@ export default function SalonJeu({ user }) {
 
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
-  const [systemMessages, setSystemMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showProfil, setShowProfil] = useState(false);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
+  const navigate = useNavigate();
 
   const tables = [
     { id: 1, joueurs: 2 },
@@ -72,30 +73,26 @@ export default function SalonJeu({ user }) {
         return;
       }
 
-      /* ===== MESSAGE SYSTÈME (BANDEAU) ===== */
       if (data.type === "system") {
         const id = `${Date.now()}-${Math.random()}`;
 
-        setSystemMessages((prev) => [
+        setMessages((prev) => [
           ...prev,
-          { id, text: data.text, fadeOut: false },
+          {
+            id,
+            kind: "system",
+            text: data.text,
+            fadeOut: false,
+          },
         ]);
 
         setTimeout(() => {
-          setSystemMessages((prev) =>
+          setMessages((prev) =>
             prev.map((m) =>
               m.id === id ? { ...m, fadeOut: true } : m
             )
           );
         }, 3000);
-
-        setTimeout(() => {
-          setSystemMessages((prev) =>
-            prev.filter((m) => m.id !== id)
-          );
-        }, 4000);
-
-        return;
       }
     };
 
@@ -125,22 +122,6 @@ export default function SalonJeu({ user }) {
   };
 
   /* ===============================
-     AVATAR → BACKEND
-  ================================ */
-  const handleAvatarChanged = (newAvatar) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    ws.send(
-      JSON.stringify({
-        type: "update_avatar",
-        pseudo: currentName,
-        avatar: newAvatar,
-      })
-    );
-  };
-
-  /* ===============================
      AUTO-SCROLL
   ================================ */
   useEffect(() => {
@@ -162,11 +143,14 @@ export default function SalonJeu({ user }) {
             {tables.map((t) => (
               <div key={t.id} className="table-card">
                 <div className="table-title">Table {t.id}</div>
-                <div className="table-info">
-                  Joueurs : {t.joueurs} / 4
-                </div>
+                <div className="table-info">Joueurs : {t.joueurs} / 4</div>
                 <div className="table-info">Statut : En attente</div>
-                <button className="btn-join">Rejoindre</button>
+                <button
+                  className="btn-join"
+                  onClick={() => navigate(`/table/${t.id}`)}
+                >
+                  Rejoindre
+                </button>
               </div>
             ))}
           </div>
@@ -176,29 +160,24 @@ export default function SalonJeu({ user }) {
         <div className="panel panel-center">
           <h2 className="panel-title">Tchat</h2>
 
-          {/* BANDEAU SYSTÈME */}
-          {systemMessages.length > 0 && (
-            <div className="system-banner">
-              {systemMessages.map((m) => (
+          <div className="chat-box" ref={chatBoxRef}>
+            {messages.map((m) =>
+              m.kind === "system" ? (
                 <div
                   key={m.id}
-                  className={`chat-system ${
+                  className={`chat-message chat-system ${
                     m.fadeOut ? "fade-out" : ""
                   }`}
                 >
                   {m.text}
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div className="chat-box" ref={chatBoxRef}>
-            {messages.map((m) => (
-              <div key={m.id} className="chat-message">
-                <span className="chat-user">{m.user} :</span>
-                <span className="chat-text">{m.text}</span>
-              </div>
-            ))}
+              ) : (
+                <div key={m.id} className="chat-message">
+                  <span className="chat-user">{m.user} :</span>
+                  <span className="chat-text">{m.text}</span>
+                </div>
+              )
+            )}
           </div>
 
           <div className="chat-input-zone">
@@ -207,11 +186,8 @@ export default function SalonJeu({ user }) {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Écrire un message…"
             />
-            <button className="chat-send" onClick={sendMessage}>
-              Envoyer
-            </button>
+            <button onClick={sendMessage}>Envoyer</button>
           </div>
         </div>
 
@@ -244,12 +220,12 @@ export default function SalonJeu({ user }) {
         <Profil
           pseudo={currentName}
           onClose={() => setShowProfil(false)}
-          onAvatarChanged={handleAvatarChanged}
         />
       )}
     </div>
   );
 }
+
 
 
 
