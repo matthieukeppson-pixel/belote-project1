@@ -2,36 +2,18 @@ import React, { useEffect, useRef, useState } from "react";
 import "../styles/salonjeu.css";
 import Profil from "./Profil.jsx";
 
-const LOCAL_AVATAR_KEY = "profile_photo_local";
-
-/**
- * RÈGLE SALON — ÉTAPE 1 (locale)
- * - Avatar par défaut : avatar_blue.png
- * - Si le joueur a choisi une photo :
- *   → SON avatar dans le salon = photo locale
- * - Les autres joueurs restent en avatar bleu
- */
-
 export default function SalonJeu({ user }) {
   const currentName = user?.pseudo || "Joueur";
 
-  /* ===============================
-     STATES
-  ================================ */
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [systemMessages, setSystemMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showProfil, setShowProfil] = useState(false);
 
-  /* ===============================
-     REFS
-  ================================ */
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
 
-  /* ===============================
-     TABLES (locales)
-  ================================ */
   const tables = [
     { id: 1, joueurs: 2 },
     { id: 2, joueurs: 0 },
@@ -39,7 +21,7 @@ export default function SalonJeu({ user }) {
   ];
 
   /* ===============================
-     WEBSOCKET (ouverture unique)
+     WEBSOCKET SALON
   ================================ */
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:4000");
@@ -50,6 +32,9 @@ export default function SalonJeu({ user }) {
         JSON.stringify({
           type: "join_salon",
           pseudo: currentName,
+          avatar:
+            localStorage.getItem("profile_photo_local") ||
+            "/avatar_blue.png",
         })
       );
 
@@ -68,7 +53,7 @@ export default function SalonJeu({ user }) {
         setPlayers(
           (data.players || []).map((p) => ({
             name: p.name,
-            online: true,
+            avatar: p.avatar || "/avatar_blue.png",
           }))
         );
         return;
@@ -87,46 +72,36 @@ export default function SalonJeu({ user }) {
         return;
       }
 
+      /* ===== MESSAGE SYSTÈME (BANDEAU) ===== */
       if (data.type === "system") {
         const id = `${Date.now()}-${Math.random()}`;
 
-        setMessages((prev) => [
+        setSystemMessages((prev) => [
           ...prev,
-          {
-            id,
-            kind: "system",
-            text: data.text,
-            fadeOut: false,
-          },
+          { id, text: data.text, fadeOut: false },
         ]);
 
         setTimeout(() => {
-          setMessages((prev) =>
+          setSystemMessages((prev) =>
             prev.map((m) =>
               m.id === id ? { ...m, fadeOut: true } : m
             )
           );
         }, 3000);
+
+        setTimeout(() => {
+          setSystemMessages((prev) =>
+            prev.filter((m) => m.id !== id)
+          );
+        }, 4000);
+
+        return;
       }
     };
 
-    ws.onerror = () => {
-      console.warn("WebSocket erreur");
-    };
-
     return () => ws.close();
-
-    // Ouverture volontairement unique
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  /* ===============================
-     AUTO-SCROLL CHAT
-  ================================ */
-  useEffect(() => {
-    if (!chatBoxRef.current) return;
-    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-  }, [messages]);
 
   /* ===============================
      ENVOI MESSAGE
@@ -150,55 +125,80 @@ export default function SalonJeu({ user }) {
   };
 
   /* ===============================
+     AVATAR → BACKEND
+  ================================ */
+  const handleAvatarChanged = (newAvatar) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(
+      JSON.stringify({
+        type: "update_avatar",
+        pseudo: currentName,
+        avatar: newAvatar,
+      })
+    );
+  };
+
+  /* ===============================
+     AUTO-SCROLL
+  ================================ */
+  useEffect(() => {
+    if (!chatBoxRef.current) return;
+    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+  }, [messages]);
+
+  /* ===============================
      RENDER
   ================================ */
   return (
     <div className="salon-wrapper">
       <div className="salon-grid">
 
-        {/* ===== TABLES ===== */}
+        {/* TABLES */}
         <div className="panel panel-side">
           <h2 className="panel-title">Tables</h2>
-
           <div className="tables-list">
-            {tables.map((table) => (
-              <div key={table.id} className="table-card">
-                <div className="table-title">Table {table.id}</div>
+            {tables.map((t) => (
+              <div key={t.id} className="table-card">
+                <div className="table-title">Table {t.id}</div>
                 <div className="table-info">
-                  Joueurs : {table.joueurs} / 4
+                  Joueurs : {t.joueurs} / 4
                 </div>
                 <div className="table-info">Statut : En attente</div>
-
-                <button className="btn-join" type="button">
-                  Rejoindre
-                </button>
+                <button className="btn-join">Rejoindre</button>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ===== TCHAT ===== */}
+        {/* TCHAT */}
         <div className="panel panel-center">
           <h2 className="panel-title">Tchat</h2>
 
-          <div className="chat-box" ref={chatBoxRef}>
-            {messages.map((m) =>
-              m.kind === "system" ? (
+          {/* BANDEAU SYSTÈME */}
+          {systemMessages.length > 0 && (
+            <div className="system-banner">
+              {systemMessages.map((m) => (
                 <div
                   key={m.id}
-                  className={`chat-message chat-system ${
+                  className={`chat-system ${
                     m.fadeOut ? "fade-out" : ""
                   }`}
                 >
-                  <span className="chat-text">{m.text}</span>
+                  {m.text}
                 </div>
-              ) : (
-                <div key={m.id} className="chat-message">
-                  <span className="chat-user">{m.user} :</span>
-                  <span className="chat-text">{m.text}</span>
-                </div>
-              )
-            )}
+              ))}
+            </div>
+          )}
+
+          <div className="chat-box" ref={chatBoxRef}>
+            {messages.map((m) => (
+              <div key={m.id} className="chat-message">
+                <span className="chat-user">{m.user} :</span>
+                <span className="chat-text">{m.text}</span>
+              </div>
+            ))}
           </div>
 
           <div className="chat-input-zone">
@@ -209,32 +209,20 @@ export default function SalonJeu({ user }) {
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Écrire un message…"
             />
-            <button
-              className="chat-send"
-              type="button"
-              onClick={sendMessage}
-            >
+            <button className="chat-send" onClick={sendMessage}>
               Envoyer
             </button>
           </div>
         </div>
 
-        {/* ===== JOUEURS ===== */}
+        {/* JOUEURS */}
         <div className="panel panel-side">
           <h2 className="panel-title">Joueurs</h2>
-
           <div className="players-list">
             {players.map((p) => (
               <div key={p.name} className="player-card">
-                <span className="status-dot online" />
-
                 <img
-                  src={
-                    p.name === currentName
-                      ? localStorage.getItem(LOCAL_AVATAR_KEY) ||
-                        "/avatar_blue.png"
-                      : "/avatar_blue.png"
-                  }
+                  src={p.avatar}
                   className="player-avatar"
                   alt=""
                   onClick={() =>
@@ -245,7 +233,6 @@ export default function SalonJeu({ user }) {
                       p.name === currentName ? "pointer" : "default",
                   }}
                 />
-
                 <div className="player-name">{p.name}</div>
               </div>
             ))}
@@ -253,16 +240,21 @@ export default function SalonJeu({ user }) {
         </div>
       </div>
 
-      {/* ===== PROFIL ===== */}
       {showProfil && (
         <Profil
           pseudo={currentName}
           onClose={() => setShowProfil(false)}
+          onAvatarChanged={handleAvatarChanged}
         />
       )}
     </div>
   );
 }
+
+
+
+
+
 
 
 

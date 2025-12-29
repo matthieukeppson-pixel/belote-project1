@@ -290,7 +290,7 @@
 /* Messages système */
 .chat-system {
   text-align: center;
-  color: #ffd966;          /* étoiles + texte */
+   color: #ffffff;         /* étoiles + texte */
   font-size: 1.2rem;
   font-weight: 600;
   opacity: 1;
