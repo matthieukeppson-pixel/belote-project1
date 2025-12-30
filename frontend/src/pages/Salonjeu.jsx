@@ -65,40 +65,40 @@ export default function SalonJeu({ user }) {
           ...prev,
           {
             id: `${Date.now()}-${Math.random()}`,
-            kind: "chat",
             user: data.user,
             text: data.text,
           },
         ]);
-        return;
-      }
-
-      if (data.type === "system") {
-        const id = `${Date.now()}-${Math.random()}`;
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id,
-            kind: "system",
-            text: data.text,
-            fadeOut: false,
-          },
-        ]);
-
-        setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === id ? { ...m, fadeOut: true } : m
-            )
-          );
-        }, 3000);
       }
     };
 
     return () => ws.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ===============================
+     🔁 AVATAR → SYNCHRO IMMEDIATE
+  ================================ */
+  const handleAvatarChanged = (newAvatar) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    // 1️⃣ Mise à jour immédiate LOCALE (toi)
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.name === currentName ? { ...p, avatar: newAvatar } : p
+      )
+    );
+
+    // 2️⃣ Envoi au backend (autres joueurs)
+    ws.send(
+      JSON.stringify({
+        type: "update_avatar",
+        pseudo: currentName,
+        avatar: newAvatar,
+      })
+    );
+  };
 
   /* ===============================
      ENVOI MESSAGE
@@ -122,11 +122,11 @@ export default function SalonJeu({ user }) {
   };
 
   /* ===============================
-     AUTO-SCROLL
+     CHAT TOUJOURS EN HAUT
   ================================ */
   useEffect(() => {
     if (!chatBoxRef.current) return;
-    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    chatBoxRef.current.scrollTop = 0;
   }, [messages]);
 
   /* ===============================
@@ -161,23 +161,12 @@ export default function SalonJeu({ user }) {
           <h2 className="panel-title">Tchat</h2>
 
           <div className="chat-box" ref={chatBoxRef}>
-            {messages.map((m) =>
-              m.kind === "system" ? (
-                <div
-                  key={m.id}
-                  className={`chat-message chat-system ${
-                    m.fadeOut ? "fade-out" : ""
-                  }`}
-                >
-                  {m.text}
-                </div>
-              ) : (
-                <div key={m.id} className="chat-message">
-                  <span className="chat-user">{m.user} :</span>
-                  <span className="chat-text">{m.text}</span>
-                </div>
-              )
-            )}
+            {messages.map((m) => (
+              <div key={m.id} className="chat-message">
+                <span className="chat-user">{m.user} :</span>
+                <span className="chat-text">{m.text}</span>
+              </div>
+            ))}
           </div>
 
           <div className="chat-input-zone">
@@ -186,8 +175,11 @@ export default function SalonJeu({ user }) {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Écrire un message..."
             />
-            <button onClick={sendMessage}>Envoyer</button>
+            <button className="btn-send" onClick={sendMessage}>
+              Envoyer
+            </button>
           </div>
         </div>
 
@@ -220,11 +212,18 @@ export default function SalonJeu({ user }) {
         <Profil
           pseudo={currentName}
           onClose={() => setShowProfil(false)}
+          onAvatarChanged={handleAvatarChanged}
         />
       )}
     </div>
   );
 }
+
+
+
+
+
+
 
 
 
