@@ -177,7 +177,7 @@ export default function SalonJeu({ user }) {
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Écrire un message..."
             />
-            <button className="btn-send" onClick={sendMessage}>
+           <button className="chat-send" onClick={sendMessage}>
               Envoyer
             </button>
           </div>
