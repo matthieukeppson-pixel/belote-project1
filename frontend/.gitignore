@@ -29,4 +29,5 @@ Thumbs.db
 
 # Uploads utilisateurs (avatars, photos, etc.)
 backend/uploads/
+backend/node_modules/
 
