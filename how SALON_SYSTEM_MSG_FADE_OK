@@ -1,0 +1,55 @@
+[33mcommit a4ac2414733c5fd92ecafcba1759d15c9046beb4[m[33m ([m[1;33mtag: [m[1;33mSALON_STABLE[m[33m, [m[1;32msalon-recuperation[m[33m, [m[1;32mprofil-modal[m[33m)[m
+Author: matthieukeppson-pixel <matthieukeppson@gmail.com>
+Date:   Wed Dec 24 18:21:35 2025 +0100
+
+    Ignore uploads utilisateurs (avatars)
+
+[1mdiff --git a/backend/uploads/avatars/avatar-1766427221143-0a1c367840b138.jpg b/backend/uploads/avatars/avatar-1766427221143-0a1c367840b138.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex cf2d126..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766427221143-0a1c367840b138.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766427235759-95e57477ce34f.jpg b/backend/uploads/avatars/avatar-1766427235759-95e57477ce34f.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex c1077c2..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766427235759-95e57477ce34f.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766427282560-8ee6d4223fb3e8.png b/backend/uploads/avatars/avatar-1766427282560-8ee6d4223fb3e8.png[m
+[1mdeleted file mode 100644[m
+[1mindex c360cf9..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766427282560-8ee6d4223fb3e8.png and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766427663696-96c1091b8549d8.jpg b/backend/uploads/avatars/avatar-1766427663696-96c1091b8549d8.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex cf2d126..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766427663696-96c1091b8549d8.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766427709417-7e03cecc483f8.jpg b/backend/uploads/avatars/avatar-1766427709417-7e03cecc483f8.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex cf2d126..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766427709417-7e03cecc483f8.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766432875889-259dd88ab71818.jpg b/backend/uploads/avatars/avatar-1766432875889-259dd88ab71818.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex cf2d126..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766432875889-259dd88ab71818.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766432894391-1f41a09957232.png b/backend/uploads/avatars/avatar-1766432894391-1f41a09957232.png[m
+[1mdeleted file mode 100644[m
+[1mindex c360cf9..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766432894391-1f41a09957232.png and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766433132322-01d6927615ee18.jpg b/backend/uploads/avatars/avatar-1766433132322-01d6927615ee18.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex c1077c2..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766433132322-01d6927615ee18.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766433153846-313b205f583bf.jpg b/backend/uploads/avatars/avatar-1766433153846-313b205f583bf.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex f20069e..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766433153846-313b205f583bf.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766433312626-1dc6f05a56b41.jpg b/backend/uploads/avatars/avatar-1766433312626-1dc6f05a56b41.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex b175ca3..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766433312626-1dc6f05a56b41.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766433331077-7daf80a2a48db8.jpg b/backend/uploads/avatars/avatar-1766433331077-7daf80a2a48db8.jpg[m
+[1mdeleted file mode 100644[m
+[1mindex cf2d126..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766433331077-7daf80a2a48db8.jpg and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar-1766436843084-7eae2608d5f13.png b/backend/uploads/avatars/avatar-1766436843084-7eae2608d5f13.png[m
+[1mdeleted file mode 100644[m
+[1mindex c360cf9..0000000[m
+Binary files a/backend/uploads/avatars/avatar-1766436843084-7eae2608d5f13.png and /dev/null differ
+[1mdiff --git a/backend/uploads/avatars/avatar

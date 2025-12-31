@@ -1,26 +1,23 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import "../styles/table.css";
+import { useNavigate } from "react-router-dom";
+import "../styles/Table.css";
 
 export default function Table() {
   const navigate = useNavigate();
-  const { id } = useParams();
 
   return (
-    <div className="table-wrapper">
-      <button
-        className="btn-back"
-        onClick={() => navigate("/")}
-      >
+    <div className="table-page">
+      <button className="table-back-btn" onClick={() => navigate("/salon")}>
         ← Retour au salon
       </button>
 
-      <div className="table-container">
-        <h2>Table {id}</h2>
+      <div className="table-center">
+        <div className="table-image" />
       </div>
     </div>
   );
 }
+
 
 
 
