@@ -32,6 +32,12 @@ export default function TableChat() {
 
   return (
     <div className="tablechat-container">
+
+      {/* Titre du tchat */}
+      <div className="tablechat-title">
+        TCHAT
+      </div>
+
       <div
         className="tablechat-messages"
         ref={messagesRef}
@@ -68,6 +74,7 @@ export default function TableChat() {
     </div>
   );
 }
+
 
 
 
