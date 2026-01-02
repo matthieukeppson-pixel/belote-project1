@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import TableChat from "../components/TableChat";
 import "../styles/Table.css";
 
 export default function Table() {
@@ -11,12 +12,19 @@ export default function Table() {
         ← Retour au salon
       </button>
 
-      <div className="table-center">
-        <div className="table-image" />
+      <div className="table-layout">
+        <div className="table-zone">
+          <div className="table-image" />
+        </div>
+
+        <div className="table-chat-zone">
+          <TableChat tableName="Belote entre amis" />
+        </div>
       </div>
     </div>
   );
 }
+
 
 
 

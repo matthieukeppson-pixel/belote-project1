@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../styles/TableChat.css";
 
 export default function TableChat({ tableName }) {
@@ -8,6 +8,7 @@ export default function TableChat({ tableName }) {
   ]);
 
   const [newMessage, setNewMessage] = useState("");
+  const messagesRef = useRef(null);
 
   const sendMessage = () => {
     if (!newMessage.trim()) return;
@@ -20,9 +21,20 @@ export default function TableChat({ tableName }) {
     setNewMessage("");
   };
 
+  /* 🔽 AUTO-SCROLL PROPRE */
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop =
+        messagesRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <div className="tablechat-container">
-      <div className="tablechat-messages">
+      <div
+        className="tablechat-messages"
+        ref={messagesRef}
+      >
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -52,6 +64,7 @@ export default function TableChat({ tableName }) {
     </div>
   );
 }
+
 
 
 

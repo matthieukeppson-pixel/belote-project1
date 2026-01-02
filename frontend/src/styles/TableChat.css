@@ -1,77 +1,101 @@
-/* =========================================== */
-/*       CHAT DES TABLES (tablechat-*)         */
-/* =========================================== */
+/* ===========================================
+   CHAT TABLE — VERSION STABLE
+   scroll + input + Chrome/Firefox OK
+=========================================== */
 
 .tablechat-container {
+  height: 100%;
+  min-height: 0;
+
   display: flex;
   flex-direction: column;
-  height: 100%;
+
+  position: relative;
+
   color: white;
   font-family: "Orbitron", sans-serif;
 }
 
-/* Messages */
+/* ===============================
+   MESSAGES (ZONE SCROLLABLE)
+================================ */
+
 .tablechat-messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+
   overflow-y: auto;
-  margin-bottom: 18px;
+  overflow-x: hidden;
+
   padding-right: 6px;
+  padding-bottom: 16px; /* empêche la dernière ligne d'être cachée */
 }
 
 .tablechat-line {
-  font-size: 20px;
-  margin-bottom: 12px;
-  text-shadow: 0 0 6px rgba(0, 150, 255, 0.6);
+  font-size: 18px;
+  margin-bottom: 10px;
+
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-/* =========================================== */
-/*              INPUT + BOUTON                 */
-/* =========================================== */
+/* ===============================
+   INPUT + BOUTON
+================================ */
 
 .tablechat-inputzone {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: auto; /* réserve l'espace en bas */
 }
 
+/* Champ texte */
 .tablechat-input {
   flex: 1;
-  padding: 12px;
+  min-width: 0;
+  width: 100%;
 
-  background: rgba(0, 30, 80, 0.5);
-  border: 1px solid rgba(0, 120, 255, 0.35);
+  padding: 10px;
+
+  background: rgba(60, 0, 0, 0.45);
+  border: 1px solid rgba(160, 60, 60, 0.6);
   border-radius: 10px;
 
   color: white;
   font-family: "Orbitron", sans-serif;
-  font-size: 18px;
+  font-size: 16px;
+
+  box-sizing: border-box;
 }
 
 .tablechat-input::placeholder {
-  color: rgba(200, 220, 255, 0.6);
+  color: rgba(255, 220, 220, 0.7);
+  white-space: nowrap;
 }
 
-/* Bouton envoyer */
+/* Bouton envoyer — style Table */
 .tablechat-button {
-  padding: 12px 20px;
+  padding: 10px 14px;
 
-  background: linear-gradient(180deg, #346dff, #244fd8);
+  background: linear-gradient(
+    180deg,
+    #7a1f1f,
+    #5a1414
+  );
+
   border-radius: 10px;
   border: none;
 
   color: white;
-  font-size: 18px;
+  font-size: 16px;
+  font-family: "Orbitron", sans-serif;
+
   cursor: pointer;
-
-  transition: 0.15s ease;
+  flex-shrink: 0;
 }
-
-.tablechat-button:hover {
-  transform: scale(1.07);
-}
-
-.tablechat-button:active {
-  transform: scale(0.92);
-}
-
 
 
