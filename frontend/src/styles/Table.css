@@ -14,10 +14,10 @@
   position: relative;
 
   display: flex;
-  align-items: center;      /* centrage vertical */
-  justify-content: center;  /* centrage horizontal */
+  align-items: center;
+  justify-content: center;
 
-  overflow: hidden; /* on ne veut pas que la page descende */
+  overflow: hidden;
 }
 
 /* ===============================
@@ -29,32 +29,54 @@
   top: 20px;
   left: 20px;
 
-  background: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
+  background: linear-gradient(
+    180deg,
+    #7a1f1f,
+    #5a1414
+  );
+
+  border: 1px solid rgba(220, 180, 120, 0.6);
+  border-radius: 12px;
+
+  padding: 8px 16px;
+
+  color: #fff;
   font-weight: 600;
+  font-family: "Orbitron", sans-serif;
+
   cursor: pointer;
-  z-index: 10;
+
+  box-shadow:
+    0 0 8px rgba(180, 60, 60, 0.6),
+    inset 0 0 6px rgba(255, 220, 180, 0.25);
+
+  transition: 0.2s ease;
+}
+
+.table-back-btn:hover {
+  filter: brightness(1.15);
+}
+
+.table-back-btn:active {
+  transform: scale(0.95);
 }
 
 /* ===============================
-   LAYOUT TABLE + TCHAT (BLOC CONTRAINT)
+   LAYOUT TABLE + TCHAT
+   (BLOC DE HAUTEUR FIXE)
 ================================ */
 
 .table-layout {
   width: 100%;
-  padding-left: 3%;
-  padding-right: 3%;
-  box-sizing: border-box;
+  height: 640px; /* référence commune : table + tchat */
 
   display: flex;
   flex-direction: row;
-  align-items: stretch; /* les deux colonnes font la même hauteur */
+  align-items: stretch;
 
-  /* IMPORTANT :
-     hauteur fixe du "bloc" pour empêcher le tchat de pousser vers le bas */
-  height: min(720px, calc(100vh - 120px));
+  padding-left: 3%;
+  padding-right: 3%;
+  box-sizing: border-box;
 }
 
 /* ===============================
@@ -62,7 +84,7 @@
 ================================ */
 
 .table-zone {
-  width: 67%;
+  width: 65%;
   height: 100%;
 
   display: flex;
@@ -71,7 +93,7 @@
 }
 
 /* ===============================
-   IMAGE TABLE (CARRÉE, À LA HAUTEUR DU BLOC)
+   IMAGE TABLE (RÉFÉRENCE HAUTEUR)
 ================================ */
 
 .table-image {
@@ -85,15 +107,18 @@
   background-repeat: no-repeat;
   background-position: center;
 
+  border: 1px solid rgba(220, 180, 120, 0.6);
+
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
 }
 
 /* ===============================
-   ZONE TCHAT TABLE (MÊME HAUTEUR QUE LA TABLE)
+   ZONE TCHAT TABLE
+   (MÊME HAUTEUR QUE LA TABLE)
 ================================ */
 
 .table-chat-zone {
-  width: 27%;
+  width: 25%;
   height: 100%;
 
   margin-left: 32px;
@@ -105,6 +130,7 @@
 
   background: rgba(60, 0, 0, 0.55);
   border-radius: 20px;
+  border: 1px solid rgba(220, 180, 120, 0.6);
 }
 
 /* Le composant TableChat remplit la colonne */
@@ -112,6 +138,8 @@
   width: 100%;
   height: 100%;
 }
+
+
 
 
 
