@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import "../styles/TableChat.css";
 
-export default function TableChat({ tableName }) {
-  const [messages, setMessages] = useState([
-    { id: 1, text: `Bienvenue à la table ${tableName} ⭐`, from: "system" },
-    { id: 2, text: "Le tchat table fonctionne ✔️", from: "system" }
-  ]);
-
+export default function TableChat() {
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+
   const messagesRef = useRef(null);
 
   const sendMessage = () => {
@@ -15,13 +12,17 @@ export default function TableChat({ tableName }) {
 
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), text: newMessage, from: "me" }
+      {
+        id: Date.now(),
+        text: newMessage,
+        from: "me"
+      }
     ]);
 
     setNewMessage("");
   };
 
-  /* 🔽 AUTO-SCROLL PROPRE */
+  /* Auto-scroll vers le bas quand un message arrive */
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop =
@@ -49,9 +50,12 @@ export default function TableChat({ tableName }) {
         <input
           type="text"
           className="tablechat-input"
-          placeholder="Écrire un message..."
+          placeholder="Écrire un message"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sendMessage();
+          }}
         />
 
         <button
@@ -64,6 +68,7 @@ export default function TableChat({ tableName }) {
     </div>
   );
 }
+
 
 
 

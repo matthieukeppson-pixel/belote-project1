@@ -12,9 +12,12 @@
   background-repeat: no-repeat;
 
   position: relative;
- overflow-x: hidden;
-overflow-y: auto;
 
+  display: flex;
+  align-items: center;      /* centrage vertical */
+  justify-content: center;  /* centrage horizontal */
+
+  overflow: hidden; /* on ne veut pas que la page descende */
 }
 
 /* ===============================
@@ -32,23 +35,26 @@ overflow-y: auto;
   padding: 8px 14px;
   font-weight: 600;
   cursor: pointer;
+  z-index: 10;
 }
 
 /* ===============================
-   LAYOUT TABLE + TCHAT
+   LAYOUT TABLE + TCHAT (BLOC CONTRAINT)
 ================================ */
 
 .table-layout {
   width: 100%;
-  height: calc(100vh - 40px);
-
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-
   padding-left: 3%;
   padding-right: 3%;
   box-sizing: border-box;
+
+  display: flex;
+  flex-direction: row;
+  align-items: stretch; /* les deux colonnes font la même hauteur */
+
+  /* IMPORTANT :
+     hauteur fixe du "bloc" pour empêcher le tchat de pousser vers le bas */
+  height: min(720px, calc(100vh - 120px));
 }
 
 /* ===============================
@@ -57,6 +63,7 @@ overflow-y: auto;
 
 .table-zone {
   width: 67%;
+  height: 100%;
 
   display: flex;
   align-items: center;
@@ -64,13 +71,14 @@ overflow-y: auto;
 }
 
 /* ===============================
-   IMAGE TABLE
+   IMAGE TABLE (CARRÉE, À LA HAUTEUR DU BLOC)
 ================================ */
 
 .table-image {
-  width: 100%;
-  max-width: 720px;
+  height: 100%;
   aspect-ratio: 1 / 1;
+  width: auto;
+  max-width: 100%;
 
   background-image: url("/table_vero.png");
   background-size: contain;
@@ -81,29 +89,32 @@ overflow-y: auto;
 }
 
 /* ===============================
-   ZONE TCHAT TABLE
+   ZONE TCHAT TABLE (MÊME HAUTEUR QUE LA TABLE)
 ================================ */
 
 .table-chat-zone {
   width: 27%;
-  height: 80%;
+  height: 100%;
 
   margin-left: 32px;
   padding: 20px;
   box-sizing: border-box;
 
   display: flex;
-  align-items: center;
+  align-items: stretch;
 
   background: rgba(60, 0, 0, 0.55);
   border-radius: 20px;
 }
 
-/* Le composant TableChat doit remplir la colonne */
+/* Le composant TableChat remplit la colonne */
 .table-chat-zone > * {
   width: 100%;
   height: 100%;
 }
+
+
+
 
 
 
