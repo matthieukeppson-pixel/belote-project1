@@ -115,8 +115,76 @@ export function handleDistribution(game, event, count) {
 // ============================================
 
 export function handleAnnonce(game, event) {
+  if (!event) return game;
+
+  const playersCount = game.players.length;
+  let currentIndex = game.currentPlayerIndex;
+
+  // ===============================
+  // PASS
+  // ===============================
+  if (event.type === "PASS") {
+    const nextIndex = (currentIndex + 1) % playersCount;
+
+    // Si on a fait un tour complet
+    if (nextIndex === (game.dealerIndex + 1) % playersCount) {
+      // Fin du tour d'annonce
+      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
+        return {
+          ...game,
+          state: STATES.ANNOUNCE_ATOUT_TOUR_2,
+          currentPlayerIndex: (game.dealerIndex + 1) % playersCount
+        };
+      }
+
+      // Fin du 2e tour → redistribution
+      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+        return {
+          ...game,
+          state: STATES.DISTRIBUTION_3,
+          deck: [],
+          hands: {},
+          atout: null,
+          preneur: null
+        };
+      }
+    }
+
+    // PASS simple → joueur suivant
+    return {
+      ...game,
+      currentPlayerIndex: nextIndex
+    };
+  }
+
+  // ===============================
+  // TAKE_ATOUT
+  // ===============================
+  if (event.type === "TAKE_ATOUT") {
+    // Détermination de l'atout
+    let atout = game.atout;
+
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
+      // Atout retourné (déjà connu / stocké ailleurs)
+      atout = event.suit; // sécurité
+    }
+
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+      // Atout libre
+      atout = event.suit;
+    }
+
+    return {
+      ...game,
+      atout,
+      preneur: game.currentPlayerIndex,
+      state: STATES.DISTRIBUTION_3_FINAL
+    };
+  }
+
   return game;
 }
+
 
 // ============================================
 // JEU DES PLIS (squelette)
