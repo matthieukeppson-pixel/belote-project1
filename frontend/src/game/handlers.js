@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 // ============================================
 // HANDLERS — BELOTE ENGINE (V1)
-// handleTableIdle + handleDistribution implémentés
 // ============================================
 
 import { STATES } from "./beloteEngine";
@@ -12,6 +11,9 @@ import { STATES } from "./beloteEngine";
 
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
+
+const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
+const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
 
 function createDeck() {
   const deck = [];
@@ -30,6 +32,16 @@ function shuffle(deck) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function cardRank(card, atout, couleurDemandee) {
+  if (card.suit === atout) {
+    return ATTOUT_ORDER.indexOf(card.value);
+  }
+  if (card.suit === couleurDemandee) {
+    return NORMAL_ORDER.indexOf(card.value);
+  }
+  return Infinity;
 }
 
 // ============================================
@@ -53,6 +65,8 @@ export function handleTableIdle(game, event) {
     atout: null,
     preneur: null,
     pli: [],
+    couleurDemandee: null,
+    plisGagnes: {},
     score: game.score ?? { equipeA: 0, equipeB: 0 }
   };
 }
@@ -62,29 +76,22 @@ export function handleTableIdle(game, event) {
 // ============================================
 
 export function handleDistribution(game, event, count) {
-  // On ne réagit qu'aux entrées d'état
-  if (!event || event.type !== "DISTRIBUTE_CARDS") {
-    return game;
-  }
+  if (!event || event.type !== "DISTRIBUTE_CARDS") return game;
 
-  // Création + mélange du paquet uniquement si nécessaire
-  let deck = game.deck.length === 0
-    ? shuffle(createDeck())
-    : [...game.deck];
+  let deck =
+    game.deck.length === 0
+      ? shuffle(createDeck())
+      : [...game.deck];
 
   const hands = { ...game.hands };
 
-  // Initialisation des mains si besoin
   for (const player of game.players) {
-    if (!hands[player]) {
-      hands[player] = [];
-    }
+    if (!hands[player]) hands[player] = [];
   }
 
-  // Distribution circulaire à partir du joueur à gauche du donneur
   let index = (game.dealerIndex + 1) % 4;
 
-  for (let round = 0; round < count; round++) {
+  for (let r = 0; r < count; r++) {
     for (let i = 0; i < game.players.length; i++) {
       const playerId = game.players[index];
       hands[playerId] = [...hands[playerId], deck.shift()];
@@ -92,7 +99,6 @@ export function handleDistribution(game, event, count) {
     }
   }
 
-  // Détermination de l'état suivant
   let nextState = game.state;
   if (game.state === STATES.DISTRIBUTION_3) {
     nextState = STATES.DISTRIBUTION_2;
@@ -111,33 +117,25 @@ export function handleDistribution(game, event, count) {
 }
 
 // ============================================
-// ANNONCE DE L’ATOUT (squelette)
+// ANNONCE DE L’ATOUT
 // ============================================
 
 export function handleAnnonce(game, event) {
   if (!event) return game;
 
   const playersCount = game.players.length;
-  let currentIndex = game.currentPlayerIndex;
+  const startIndex = (game.dealerIndex + 1) % playersCount;
+  const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
-  // ===============================
-  // PASS
-  // ===============================
   if (event.type === "PASS") {
-    const nextIndex = (currentIndex + 1) % playersCount;
-
-    // Si on a fait un tour complet
-    if (nextIndex === (game.dealerIndex + 1) % playersCount) {
-      // Fin du tour d'annonce
+    if (nextIndex === startIndex) {
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
         return {
           ...game,
           state: STATES.ANNOUNCE_ATOUT_TOUR_2,
-          currentPlayerIndex: (game.dealerIndex + 1) % playersCount
+          currentPlayerIndex: startIndex
         };
       }
-
-      // Fin du 2e tour → redistribution
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
         return {
           ...game,
@@ -149,34 +147,13 @@ export function handleAnnonce(game, event) {
         };
       }
     }
-
-    // PASS simple → joueur suivant
-    return {
-      ...game,
-      currentPlayerIndex: nextIndex
-    };
+    return { ...game, currentPlayerIndex: nextIndex };
   }
 
-  // ===============================
-  // TAKE_ATOUT
-  // ===============================
   if (event.type === "TAKE_ATOUT") {
-    // Détermination de l'atout
-    let atout = game.atout;
-
-    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
-      // Atout retourné (déjà connu / stocké ailleurs)
-      atout = event.suit; // sécurité
-    }
-
-    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-      // Atout libre
-      atout = event.suit;
-    }
-
     return {
       ...game,
-      atout,
+      atout: event.suit,
       preneur: game.currentPlayerIndex,
       state: STATES.DISTRIBUTION_3_FINAL
     };
@@ -185,65 +162,138 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
-
 // ============================================
-// JEU DES PLIS (squelette)
+// JEU DES PLIS
 // ============================================
 
 export function handlePli(game, event) {
-  if (!event || event.type !== "PLAY_CARD") {
-    return game;
+  if (!event) return game;
+
+  // ===============================
+  // PLAY_CARD
+  // ===============================
+  if (event.type === "PLAY_CARD") {
+    const playerId = game.players[game.currentPlayerIndex];
+    const hand = game.hands[playerId];
+    if (!hand) return game;
+
+    const idx = hand.findIndex(
+      (c) => c.suit === event.card.suit && c.value === event.card.value
+    );
+    if (idx === -1) return game;
+
+    const newHand = [...hand];
+    const [playedCard] = newHand.splice(idx, 1);
+
+    const couleurDemandee =
+      game.pli.length === 0
+        ? playedCard.suit
+        : game.couleurDemandee;
+
+    const newPli = [...game.pli, { playerId, card: playedCard }];
+
+    return {
+      ...game,
+      hands: { ...game.hands, [playerId]: newHand },
+      pli: newPli,
+      couleurDemandee,
+      currentPlayerIndex:
+        (game.currentPlayerIndex + 1) % game.players.length
+    };
   }
 
-  const playerId = game.players[game.currentPlayerIndex];
-  const hand = game.hands[playerId];
+  // ===============================
+  // END_PLI
+  // ===============================
+  if (event.type === "END_PLI" && game.pli.length === 4) {
+    let winner = game.pli[0];
+    let bestRank = cardRank(
+      winner.card,
+      game.atout,
+      game.couleurDemandee
+    );
 
-  if (!hand || hand.length === 0) {
-    return game;
+    for (let i = 1; i < game.pli.length; i++) {
+      const entry = game.pli[i];
+      const rank = cardRank(
+        entry.card,
+        game.atout,
+        game.couleurDemandee
+      );
+      if (rank < bestRank) {
+        bestRank = rank;
+        winner = entry;
+      }
+    }
+
+    const winnerIndex = game.players.indexOf(winner.playerId);
+
+    const plisGagnes = {
+      ...game.plisGagnes,
+      [winner.playerId]: [
+        ...(game.plisGagnes[winner.playerId] || []),
+        game.pli
+      ]
+    };
+
+    const allHandsEmpty = game.players.every(
+      (playerId) => game.hands[playerId]?.length === 0
+    );
+
+    return {
+      ...game,
+      plisGagnes,
+      pli: [],
+      couleurDemandee: null,
+      currentPlayerIndex: winnerIndex,
+      state: allHandsEmpty ? STATES.FIN_DE_MANCHE : STATES.PLI_EN_COURS
+    };
   }
 
-  const cardIndex = hand.findIndex(
-    (c) => c.suit === event.card.suit && c.value === event.card.value
-  );
+  return game;
+}
 
-  // Carte non trouvée → action ignorée
-  if (cardIndex === -1) {
-    return game;
+// ============================================
+// FIN DE MANCHE
+// ============================================
+
+export function handleFinDeManche(game, event) {
+  let plisEquipeA = 0;
+  let plisEquipeB = 0;
+
+  for (const playerId in game.plisGagnes) {
+    const index = game.players.indexOf(playerId);
+    const count = game.plisGagnes[playerId].length;
+    if (index === 0 || index === 2) plisEquipeA += count;
+    else plisEquipeB += count;
   }
 
-  // Retirer la carte de la main
-  const newHand = [...hand];
-  const [playedCard] = newHand.splice(cardIndex, 1);
+  const gagnant =
+    plisEquipeA === plisEquipeB
+      ? null
+      : plisEquipeA > plisEquipeB
+        ? "equipeA"
+        : "equipeB";
 
-  // Ajouter la carte au pli
-  const newPli = [...game.pli, {
-    playerId,
-    card: playedCard
-  }];
-
-  // Joueur suivant
-  const nextPlayerIndex =
-    (game.currentPlayerIndex + 1) % game.players.length;
+  const score = { ...game.score };
+  if (gagnant) score[gagnant] += 1;
 
   return {
     ...game,
-    hands: {
-      ...game.hands,
-      [playerId]: newHand
-    },
-    pli: newPli,
-    currentPlayerIndex: nextPlayerIndex
+    state: STATES.TABLE_IDLE,
+    score,
+    deck: [],
+    hands: {},
+    pli: [],
+    plisGagnes: {},
+    couleurDemandee: null,
+    atout: null,
+    preneur: null
   };
 }
 
 
-// ============================================
-// FIN DE MANCHE (squelette)
-// ============================================
 
-export function handleFinDeManche(game, event) {
-  return game;
-}
 
 
 
