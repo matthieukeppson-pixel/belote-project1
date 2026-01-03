@@ -191,8 +191,51 @@ export function handleAnnonce(game, event) {
 // ============================================
 
 export function handlePli(game, event) {
-  return game;
+  if (!event || event.type !== "PLAY_CARD") {
+    return game;
+  }
+
+  const playerId = game.players[game.currentPlayerIndex];
+  const hand = game.hands[playerId];
+
+  if (!hand || hand.length === 0) {
+    return game;
+  }
+
+  const cardIndex = hand.findIndex(
+    (c) => c.suit === event.card.suit && c.value === event.card.value
+  );
+
+  // Carte non trouvée → action ignorée
+  if (cardIndex === -1) {
+    return game;
+  }
+
+  // Retirer la carte de la main
+  const newHand = [...hand];
+  const [playedCard] = newHand.splice(cardIndex, 1);
+
+  // Ajouter la carte au pli
+  const newPli = [...game.pli, {
+    playerId,
+    card: playedCard
+  }];
+
+  // Joueur suivant
+  const nextPlayerIndex =
+    (game.currentPlayerIndex + 1) % game.players.length;
+
+  return {
+    ...game,
+    hands: {
+      ...game.hands,
+      [playerId]: newHand
+    },
+    pli: newPli,
+    currentPlayerIndex: nextPlayerIndex
+  };
 }
+
 
 // ============================================
 // FIN DE MANCHE (squelette)
