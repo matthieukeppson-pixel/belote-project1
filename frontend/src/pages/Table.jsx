@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
+import CardBackRow from "../components/CardBackRow";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch } from "../game/beloteEngine";
@@ -27,41 +28,67 @@ export default function Table() {
 
   return (
     <div className="table-page">
-      <button className="table-back-btn" onClick={() => navigate("/salon")}>
+      {/* ===================== */}
+      {/* RETOUR SALON */}
+      {/* ===================== */}
+      <button
+        className="table-back-btn"
+        onClick={() => navigate("/salon")}
+      >
         ← Retour au salon
       </button>
 
       <div className="table-layout">
+        {/* ===================== */}
+        {/* ZONE TABLE */}
+        {/* ===================== */}
         <div className="table-zone">
-          <div className="table-image" />
+          <div className="table-board">
+            {/* Fond de table */}
+            <div className="table-image" />
 
-          {/* MAIN DU JOUEUR LOCAL (LECTURE SEULE) */}
-          {game && game.hands && game.hands["joueur1"] && (
-            <div className="player-hand">
-              {game.hands["joueur1"].map((card, index) => (
-                <div key={index} className="card">
-                  {card.value} {card.suit}
-                </div>
-              ))}
-            </div>
-          )}
+            {/* ===================== */}
+            {/* JOUEUR EN FACE */}
+            {/* ===================== */}
+            <CardBackRow
+              count={game.hands["joueur2"]?.length}
+              position="top"
+            />
 
-          {/* DEBUG TEMPORAIRE */}
-          {game && (
-            <pre
-              style={{
-                color: "white",
-                fontSize: "12px",
-                marginTop: "10px",
-                maxHeight: "200px",
-                overflow: "auto"
-              }}
-            >
-              {JSON.stringify(game, null, 2)}
-            </pre>
-          )}
+            {/* ===================== */}
+            {/* JOUEUR À GAUCHE */}
+            {/* ===================== */}
+            <CardBackRow
+              count={game.hands["joueur4"]?.length}
+              position="left"
+            />
+
+            {/* ===================== */}
+            {/* JOUEUR À DROITE */}
+            {/* ===================== */}
+            <CardBackRow
+              count={game.hands["joueur3"]?.length}
+              position="right"
+            />
+
+            {/* ===================== */}
+            {/* JOUEUR LOCAL (BAS) */}
+            {/* ===================== */}
+            {game.hands["joueur1"] && (
+              <div className="player-bottom">
+                {game.hands["joueur1"].map((card, index) => (
+                  <div key={index} className="card">
+                    {card.value} {card.suit}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* ===================== */}
+        {/* TCHAT */}
+        {/* ===================== */}
         <div className="table-chat-zone">
           <TableChat tableName="Belote entre amis" />
         </div>
@@ -69,6 +96,9 @@ export default function Table() {
     </div>
   );
 }
+
+
+
 
 
 
