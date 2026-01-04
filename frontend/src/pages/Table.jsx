@@ -48,7 +48,7 @@ export default function Table() {
             <div className="table-image" />
 
             {/* ===================== */}
-            {/* AVATARS JOUEURS (UI SEULEMENT) */}
+            {/* AVATARS JOUEURS (ADVERSES) */}
             {/* ===================== */}
 
             <div className="player-seat top">
@@ -98,17 +98,45 @@ export default function Table() {
             />
 
             {/* ===================== */}
-            {/* JOUEUR LOCAL (BAS) */}
+            {/* JOUEUR LOCAL — MAIN EN ARC */}
             {/* ===================== */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
-                {game.hands["joueur1"].map((card, index) => (
-                  <div key={index} className="card">
-                    {card.value} {card.suit}
-                  </div>
-                ))}
+                {game.hands["joueur1"].map((card, index) => {
+                  const total = game.hands["joueur1"].length; // belote = 8
+                  const center = (total - 1) / 2;             // 3.5
+                  const offset = index - center;
+
+                  const rotation = offset * 4;                // arc léger
+                  const curveY = Math.abs(offset) * 4;        // courbure
+                  const baseLift = -18;                        // lift validé
+
+                  return (
+                    <div
+                      key={index}
+                      className="card"
+                      style={{
+                        transform: `translateY(${baseLift + curveY}px) rotate(${rotation}deg)`
+                      }}
+                    >
+                      {card.value} {card.suit}
+                    </div>
+                  );
+                })}
               </div>
             )}
+
+            {/* ===================== */}
+            {/* AVATAR JOUEUR LOCAL (AU BON ENDROIT) */}
+            {/* ===================== */}
+            <div className="player-seat bottom">
+              <img
+                src="/avatar.png"
+                alt="Avatar joueur"
+                className="player-avatar"
+              />
+              <div className="player-pseudo">joueur1</div>
+            </div>
           </div>
         </div>
 
@@ -122,6 +150,9 @@ export default function Table() {
     </div>
   );
 }
+
+
+
 
 
 
