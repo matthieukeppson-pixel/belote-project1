@@ -151,13 +151,15 @@ export function handleAnnonce(game, event) {
   }
 
   if (event.type === "TAKE_ATOUT") {
-    return {
-      ...game,
-      atout: event.suit,
-      preneur: game.currentPlayerIndex,
-      state: STATES.DISTRIBUTION_3_FINAL
-    };
-  }
+  return {
+    ...game,
+    atout: event.suit,
+    atoutChoisi: true,      // 👈 AJOUT ICI
+    preneur: game.currentPlayerIndex,
+    state: STATES.DISTRIBUTION_3_FINAL
+  };
+}
+
 
   return game;
 }

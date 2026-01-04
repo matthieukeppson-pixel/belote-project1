@@ -42,6 +42,7 @@ export function createInitialGameState() {
     deck: [],
 
     atout: null,
+    atoutChoisi: false,   // 👈 NOUVEAU
     preneur: null,
 
     currentPlayerIndex: 0,
@@ -53,6 +54,7 @@ export function createInitialGameState() {
     }
   };
 }
+
 
 // ============================================
 // DISPATCH CENTRAL (MOTEUR)

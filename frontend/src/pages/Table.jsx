@@ -12,17 +12,21 @@ export default function Table() {
   const [game] = useState(() => {
     let g = createInitialGameState();
 
+    // =====================
+    // JOUEURS
+    // =====================
     g = {
       ...g,
       players: ["joueur1", "joueur2", "joueur3", "joueur4"]
     };
 
+    // =====================
+    // DISTRIBUTION INITIALE (3 / 2)
+    // =====================
     g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 3 cartes
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 2 cartes
 
-    console.log("GAME STATE:", g);
     return g;
   });
 
@@ -48,9 +52,8 @@ export default function Table() {
             <div className="table-image" />
 
             {/* ===================== */}
-            {/* AVATARS JOUEURS (ADVERSES) */}
+            {/* AVATARS JOUEURS ADVERSES */}
             {/* ===================== */}
-
             <div className="player-seat top">
               <img
                 src="/avatar.png"
@@ -79,37 +82,34 @@ export default function Table() {
             </div>
 
             {/* ===================== */}
-            {/* CARTES ADVERSES (LOGIQUE PRÉSENTE, UI MASQUÉE) */}
+            {/* CARTES ADVERSES (MASQUÉES) */}
             {/* ===================== */}
-
             <CardBackRow
               count={game.hands["joueur2"]?.length}
               position="top"
             />
-
             <CardBackRow
               count={game.hands["joueur4"]?.length}
               position="left"
             />
-
             <CardBackRow
               count={game.hands["joueur3"]?.length}
               position="right"
             />
 
             {/* ===================== */}
-            {/* JOUEUR LOCAL — MAIN EN ARC */}
+            {/* MAIN JOUEUR LOCAL (ARC) */}
             {/* ===================== */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
-                  const total = game.hands["joueur1"].length; // belote = 8
-                  const center = (total - 1) / 2;             // 3.5
+                  const total = game.hands["joueur1"].length;
+                  const center = (total - 1) / 2;
                   const offset = index - center;
 
-                  const rotation = offset * 4;                // arc léger
-                  const curveY = Math.abs(offset) * 4;        // courbure
-                  const baseLift = -18;                        // lift validé
+                  const rotation = offset * 4;
+                  const curveY = Math.abs(offset) * 4;
+                  const baseLift = -18;
 
                   return (
                     <div
@@ -127,7 +127,7 @@ export default function Table() {
             )}
 
             {/* ===================== */}
-            {/* AVATAR JOUEUR LOCAL (AU BON ENDROIT) */}
+            {/* AVATAR JOUEUR LOCAL */}
             {/* ===================== */}
             <div className="player-seat bottom">
               <img
@@ -150,6 +150,8 @@ export default function Table() {
     </div>
   );
 }
+
+
 
 
 
