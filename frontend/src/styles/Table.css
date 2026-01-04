@@ -159,6 +159,77 @@
     0 0 0 1px rgba(220, 180, 120, 0.35),
     0 0 20px rgba(160, 30, 30, 0.6);
 }
+/* ============================================
+   JOUEURS ADVERSES (AVATAR + PSEUDO)
+============================================ */
+
+.player-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  z-index: 6; /* au-dessus de la table */
+}
+
+/* --- JOUEUR DROITE : avatar posé sur le bord --- */
+.player-seat.right {
+  right: -22px;              /* avatar posé sur le bord de la table */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* --- JOUEUR GAUCHE : symétrique --- */
+.player-seat.left {
+  left: -22px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* --- JOUEUR HAUT --- */
+.player-seat.top {
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ============================================
+   AVATAR JOUEUR
+============================================ */
+
+.player-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+.table-board .player-avatar {
+  border: 2px solid #c83b3b;
+  background: #7a1f1f;
+
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(200, 60, 60, 0.7);
+}
+
+
+/* ============================================
+   PSEUDO JOUEUR
+============================================ */
+
+.player-pseudo {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f2e6c9;
+
+  padding: 3px 10px;
+  border-radius: 12px;
+
+  background: rgba(20, 10, 10, 0.65);
+  box-shadow: 0 0 0 1px rgba(220, 180, 120, 0.35);
+
+  white-space: nowrap;
+}
 
 
 

@@ -48,24 +48,50 @@ export default function Table() {
             <div className="table-image" />
 
             {/* ===================== */}
-            {/* JOUEUR EN FACE */}
+            {/* AVATARS JOUEURS (UI SEULEMENT) */}
             {/* ===================== */}
+
+            <div className="player-seat top">
+              <img
+                src="/avatar.png"
+                alt="Avatar joueur"
+                className="player-avatar"
+              />
+              <div className="player-pseudo">joueur2</div>
+            </div>
+
+            <div className="player-seat left">
+              <img
+                src="/avatar.png"
+                alt="Avatar joueur"
+                className="player-avatar"
+              />
+              <div className="player-pseudo">joueur4</div>
+            </div>
+
+            <div className="player-seat right">
+              <img
+                src="/avatar.png"
+                alt="Avatar joueur"
+                className="player-avatar"
+              />
+              <div className="player-pseudo">joueur3</div>
+            </div>
+
+            {/* ===================== */}
+            {/* CARTES ADVERSES (LOGIQUE PRÉSENTE, UI MASQUÉE) */}
+            {/* ===================== */}
+
             <CardBackRow
               count={game.hands["joueur2"]?.length}
               position="top"
             />
 
-            {/* ===================== */}
-            {/* JOUEUR À GAUCHE */}
-            {/* ===================== */}
             <CardBackRow
               count={game.hands["joueur4"]?.length}
               position="left"
             />
 
-            {/* ===================== */}
-            {/* JOUEUR À DROITE */}
-            {/* ===================== */}
             <CardBackRow
               count={game.hands["joueur3"]?.length}
               position="right"
@@ -96,6 +122,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
