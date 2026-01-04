@@ -95,7 +95,7 @@
 .player-bottom {
   position: absolute;
 
-  bottom: 33px;               /* ⬆️ +1 cm */
+   bottom: 70px;   /* au lieu de 33px */
   left: 50%;
   transform: translateX(-50%);
 
@@ -112,7 +112,20 @@
 
   z-index: 5;
 }
+.player-seat.bottom {
+  position: absolute;
 
+ bottom: -40px;             /* sous la main */
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  z-index: 6;
+}
 
 
 
