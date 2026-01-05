@@ -5,10 +5,12 @@
 .table-page {
   width: 100vw;
   height: 100vh;
+
   background-image: url("/table_background.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+
   position: relative;
   overflow: hidden;
 }
@@ -21,13 +23,16 @@
   position: absolute;
   top: 20px;
   left: 20px;
+
   padding: 8px 16px;
   border-radius: 20px;
   border: 1px solid rgba(220, 180, 120, 0.8);
+
   background: linear-gradient(180deg, #7a1f1f, #5a1414);
   color: white;
   font-weight: 600;
   cursor: pointer;
+
   box-shadow: 0 0 10px rgba(180, 40, 40, 0.6);
   z-index: 10;
 }
@@ -39,9 +44,11 @@
 .table-layout {
   width: 100%;
   height: 100%;
+
   display: flex;
   justify-content: center;
   align-items: center;
+
   padding: 3%;
   box-sizing: border-box;
 }
@@ -74,6 +81,7 @@
 .table-image {
   width: 100%;
   height: 100%;
+
   background-image: url("/table_vero.png");
   background-size: contain;
   background-repeat: no-repeat;
@@ -81,7 +89,7 @@
 }
 
 /* ============================================
-   POSITIONS DES JOUEURS (AVATARS)
+   AVATARS JOUEURS
 ============================================ */
 
 .player-seat {
@@ -90,62 +98,49 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  pointer-events: none;
+  z-index: 6;
 }
 
-/* Haut */
 .player-seat.top {
   top: -10px;
   left: 50%;
   transform: translateX(-50%);
 }
 
-/* Bas */
 .player-seat.bottom {
-  bottom: -18px;   /* ⬇️ légèrement plus bas */
+  bottom: -18px; /* validé */
   left: 50%;
   transform: translateX(-50%);
 }
 
-
-/* Gauche */
 .player-seat.left {
   left: -10px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* Droite */
 .player-seat.right {
   right: -10px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* ============================================
-   AVATARS
-============================================ */
-
 .player-avatar {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: 2px solid rgba(220, 180, 120, 0.8);
-  background: #2a2a2a;
+
+  border: 2px solid #c83b3b;
+  background: #7a1f1f;
+
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.6),
-    0 6px 14px rgba(0, 0, 0, 0.7);
+    0 0 8px rgba(200, 60, 60, 0.7);
 }
-
-/* ============================================
-   PSEUDOS
-============================================ */
 
 .player-pseudo {
   font-size: 13px;
-  font-weight: 600;
-  color: #f2e6c9;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  color: #f0e6d2;
 }
 
 /* ============================================
@@ -157,92 +152,93 @@
   bottom: 70px;
   left: 50%;
   transform: translateX(-50%);
+
   display: flex;
   gap: 14px;
+
   padding: 12px 18px;
   border-radius: 18px;
+
   background: rgba(20, 10, 10, 0.65);
   box-shadow:
     0 0 0 1px rgba(220, 180, 120, 0.35),
     0 10px 25px rgba(0, 0, 0, 0.6);
+
   z-index: 5;
 }
 
 /* ============================================
-   CARTES JOUEUR LOCAL
+   CARTES (DEV / MOCK)
 ============================================ */
 
 .card {
   width: 64px;
   height: 96px;
+
   background: white;
   border-radius: 8px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-size: 13px;
   font-weight: bold;
   color: black;
+
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
 }
 
 /* ============================================
-   CARTES ADVERSES — POSITIONNEMENT
+   UI ANNONCE D’ATOUT
 ============================================ */
 
-.cardback-slot {
+.atout-panel {
   position: absolute;
-}
-
-.cardback-slot.top {
-  top: 40px;
+  top: calc(50% + 50px); /* panneau descendu */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
+
+  background: rgba(20, 10, 10, 0.85);
+  padding: 20px 26px;
+  border-radius: 18px;
+
+  box-shadow:
+    0 0 0 1px rgba(220, 180, 120, 0.35),
+    0 10px 25px rgba(0, 0, 0, 0.6);
+
+  z-index: 20;
+  text-align: center;
 }
 
-.cardback-slot.left {
-  left: 36px;
-  top: 50%;
-  transform: translateY(-50%);
+.atout-title {
+  color: #f0e6d2;
+  font-weight: 600;
+  margin-bottom: 14px;
 }
 
-.cardback-slot.right {
-  right: 36px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.cardback-row {
+.atout-actions {
   display: flex;
-  gap: 8px;
+  gap: 14px;
+  justify-content: center;
 }
 
-.cardback-row.left {
-  transform: rotate(90deg);
-  transform-origin: center;
+.atout-btn {
+  padding: 8px 16px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.cardback-row.right {
-  transform: rotate(-90deg);
-  transform-origin: center;
+.atout-btn.take {
+  background: #7a1f1f;
+  color: white;
 }
 
-.card-back {
-  width: 60px;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
-
-/* ============================================
-   CARTES ADVERSES — MASQUAGE VISUEL
-============================================ */
-
-.cardback-slot.top .cardback-row,
-.cardback-slot.left .cardback-row,
-.cardback-slot.right .cardback-row {
-  opacity: 0;
-  pointer-events: none;
+.atout-btn.pass {
+  background: #333;
+  color: white;
 }
 
 /* ============================================
@@ -252,15 +248,19 @@
 .table-chat-zone {
   flex: 0 0 27%;
   height: 100%;
+
   margin-left: 3%;
+
   background: rgba(60, 0, 0, 0.55);
   border-radius: 20px;
   padding: 20px;
   box-sizing: border-box;
+
   box-shadow:
     0 0 0 1px rgba(220, 180, 120, 0.35),
     0 0 20px rgba(160, 30, 30, 0.6);
 }
+
 
 
 
