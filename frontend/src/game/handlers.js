@@ -153,14 +153,34 @@ export function handleAnnonce(game, event) {
   }
 
   if (event.type === "TAKE_ATOUT") {
-    return {
-      ...game,
-      atout: game.atoutPropose.suit,
-      atoutPropose: null,          // ✅ disparaît de la table
-      atoutChoisi: true,
-      preneur: game.currentPlayerIndex,
-      state: STATES.DISTRIBUTION_3_FINAL
-    };
+
+    // ===== TOUR 1 =====
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
+      return {
+        ...game,
+        atout: game.atoutPropose.suit,
+        atoutPropose: null,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
+    }
+
+    // ===== TOUR 2 =====
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+
+      if (!event.suit) return game;
+      if (event.suit === game.atoutPropose.suit) return game;
+
+      return {
+        ...game,
+        atout: event.suit,
+        atoutPropose: null,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
+    }
   }
 
   return game;
@@ -217,6 +237,7 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
+
 
 
 
