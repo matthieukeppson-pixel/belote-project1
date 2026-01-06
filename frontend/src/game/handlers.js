@@ -108,8 +108,30 @@ export function handleDistribution(game, event, count) {
     };
   }
 
+  // ===== DISTRIBUTION FINALE CORRIGÉE =====
   if (game.state === STATES.DISTRIBUTION_3_FINAL) {
-    return { ...game, state: STATES.PLI_EN_COURS, deck, hands };
+    const preneurId = game.players[game.preneur];
+
+    // Donner 3 cartes à tous, sauf preneur (2 cartes)
+    for (let i = 0; i < game.players.length; i++) {
+      const playerId = game.players[i];
+      const cardsToGive = i === game.preneur ? 2 : 3;
+
+      for (let c = 0; c < cardsToGive; c++) {
+        hands[playerId] = [...hands[playerId], deck.shift()];
+      }
+    }
+
+    // Donner la carte retournée au preneur
+    hands[preneurId] = [...hands[preneurId], game.atoutPropose];
+
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      atoutPropose: null
+    };
   }
 
   return game;
@@ -159,7 +181,6 @@ export function handleAnnonce(game, event) {
       return {
         ...game,
         atout: game.atoutPropose.suit,
-        atoutPropose: null,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
@@ -168,14 +189,12 @@ export function handleAnnonce(game, event) {
 
     // ===== TOUR 2 =====
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-
       if (!event.suit) return game;
       if (event.suit === game.atoutPropose.suit) return game;
 
       return {
         ...game,
         atout: event.suit,
-        atoutPropose: null,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
@@ -237,6 +256,8 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
+
+
 
 
 
