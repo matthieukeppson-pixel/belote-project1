@@ -1,6 +1,5 @@
 // ============================================
 // BELOTE ENGINE — MACHINE À ÉTATS (V1)
-// Aucun gameplay ici, uniquement la structure
 // ============================================
 
 import {
@@ -30,7 +29,7 @@ export const STATES = {
 };
 
 // ============================================
-// ÉTAT INITIAL D’UNE PARTIE
+// ÉTAT INITIAL
 // ============================================
 
 export function createInitialGameState() {
@@ -42,7 +41,8 @@ export function createInitialGameState() {
     deck: [],
 
     atout: null,
-    atoutChoisi: false,   // 👈 NOUVEAU
+    atoutPropose: null,     // ✅ AJOUT
+    atoutChoisi: false,
     preneur: null,
 
     currentPlayerIndex: 0,
@@ -55,9 +55,8 @@ export function createInitialGameState() {
   };
 }
 
-
 // ============================================
-// DISPATCH CENTRAL (MOTEUR)
+// DISPATCH
 // ============================================
 
 export function dispatch(game, event) {
@@ -85,8 +84,8 @@ export function dispatch(game, event) {
       return handleFinDeManche(game, event);
 
     default:
-      console.warn("État inconnu :", game.state);
       return game;
   }
 }
+
 
