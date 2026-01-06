@@ -4,12 +4,23 @@ import TableChat from "../components/TableChat";
 import CardBackRow from "../components/CardBackRow";
 import "../styles/Table.css";
 
-import { createInitialGameState, dispatch } from "../game/beloteEngine";
+import {
+  createInitialGameState,
+  dispatch,
+  STATES
+} from "../game/beloteEngine";
+
+const SUITS = ["hearts", "diamonds", "clubs", "spades"];
+
+function getAvailableSuits(atoutPropose) {
+  if (!atoutPropose) return [];
+  return SUITS.filter((s) => s !== atoutPropose.suit);
+}
 
 export default function Table() {
   const navigate = useNavigate();
 
-  const [game] = useState(() => {
+  const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
     g = {
@@ -24,6 +35,18 @@ export default function Table() {
 
     return g;
   });
+
+  // ===============================
+  // ACTIONS UI
+  // ===============================
+
+  function handlePass() {
+    setGame((g) => dispatch(g, { type: "PASS" }));
+  }
+
+  function handleTakeAtout(suit) {
+    setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }));
+  }
 
   return (
     <div className="table-page">
@@ -45,65 +68,46 @@ export default function Table() {
           <div className="table-board">
             {/* Fond de table */}
             <div className="table-image" />
+{game.atoutPropose && (
+  <div className="atout-card">
+    <div className="label">Atout proposé</div>
+    <div className="symbol">
+      {game.atoutPropose.value} {game.atoutPropose.suit}
+    </div>
+  </div>
+)}
 
             {/* ===================== */}
             {/* AVATARS JOUEURS */}
             {/* ===================== */}
 
             <div className="player-seat top">
-              <img
-                src="/avatar.png"
-                alt="Avatar joueur"
-                className="player-avatar"
-              />
+              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
               <div className="player-pseudo">joueur2</div>
             </div>
 
             <div className="player-seat left">
-              <img
-                src="/avatar.png"
-                alt="Avatar joueur"
-                className="player-avatar"
-              />
+              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
               <div className="player-pseudo">joueur4</div>
             </div>
 
             <div className="player-seat right">
-              <img
-                src="/avatar.png"
-                alt="Avatar joueur"
-                className="player-avatar"
-              />
+              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
               <div className="player-pseudo">joueur3</div>
             </div>
 
             <div className="player-seat bottom">
-              <img
-                src="/avatar.png"
-                alt="Avatar joueur"
-                className="player-avatar"
-              />
+              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
               <div className="player-pseudo">joueur1</div>
             </div>
 
             {/* ===================== */}
-            {/* CARTES ADVERSES (MASQUÉES) */}
+            {/* CARTES ADVERSES */}
             {/* ===================== */}
 
-            <CardBackRow
-              count={game.hands["joueur2"]?.length}
-              position="top"
-            />
-
-            <CardBackRow
-              count={game.hands["joueur4"]?.length}
-              position="left"
-            />
-
-            <CardBackRow
-              count={game.hands["joueur3"]?.length}
-              position="right"
-            />
+            <CardBackRow count={game.hands["joueur2"]?.length} position="top" />
+            <CardBackRow count={game.hands["joueur4"]?.length} position="left" />
+            <CardBackRow count={game.hands["joueur3"]?.length} position="right" />
 
             {/* ===================== */}
             {/* MAIN JOUEUR LOCAL */}
@@ -135,14 +139,40 @@ export default function Table() {
             )}
 
             {/* ===================== */}
-            {/* PANNEAU ATTOUT (TEST UI) */}
+            {/* PANNEAU ANNONCE ATTOUT */}
             {/* ===================== */}
-            {game.state === "ANNOUNCE_ATOUT_TOUR_1" && (
+            {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
+
                 <div className="atout-actions">
-                  <button className="atout-btn take">Prendre</button>
-                  <button className="atout-btn pass">Passer</button>
+                  {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                    <button
+                      className="atout-btn take"
+                      onClick={() => handleTakeAtout()}
+                    >
+                      Prendre
+                    </button>
+                  )}
+
+                  {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+                    getAvailableSuits(game.atoutPropose).map((suit) => (
+                      <button
+                        key={suit}
+                        className="atout-btn take"
+                        onClick={() => handleTakeAtout(suit)}
+                      >
+                        Prendre {suit}
+                      </button>
+                    ))}
+
+                  <button
+                    className="atout-btn pass"
+                    onClick={handlePass}
+                  >
+                    Passer
+                  </button>
                 </div>
               </div>
             )}
@@ -159,6 +189,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
