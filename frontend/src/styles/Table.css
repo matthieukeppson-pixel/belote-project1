@@ -300,6 +300,29 @@
 .atout-card .symbol {
   font-size: 28px;
 }
+/* ===================== */
+/* PLI AU CENTRE */
+/* ===================== */
+
+.pli-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  pointer-events: none;
+  z-index: 30; /* 🔑 AU-DESSUS DE LA TABLE */
+}
+
+
+.pli-card {
+  background: white;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
 
 
 

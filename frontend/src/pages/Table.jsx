@@ -65,6 +65,24 @@ export default function Table() {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+{/* ===================== */}
+{/* PLI AU CENTRE */}
+{/* ===================== */}
+{game.pli && game.pli.length > 0 && (
+  <div className="pli-center">
+    {game.pli.map((entry, index) => (
+      <div
+        key={index}
+        className="pli-card"
+        style={{
+          transform: `translate(${index * 18}px, ${-index * 6}px)`
+        }}
+      >
+        {entry.card.value} {entry.card.suit}
+      </div>
+    ))}
+  </div>
+)}
 
             {/* ===================== */}
             {/* CARTE D’ATOUT PROPOSÉE */}
@@ -116,11 +134,8 @@ export default function Table() {
                     <div
                       key={index}
                       className="card"
-                      onClick={() => {
-                        if (game.state !== STATES.PLI_EN_COURS) return;
-                        if (game.currentPlayerIndex !== 0) return;
-                        handlePlayCard(card);
-                      }}
+                     onClick={() => handlePlayCard(card)}
+
                       style={{
                         transform: `translateY(${-18 + Math.abs(offset) * 4}px) rotate(${offset * 4}deg)`
                       }}

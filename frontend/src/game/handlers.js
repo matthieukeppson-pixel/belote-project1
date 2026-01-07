@@ -236,7 +236,8 @@ export function handlePli(game, event) {
   if (!event) return game;
 
   if (event.type === "PLAY_CARD") {
-    const playerId = game.players[game.currentPlayerIndex];
+   const playerId = "joueur1";
+
     const hand = game.hands[playerId];
 
     const idx = hand.findIndex(
