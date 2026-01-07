@@ -10,13 +10,6 @@ import {
   STATES
 } from "../game/beloteEngine";
 
-const SUITS = ["hearts", "diamonds", "clubs", "spades"];
-
-function getAvailableSuits(atoutPropose) {
-  if (!atoutPropose) return [];
-  return SUITS.filter((s) => s !== atoutPropose.suit);
-}
-
 export default function Table() {
   const navigate = useNavigate();
 
@@ -28,10 +21,10 @@ export default function Table() {
       players: ["joueur1", "joueur2", "joueur3", "joueur4"]
     };
 
+    // ⚠️ ORDRE OBLIGATOIRE
     g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 3 cartes
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 2 cartes + carte retournée
 
     return g;
   });
@@ -40,12 +33,17 @@ export default function Table() {
   // ACTIONS UI
   // ===============================
 
-  function handlePass() {
-    setGame((g) => dispatch(g, { type: "PASS" }));
+  function handleTakeAtout() {
+    // ✅ UNE SEULE INTENTION
+    setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
   }
 
-  function handleTakeAtout(suit) {
-    setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }));
+  function handlePass() {
+    setGame(g => dispatch(g, { type: "PASS" }));
+  }
+
+  function handlePlayCard(card) {
+    setGame(g => dispatch(g, { type: "PLAY_CARD", card }));
   }
 
   return (
@@ -66,52 +64,47 @@ export default function Table() {
         {/* ===================== */}
         <div className="table-zone">
           <div className="table-board">
-            {/* Fond de table */}
             <div className="table-image" />
-{game.atoutPropose && (
-  <div className="atout-card">
-    <div className="label">Atout proposé</div>
-    <div className="symbol">
-      {game.atoutPropose.value} {game.atoutPropose.suit}
-    </div>
-  </div>
-)}
 
             {/* ===================== */}
-            {/* AVATARS JOUEURS */}
+            {/* CARTE D’ATOUT PROPOSÉE */}
             {/* ===================== */}
+            {game.atoutPropose && (
+              <div className="atout-card">
+                <div className="label">Atout proposé</div>
+                <div className="symbol">
+                  {game.atoutPropose.value} {game.atoutPropose.suit}
+                </div>
+              </div>
+            )}
 
+            {/* AVATARS */}
             <div className="player-seat top">
-              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
+              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
               <div className="player-pseudo">joueur2</div>
             </div>
 
             <div className="player-seat left">
-              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
+              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
               <div className="player-pseudo">joueur4</div>
             </div>
 
             <div className="player-seat right">
-              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
+              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
               <div className="player-pseudo">joueur3</div>
             </div>
 
             <div className="player-seat bottom">
-              <img src="/avatar.png" alt="Avatar joueur" className="player-avatar" />
+              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
               <div className="player-pseudo">joueur1</div>
             </div>
 
-            {/* ===================== */}
             {/* CARTES ADVERSES */}
-            {/* ===================== */}
-
             <CardBackRow count={game.hands["joueur2"]?.length} position="top" />
             <CardBackRow count={game.hands["joueur4"]?.length} position="left" />
             <CardBackRow count={game.hands["joueur3"]?.length} position="right" />
 
-            {/* ===================== */}
-            {/* MAIN JOUEUR LOCAL */}
-            {/* ===================== */}
+            {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -119,16 +112,17 @@ export default function Table() {
                   const center = (total - 1) / 2;
                   const offset = index - center;
 
-                  const rotation = offset * 4;
-                  const curveY = Math.abs(offset) * 4;
-                  const baseLift = -18;
-
                   return (
                     <div
                       key={index}
                       className="card"
+                      onClick={() => {
+                        if (game.state !== STATES.PLI_EN_COURS) return;
+                        if (game.currentPlayerIndex !== 0) return;
+                        handlePlayCard(card);
+                      }}
                       style={{
-                        transform: `translateY(${baseLift + curveY}px) rotate(${rotation}deg)`
+                        transform: `translateY(${-18 + Math.abs(offset) * 4}px) rotate(${offset * 4}deg)`
                       }}
                     >
                       {card.value} {card.suit}
@@ -138,39 +132,16 @@ export default function Table() {
               </div>
             )}
 
-            {/* ===================== */}
-            {/* PANNEAU ANNONCE ATTOUT */}
-            {/* ===================== */}
+            {/* PANNEAU ATTOUT */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
-
                 <div className="atout-actions">
-                  {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-                    <button
-                      className="atout-btn take"
-                      onClick={() => handleTakeAtout()}
-                    >
-                      Prendre
-                    </button>
-                  )}
-
-                  {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
-                    getAvailableSuits(game.atoutPropose).map((suit) => (
-                      <button
-                        key={suit}
-                        className="atout-btn take"
-                        onClick={() => handleTakeAtout(suit)}
-                      >
-                        Prendre {suit}
-                      </button>
-                    ))}
-
-                  <button
-                    className="atout-btn pass"
-                    onClick={handlePass}
-                  >
+                  <button className="atout-btn take" onClick={handleTakeAtout}>
+                    Prendre
+                  </button>
+                  <button className="atout-btn pass" onClick={handlePass}>
                     Passer
                   </button>
                 </div>
@@ -179,9 +150,6 @@ export default function Table() {
           </div>
         </div>
 
-        {/* ===================== */}
-        {/* TCHAT */}
-        {/* ===================== */}
         <div className="table-chat-zone">
           <TableChat tableName="Belote entre amis" />
         </div>
@@ -189,6 +157,12 @@ export default function Table() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

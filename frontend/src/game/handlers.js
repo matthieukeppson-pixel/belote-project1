@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { STATES } from "./beloteEngine";
 
 // ============================================
@@ -28,12 +27,6 @@ function shuffle(deck) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
-}
-
-function cardRank(card, atout, couleurDemandee) {
-  if (card.suit === atout) return ATTOUT_ORDER.indexOf(card.value);
-  if (card.suit === couleurDemandee) return NORMAL_ORDER.indexOf(card.value);
-  return Infinity;
 }
 
 // ============================================
@@ -80,6 +73,55 @@ export function handleDistribution(game, event, count) {
     if (!hands[player]) hands[player] = [];
   }
 
+  // ============================================
+  // DISTRIBUTION FINALE BEL0TE (2 + retournée pour preneur, 3 pour les autres)
+  // ============================================
+  if (game.state === STATES.DISTRIBUTION_3_FINAL) {
+    // preneur = index du joueur qui a pris (stocké comme index)
+    const preneurIndex = game.preneur;
+    const preneurId =
+      typeof preneurIndex === "number" ? game.players[preneurIndex] : null;
+
+    // sécurité : si preneur absent, on ne bouge pas
+    if (!preneurId) return game;
+
+    // Carte retournée (doit exister tant qu’on est en distribution finale)
+    const turned = game.atoutPropose;
+
+    // Le donneur distribue en commençant à sa droite
+    let index = (game.dealerIndex + 1) % 4;
+
+    // 3 cartes à tous sauf preneur (qui n’en reçoit que 2)
+    for (let i = 0; i < game.players.length; i++) {
+      const playerId = game.players[index];
+
+      const giveCount = playerId === preneurId ? 2 : 3;
+
+      for (let k = 0; k < giveCount; k++) {
+        hands[playerId] = [...hands[playerId], deck.shift()];
+      }
+
+      index = (index + 1) % 4;
+    }
+
+    // Le preneur reçoit la carte retournée
+    if (turned) {
+      hands[preneurId] = [...hands[preneurId], turned];
+    }
+
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      atoutPropose: null // elle a été donnée au preneur
+    };
+  }
+
+  // ============================================
+  // DISTRIBUTIONS CLASSIQUES (3 puis 2)
+  // ============================================
+
   let index = (game.dealerIndex + 1) % 4;
 
   for (let r = 0; r < count; r++) {
@@ -97,7 +139,7 @@ export function handleDistribution(game, event, count) {
   }
 
   if (game.state === STATES.DISTRIBUTION_2) {
-    const atoutPropose = deck.shift(); // ✅ CARTE RETOURNÉE
+    const atoutPropose = deck.shift();
 
     return {
       ...game,
@@ -105,32 +147,6 @@ export function handleDistribution(game, event, count) {
       deck,
       hands,
       atoutPropose
-    };
-  }
-
-  // ===== DISTRIBUTION FINALE CORRIGÉE =====
-  if (game.state === STATES.DISTRIBUTION_3_FINAL) {
-    const preneurId = game.players[game.preneur];
-
-    // Donner 3 cartes à tous, sauf preneur (2 cartes)
-    for (let i = 0; i < game.players.length; i++) {
-      const playerId = game.players[i];
-      const cardsToGive = i === game.preneur ? 2 : 3;
-
-      for (let c = 0; c < cardsToGive; c++) {
-        hands[playerId] = [...hands[playerId], deck.shift()];
-      }
-    }
-
-    // Donner la carte retournée au preneur
-    hands[preneurId] = [...hands[preneurId], game.atoutPropose];
-
-    return {
-      ...game,
-      state: STATES.PLI_EN_COURS,
-      deck,
-      hands,
-      atoutPropose: null
     };
   }
 
@@ -175,16 +191,19 @@ export function handleAnnonce(game, event) {
   }
 
   if (event.type === "TAKE_ATOUT") {
-
     // ===== TOUR 1 =====
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
-      return {
+      const ng = {
         ...game,
         atout: game.atoutPropose.suit,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
+        // ⚠️ on garde atoutPropose ici, car elle doit être donnée au preneur
       };
+
+      // 🔑 distribution finale automatique
+      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
 
     // ===== TOUR 2 =====
@@ -192,13 +211,17 @@ export function handleAnnonce(game, event) {
       if (!event.suit) return game;
       if (event.suit === game.atoutPropose.suit) return game;
 
-      return {
+      const ng = {
         ...game,
         atout: event.suit,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
+        // ⚠️ on garde atoutPropose ici aussi
       };
+
+      // 🔑 distribution finale automatique
+      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
   }
 
@@ -217,7 +240,7 @@ export function handlePli(game, event) {
     const hand = game.hands[playerId];
 
     const idx = hand.findIndex(
-      c => c.suit === event.card.suit && c.value === event.card.value
+      (c) => c.suit === event.card.suit && c.value === event.card.value
     );
     if (idx === -1) return game;
 
@@ -256,6 +279,8 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
+
+
 
 
 
