@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
-import CardBackRow from "../components/CardBackRow";
+
 import "../styles/Table.css";
 
 import {
@@ -99,10 +99,8 @@ export default function Table() {
               <div className="player-pseudo">joueur1</div>
             </div>
 
-            {/* CARTES ADVERSES */}
-            <CardBackRow count={game.hands["joueur2"]?.length} position="top" />
-            <CardBackRow count={game.hands["joueur4"]?.length} position="left" />
-            <CardBackRow count={game.hands["joueur3"]?.length} position="right" />
+            
+            
 
             {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
