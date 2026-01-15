@@ -301,6 +301,83 @@
   font-size: 28px;
 }
 
+/* ============================================
+   PLI — PRÉSENCE VISUELLE FORTE
+============================================ */
+
+.pli-zone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 14px;
+  z-index: 20;
+}
+.pli-zone {
+  pointer-events: none;
+}
+
+.pli-card {
+  padding: 14px 18px;
+  background: #ffffff;
+  border-radius: 14px;
+
+  font-weight: 800;
+  font-size: 18px;
+  color: #111;
+
+  box-shadow:
+    0 0 0 3px rgba(220, 180, 120, 0.9),
+    0 14px 28px rgba(0, 0, 0, 0.75);
+
+  transform: scale(1.2);
+}
+
+
+/* Origine visuelle de la carte jouée */
+.from-joueur1 {
+  transform: translateY(22px) scale(1.05);
+}
+
+.from-joueur2 {
+  transform: translateY(-22px) scale(1.05);
+}
+
+.from-joueur3 {
+  transform: translateX(22px) scale(1.05);
+}
+
+.from-joueur4 {
+  transform: translateX(-22px) scale(1.05);
+}
+
+/* ============================================
+   JOUEUR ACTIF — INDICATEUR
+============================================ */
+
+.active-player-indicator {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 6px 14px;
+  background: rgba(20, 10, 10, 0.85);
+  color: #f0e6d2;
+
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+
+  box-shadow:
+    0 0 0 1px rgba(220, 180, 120, 0.35),
+    0 6px 14px rgba(0, 0, 0, 0.6);
+
+  z-index: 30;
+}
+
+
 
 
 

@@ -3,11 +3,7 @@ import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
 
-import {
-  createInitialGameState,
-  dispatch,
-  STATES
-} from "../game/beloteEngine";
+import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 
 export default function Table() {
   const navigate = useNavigate();
@@ -66,12 +62,7 @@ export default function Table() {
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
 
-    console.log(
-      "REACT CLICK -> PLAY_CARD",
-      { cardKey },
-      "STATE:",
-      game.state
-    );
+    console.log("REACT CLICK -> PLAY_CARD", { cardKey }, "STATE:", game.state);
 
     setGame(g =>
       dispatch(g, {
@@ -80,16 +71,17 @@ export default function Table() {
       })
     );
   }
+const activePlayer = game.players[game.currentPlayerIndex];
 
-  const isMyTurn =
-    game.players[game.currentPlayerIndex] === "joueur1";
+  const isMyTurn = game.players[game.currentPlayerIndex] === "joueur1";
+{/* JOUEUR ACTIF */}
+<div className="active-player-indicator">
+  Au tour de : <strong>{activePlayer}</strong>
+</div>
 
   return (
     <div className="table-page">
-      <button
-        className="table-back-btn"
-        onClick={() => navigate("/salon")}
-      >
+      <button className="table-back-btn" onClick={() => navigate("/salon")}>
         ← Retour au salon
       </button>
 
@@ -97,6 +89,18 @@ export default function Table() {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+
+            {/* PLI EN COURS (AFFICHAGE SIMPLE) */}
+            {game.pli && game.pli.length > 0 && (
+              <div className="pli-zone">
+                {game.pli.map((play, index) => (
+                 <div key={index} className={`pli-card from-${play.playerId}`}>
+
+                    {play.card.value} {play.card.suit}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* CARTE D’ATOUT PROPOSÉE */}
             {game.atoutPropose && (
@@ -141,9 +145,7 @@ export default function Table() {
                     <div
                       key={`${card.suit}-${card.value}`}
                       className={`card ${!isMyTurn ? "disabled" : ""}`}
-                      onClick={
-                        isMyTurn ? () => handlePlayCard(card) : undefined
-                      }
+                      onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
                       style={{
                         transform: `translateY(${-18 + Math.abs(offset) * 4}px)
                           rotate(${offset * 4}deg)`
@@ -181,6 +183,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
