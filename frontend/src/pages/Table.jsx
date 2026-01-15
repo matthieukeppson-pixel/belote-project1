@@ -59,8 +59,6 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-            
-
             {/* PLI */}
             {game.pli?.length > 0 && (
               <div className="pli-zone">
@@ -94,15 +92,13 @@ export default function Table() {
                   className="player-avatar"
                 />
 
-                {activePlayer === player && (
-                  <div className="active-dot" />
-                )}
+                {activePlayer === player && <div className="active-dot" />}
 
                 <div className="player-pseudo">{player}</div>
               </div>
             ))}
 
-            {/* MAIN JOUEUR */}
+            {/* MAIN JOUEUR — ÉVENTAIL */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -117,11 +113,16 @@ export default function Table() {
                       onClick={
                         isMyTurn ? () => handlePlayCard(card) : undefined
                       }
-                      style={{
-                        transform: `translateY(${
-                          -18 + Math.abs(offset) * 4
-                        }px) rotate(${offset * 4}deg)`
-                      }}
+                    style={{
+  transform: `
+    translateX(${offset * -28}px)
+    translateY(${-8 + Math.abs(offset) * 2}px)
+    rotate(${offset * 4}deg)
+  `,
+  transformOrigin: "bottom center",
+  zIndex: 100 + index
+}}
+
                     >
                       {card.value} {card.suit}
                     </div>
@@ -155,6 +156,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
