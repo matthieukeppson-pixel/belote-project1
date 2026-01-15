@@ -382,3 +382,22 @@
 
   z-index: 10;
 }
+/* ============================================
+   PLI — MICRO-ANIMATION (FADE + ZOOM)
+============================================ */
+
+@keyframes pli-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Animation appliquée à chaque carte du pli */
+.pli-card {
+  animation: pli-appear 180ms ease-out;
+}
