@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
-
 import "../styles/Table.css";
 
 import {
@@ -29,12 +28,34 @@ export default function Table() {
     return g;
   });
 
+  // =====================================================
+  // 🔍 TRACEUR GLOBAL DE CLIC — DIAGNOSTIC
+  // =====================================================
+  useEffect(() => {
+    function handleGlobalClick(e) {
+      console.log("CLIC GLOBAL →", e.target);
+    }
+
+    document.addEventListener("click", handleGlobalClick);
+    return () => {
+      document.removeEventListener("click", handleGlobalClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log(
+      "🔄 RENDER TABLE — STATE:",
+      game.state,
+      "MAIN joueur1 =",
+      game.hands["joueur1"]?.map(c => `${c.suit}-${c.value}`)
+    );
+  }, [game]);
+
   // ===============================
-  // ACTIONS UI
+  // ACTIONS UI (NETTOYÉES)
   // ===============================
 
   function handleTakeAtout() {
-    // ✅ UNE SEULE INTENTION
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
   }
 
@@ -43,14 +64,28 @@ export default function Table() {
   }
 
   function handlePlayCard(card) {
-    setGame(g => dispatch(g, { type: "PLAY_CARD", card }));
+    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+
+    console.log(
+      "REACT CLICK -> PLAY_CARD",
+      { cardKey },
+      "STATE:",
+      game.state
+    );
+
+    setGame(g =>
+      dispatch(g, {
+        type: "PLAY_CARD",
+        cardKey
+      })
+    );
   }
+
+  const isMyTurn =
+    game.players[game.currentPlayerIndex] === "joueur1";
 
   return (
     <div className="table-page">
-      {/* ===================== */}
-      {/* RETOUR SALON */}
-      {/* ===================== */}
       <button
         className="table-back-btn"
         onClick={() => navigate("/salon")}
@@ -59,16 +94,11 @@ export default function Table() {
       </button>
 
       <div className="table-layout">
-        {/* ===================== */}
-        {/* ZONE TABLE */}
-        {/* ===================== */}
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
 
-            {/* ===================== */}
             {/* CARTE D’ATOUT PROPOSÉE */}
-            {/* ===================== */}
             {game.atoutPropose && (
               <div className="atout-card">
                 <div className="label">Atout proposé</div>
@@ -99,9 +129,6 @@ export default function Table() {
               <div className="player-pseudo">joueur1</div>
             </div>
 
-            
-            
-
             {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
@@ -112,15 +139,14 @@ export default function Table() {
 
                   return (
                     <div
-                      key={index}
-                      className="card"
-                      onClick={() => {
-                        if (game.state !== STATES.PLI_EN_COURS) return;
-                        if (game.currentPlayerIndex !== 0) return;
-                        handlePlayCard(card);
-                      }}
+                      key={`${card.suit}-${card.value}`}
+                      className={`card ${!isMyTurn ? "disabled" : ""}`}
+                      onClick={
+                        isMyTurn ? () => handlePlayCard(card) : undefined
+                      }
                       style={{
-                        transform: `translateY(${-18 + Math.abs(offset) * 4}px) rotate(${offset * 4}deg)`
+                        transform: `translateY(${-18 + Math.abs(offset) * 4}px)
+                          rotate(${offset * 4}deg)`
                       }}
                     >
                       {card.value} {card.suit}
@@ -155,6 +181,11 @@ export default function Table() {
     </div>
   );
 }
+
+
+
+
+
 
 
 

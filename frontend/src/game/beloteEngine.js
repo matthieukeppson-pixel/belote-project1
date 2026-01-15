@@ -29,6 +29,25 @@ export const STATES = {
 };
 
 // ============================================
+// GATE GLOBAL — ACTIONS AUTORISÉES PAR ÉTAT
+// ============================================
+
+const ALLOWED_EVENTS_BY_STATE = {
+  [STATES.TABLE_IDLE]: ["TABLE_READY"],
+
+  [STATES.DISTRIBUTION_3]: ["DISTRIBUTE_CARDS"],
+  [STATES.DISTRIBUTION_2]: ["DISTRIBUTE_CARDS"],
+  [STATES.DISTRIBUTION_3_FINAL]: ["DISTRIBUTE_CARDS"],
+
+  [STATES.ANNOUNCE_ATOUT_TOUR_1]: ["TAKE_ATOUT", "PASS"],
+  [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS"],
+
+  [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
+
+  [STATES.FIN_DE_MANCHE]: []
+};
+
+// ============================================
 // ÉTAT INITIAL
 // ============================================
 
@@ -41,7 +60,7 @@ export function createInitialGameState() {
     deck: [],
 
     atout: null,
-    atoutPropose: null,     // ✅ AJOUT
+    atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
 
@@ -60,6 +79,16 @@ export function createInitialGameState() {
 // ============================================
 
 export function dispatch(game, event) {
+  // 🔒 GATE GLOBAL — REFUS DES ACTIONS HORS CONTEXTE
+  if (!event || !event.type) return game;
+
+  const allowed = ALLOWED_EVENTS_BY_STATE[game.state];
+
+  if (!allowed || !allowed.includes(event.type)) {
+    // Action invalide pour cet état → ignorée
+    return game;
+  }
+
   switch (game.state) {
     case STATES.TABLE_IDLE:
       return handleTableIdle(game, event);
@@ -87,5 +116,6 @@ export function dispatch(game, event) {
       return game;
   }
 }
+
 
 
