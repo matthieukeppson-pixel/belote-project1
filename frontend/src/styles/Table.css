@@ -313,8 +313,6 @@
   display: flex;
   gap: 14px;
   z-index: 20;
-}
-.pli-zone {
   pointer-events: none;
 }
 
@@ -334,7 +332,6 @@
   transform: scale(1.2);
 }
 
-
 /* Origine visuelle de la carte jouée */
 .from-joueur1 {
   transform: translateY(22px) scale(1.05);
@@ -353,77 +350,35 @@
 }
 
 /* ============================================
-   JOUEUR ACTIF — INDICATEUR
+   JOUEUR ACTIF — HALO ROUGE
 ============================================ */
 
-.active-player-indicator {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  padding: 6px 14px;
-  background: rgba(20, 10, 10, 0.85);
-  color: #f0e6d2;
-
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 600;
-
+.player-seat.active .player-avatar {
   box-shadow:
-    0 0 0 1px rgba(220, 180, 120, 0.35),
-    0 6px 14px rgba(0, 0, 0, 0.6);
-
-  z-index: 30;
+    0 0 0 4px rgba(200, 40, 40, 1),
+    0 0 20px rgba(200, 40, 40, 0.9),
+    0 0 36px rgba(200, 40, 40, 0.75),
+    0 0 56px rgba(200, 40, 40, 0.55);
 }
 
+/* ============================================
+   JOUEUR ACTIF — POINT DÉCALÉ
+============================================ */
 
+.active-dot {
+  position: absolute;
+  top: -10px;
+  right: -10px;
 
+  width: 14px;
+  height: 14px;
 
+  background: #ffd76a;
+  border-radius: 50%;
 
+  box-shadow:
+    0 0 0 2px rgba(40, 20, 0, 0.9),
+    0 0 12px rgba(255, 215, 120, 0.9);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  z-index: 10;
+}

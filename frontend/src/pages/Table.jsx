@@ -18,38 +18,19 @@ export default function Table() {
 
     // ⚠️ ORDRE OBLIGATOIRE
     g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 3 cartes
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" }); // 2 cartes + carte retournée
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
 
     return g;
   });
 
-  // =====================================================
-  // 🔍 TRACEUR GLOBAL DE CLIC — DIAGNOSTIC
-  // =====================================================
   useEffect(() => {
     function handleGlobalClick(e) {
       console.log("CLIC GLOBAL →", e.target);
     }
-
     document.addEventListener("click", handleGlobalClick);
-    return () => {
-      document.removeEventListener("click", handleGlobalClick);
-    };
+    return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
-
-  useEffect(() => {
-    console.log(
-      "🔄 RENDER TABLE — STATE:",
-      game.state,
-      "MAIN joueur1 =",
-      game.hands["joueur1"]?.map(c => `${c.suit}-${c.value}`)
-    );
-  }, [game]);
-
-  // ===============================
-  // ACTIONS UI (NETTOYÉES)
-  // ===============================
 
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
@@ -61,23 +42,11 @@ export default function Table() {
 
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-
-    console.log("REACT CLICK -> PLAY_CARD", { cardKey }, "STATE:", game.state);
-
-    setGame(g =>
-      dispatch(g, {
-        type: "PLAY_CARD",
-        cardKey
-      })
-    );
+    setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
-const activePlayer = game.players[game.currentPlayerIndex];
 
-  const isMyTurn = game.players[game.currentPlayerIndex] === "joueur1";
-{/* JOUEUR ACTIF */}
-<div className="active-player-indicator">
-  Au tour de : <strong>{activePlayer}</strong>
-</div>
+  const activePlayer = game.players[game.currentPlayerIndex];
+  const isMyTurn = activePlayer === "joueur1";
 
   return (
     <div className="table-page">
@@ -90,48 +59,48 @@ const activePlayer = game.players[game.currentPlayerIndex];
           <div className="table-board">
             <div className="table-image" />
 
-            {/* PLI EN COURS (AFFICHAGE SIMPLE) */}
-            {game.pli && game.pli.length > 0 && (
+            
+
+            {/* PLI */}
+            {game.pli?.length > 0 && (
               <div className="pli-zone">
                 {game.pli.map((play, index) => (
-                 <div key={index} className={`pli-card from-${play.playerId}`}>
-
+                  <div
+                    key={index}
+                    className={`pli-card from-${play.playerId}`}
+                  >
                     {play.card.value} {play.card.suit}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* CARTE D’ATOUT PROPOSÉE */}
-            {game.atoutPropose && (
-              <div className="atout-card">
-                <div className="label">Atout proposé</div>
-                <div className="symbol">
-                  {game.atoutPropose.value} {game.atoutPropose.suit}
-                </div>
-              </div>
-            )}
-
             {/* AVATARS */}
-            <div className="player-seat top">
-              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-              <div className="player-pseudo">joueur2</div>
-            </div>
+            {[
+              ["joueur2", "top"],
+              ["joueur4", "left"],
+              ["joueur3", "right"],
+              ["joueur1", "bottom"]
+            ].map(([player, position]) => (
+              <div
+                key={player}
+                className={`player-seat ${position} ${
+                  activePlayer === player ? "active" : ""
+                }`}
+              >
+                <img
+                  src="/avatar.png"
+                  alt="Avatar"
+                  className="player-avatar"
+                />
 
-            <div className="player-seat left">
-              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-              <div className="player-pseudo">joueur4</div>
-            </div>
+                {activePlayer === player && (
+                  <div className="active-dot" />
+                )}
 
-            <div className="player-seat right">
-              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-              <div className="player-pseudo">joueur3</div>
-            </div>
-
-            <div className="player-seat bottom">
-              <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-              <div className="player-pseudo">joueur1</div>
-            </div>
+                <div className="player-pseudo">{player}</div>
+              </div>
+            ))}
 
             {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
@@ -145,10 +114,13 @@ const activePlayer = game.players[game.currentPlayerIndex];
                     <div
                       key={`${card.suit}-${card.value}`}
                       className={`card ${!isMyTurn ? "disabled" : ""}`}
-                      onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+                      onClick={
+                        isMyTurn ? () => handlePlayCard(card) : undefined
+                      }
                       style={{
-                        transform: `translateY(${-18 + Math.abs(offset) * 4}px)
-                          rotate(${offset * 4}deg)`
+                        transform: `translateY(${
+                          -18 + Math.abs(offset) * 4
+                        }px) rotate(${offset * 4}deg)`
                       }}
                     >
                       {card.value} {card.suit}
@@ -183,6 +155,7 @@ const activePlayer = game.players[game.currentPlayerIndex];
     </div>
   );
 }
+
 
 
 
