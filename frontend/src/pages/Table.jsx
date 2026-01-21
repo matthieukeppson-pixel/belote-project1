@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
@@ -59,7 +59,6 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-
             {/* PLI */}
             {game.pli?.length > 0 && (
               <div className="pli-zone">
@@ -114,16 +113,15 @@ export default function Table() {
                       onClick={
                         isMyTurn ? () => handlePlayCard(card) : undefined
                       }
-                    style={{
-  transform: `
-    translateX(${offset * -28}px)
-    translateY(${-8 + Math.abs(offset) * 2}px)
-    rotate(${offset * 4}deg)
-  `,
-  transformOrigin: "bottom center",
-  zIndex: 100 + index
-}}
-
+                      style={{
+                        transform: `
+                          translateX(${offset * -28}px)
+                          translateY(${-8 + Math.abs(offset) * 2}px)
+                          rotate(${offset * 4}deg)
+                        `,
+                        transformOrigin: "bottom center",
+                        zIndex: 100 + index
+                      }}
                     >
                       {card.value} {card.suit}
                     </div>
@@ -132,16 +130,16 @@ export default function Table() {
               </div>
             )}
 
-{/* CARTE D’ATOUT */}
-{game.atoutPropose &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-    <div className="atout-card">
-      <div className="label">Atout</div>
-      <div className="symbol">
-        {game.atoutPropose.value} {game.atoutPropose.suit}
-      </div>
-    </div>
-)}
+            {/* CARTE D’ATOUT */}
+            {game.atoutPropose &&
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                <div className="atout-card">
+                  <div className="label">Atout</div>
+                  <div className="symbol">
+                    {game.atoutPropose.value} {game.atoutPropose.suit}
+                  </div>
+                </div>
+              )}
 
             {/* PANNEAU ATTOUT */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
@@ -168,6 +166,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
