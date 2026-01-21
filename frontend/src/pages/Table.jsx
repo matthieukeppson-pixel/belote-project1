@@ -1,9 +1,12 @@
- import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
+
+// ⚠️ MODE TEST TEMPORAIRE (à supprimer plus tard)
+const IS_TEST_MODE = true;
 
 export default function Table() {
   const navigate = useNavigate();
@@ -31,6 +34,39 @@ export default function Table() {
     document.addEventListener("click", handleGlobalClick);
     return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
+
+  // ============================================
+  // AUTO-PLAY DE TEST (Joueurs non humains)
+  // ============================================
+  useEffect(() => {
+    if (!IS_TEST_MODE) return;
+
+    // Auto-play uniquement pendant un pli
+    if (game.state !== STATES.PLI_EN_COURS) return;
+
+    const activePlayer = game.players[game.currentPlayerIndex];
+
+    // Joueur humain = pas d’auto-play
+    if (activePlayer === "joueur1") return;
+
+    const hand = game.hands[activePlayer];
+    if (!hand || hand.length === 0) return;
+
+    // ⏱️ Délai pour lisibilité
+    const timeout = setTimeout(() => {
+      const card = hand[0]; // carte simple pour le test
+      const cardKey = `${card.suit}:${card.value}`;
+
+      setGame(g =>
+        dispatch(g, {
+          type: "PLAY_CARD",
+          cardKey
+        })
+      );
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [game]);
 
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
@@ -166,6 +202,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
