@@ -10,7 +10,7 @@ const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
 const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
 
-// 🔑 CLÉ CANONIQUE CARTE (NOUVEAU)
+// 🔑 CLÉ CANONIQUE CARTE
 function cardKey(card) {
   return `${card.suit}:${card.value}`;
 }
@@ -32,6 +32,23 @@ function shuffle(deck) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+// ============================================
+// CLASSEMENT DES CARTES (PLI)
+// ============================================
+
+function getCardRank(card, atout, couleurDemandee) {
+  if (card.suit === atout) {
+    return ATTOUT_ORDER.indexOf(card.value);
+  }
+
+  if (card.suit === couleurDemandee) {
+    return NORMAL_ORDER.indexOf(card.value);
+  }
+
+  // Carte hors couleur demandée et hors atout
+  return 100;
 }
 
 // ============================================
@@ -102,18 +119,16 @@ export function handleDistribution(game, event, count) {
       hands[preneurId] = [...hands[preneurId], turned];
     }
 
-  return {
-  ...game,
-  state: STATES.PLI_EN_COURS,
-  deck,
-  hands,
-  pli: [],
-  couleurDemandee: null,
-  atoutPropose: null,
- currentPlayerIndex: 0 // DEBUG: joueur1 commence
-
-};
-
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      pli: [],
+      couleurDemandee: null,
+      atoutPropose: null,
+      currentPlayerIndex: 0 // debug contrôlé
+    };
   }
 
   let index = (game.dealerIndex + 1) % 4;
@@ -211,15 +226,13 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
-
 // ============================================
-// PLI
+// PLI — JEU DE CARTE
 // ============================================
 
 export function handlePli(game, event) {
   if (!event) return game;
 
-  // 🔒 Le pli n’accepte des actions QUE pendant PLI_EN_COURS
   if (game.state !== STATES.PLI_EN_COURS) {
     return game;
   }
@@ -228,15 +241,11 @@ export function handlePli(game, event) {
     const playerId = game.players[game.currentPlayerIndex];
     const hand = game.hands[playerId];
 
-    // 🔒 Le joueur ne peut jouer qu’une seule carte par pli
     if (game.pli.some(p => p.playerId === playerId)) {
       return game;
     }
 
-    const idx = hand.findIndex(
-      c => cardKey(c) === event.cardKey
-    );
-
+    const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
     if (idx === -1) return game;
 
     const newHand = [...hand];
@@ -254,12 +263,50 @@ export function handlePli(game, event) {
       pli: newPli,
       couleurDemandee,
       currentPlayerIndex: (game.currentPlayerIndex + 1) % 4,
-      // 🎯 Transition automatique vers l’état logique du pli
       state: isComplete ? STATES.PLI_TERMINE_LOGIQUE : STATES.PLI_EN_COURS
     };
   }
 
   return game;
+}
+
+
+
+export function handlePliTermineLogique(game) {
+  const { pli, atout, couleurDemandee, players } = game;
+
+  if (!pli || pli.length !== players.length) {
+    return game;
+  }
+
+  let bestPlay = pli[0];
+  let bestRank = getCardRank(bestPlay.card, atout, couleurDemandee);
+
+  for (let i = 1; i < pli.length; i++) {
+    const play = pli[i];
+    const rank = getCardRank(play.card, atout, couleurDemandee);
+
+    if (rank < bestRank) {
+      bestRank = rank;
+      bestPlay = play;
+    }
+  }
+
+  const winnerIndex = players.indexOf(bestPlay.playerId);
+
+  // ✅ LOG TEMPORAIRE — ICI ET PAS AILLEURS
+  console.log(
+    "[PLI_TERMINE_LOGIQUE]",
+    "pli =", pli,
+    "winner =", players[winnerIndex]
+  );
+
+  return {
+    ...game,
+    pliWinnerIndex: winnerIndex,
+    currentPlayerIndex: winnerIndex,
+    state: STATES.PLI_EN_LECTURE
+  };
 }
 
 
@@ -280,6 +327,7 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
+
 
 
 
