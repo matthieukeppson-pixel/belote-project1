@@ -211,6 +211,7 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
+
 // ============================================
 // PLI
 // ============================================
@@ -218,10 +219,8 @@ export function handleAnnonce(game, event) {
 export function handlePli(game, event) {
   if (!event) return game;
 
-  if (
-    game.state !== STATES.PLI_EN_COURS &&
-    game.state !== STATES.TRICK_COMPLETE
-  ) {
+  // 🔒 Le pli n’accepte des actions QUE pendant PLI_EN_COURS
+  if (game.state !== STATES.PLI_EN_COURS) {
     return game;
   }
 
@@ -229,6 +228,7 @@ export function handlePli(game, event) {
     const playerId = game.players[game.currentPlayerIndex];
     const hand = game.hands[playerId];
 
+    // 🔒 Le joueur ne peut jouer qu’une seule carte par pli
     if (game.pli.some(p => p.playerId === playerId)) {
       return game;
     }
@@ -254,12 +254,14 @@ export function handlePli(game, event) {
       pli: newPli,
       couleurDemandee,
       currentPlayerIndex: (game.currentPlayerIndex + 1) % 4,
-      state: isComplete ? STATES.TRICK_COMPLETE : STATES.PLI_EN_COURS
+      // 🎯 Transition automatique vers l’état logique du pli
+      state: isComplete ? STATES.PLI_TERMINE_LOGIQUE : STATES.PLI_EN_COURS
     };
   }
 
   return game;
 }
+
 
 // ============================================
 // FIN DE MANCHE

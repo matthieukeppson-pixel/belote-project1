@@ -25,6 +25,12 @@ export const STATES = {
   ANNOUNCE_ATOUT_TOUR_2: "ANNOUNCE_ATOUT_TOUR_2",
 
   PLI_EN_COURS: "PLI_EN_COURS",
+
+  // PLI V1
+  PLI_TERMINE_LOGIQUE: "PLI_TERMINE_LOGIQUE",
+  PLI_EN_LECTURE: "PLI_EN_LECTURE",
+  PLI_RAMASSAGE: "PLI_RAMASSAGE",
+
   FIN_DE_MANCHE: "FIN_DE_MANCHE"
 };
 
@@ -43,6 +49,11 @@ const ALLOWED_EVENTS_BY_STATE = {
   [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS"],
 
   [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
+
+  // PLI V1 — transitions automatiques (pas d’event UI)
+  [STATES.PLI_TERMINE_LOGIQUE]: [],
+  [STATES.PLI_EN_LECTURE]: [],
+  [STATES.PLI_RAMASSAGE]: [],
 
   [STATES.FIN_DE_MANCHE]: []
 };
@@ -116,6 +127,7 @@ export function dispatch(game, event) {
       return game;
   }
 }
+
 
 
 
