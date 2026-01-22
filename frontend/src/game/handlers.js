@@ -127,7 +127,7 @@ export function handleDistribution(game, event, count) {
       pli: [],
       couleurDemandee: null,
       atoutPropose: null,
-      currentPlayerIndex: 0 // debug contrôlé
+     
     };
   }
 

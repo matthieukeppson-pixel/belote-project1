@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
@@ -14,10 +14,16 @@ export default function Table() {
   const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
-    g = {
-      ...g,
-      players: ["joueur1", "joueur2", "joueur3", "joueur4"]
-    };
+   g = {
+  ...g,
+  players: [
+    "joueur1", // Sud  (Équipe A)
+    "joueur3", // Est  (Équipe B)
+    "joueur2", // Nord (Équipe A)
+    "joueur4"  // Ouest (Équipe B)
+  ]
+};
+
 
     // ⚠️ ORDRE OBLIGATOIRE
     g = dispatch(g, { type: "TABLE_READY" });
@@ -35,26 +41,21 @@ export default function Table() {
     return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
 
-  // ============================================
-  // AUTO-PLAY DE TEST (Joueurs non humains)
-  // ============================================
+  // ======================================================
+  // AUTO-PLAY DE TEST (JOUEURS NON HUMAINS)
+  // ======================================================
   useEffect(() => {
     if (!IS_TEST_MODE) return;
-
-    // Auto-play uniquement pendant un pli
     if (game.state !== STATES.PLI_EN_COURS) return;
 
     const activePlayer = game.players[game.currentPlayerIndex];
-
-    // Joueur humain = pas d’auto-play
     if (activePlayer === "joueur1") return;
 
     const hand = game.hands[activePlayer];
     if (!hand || hand.length === 0) return;
 
-    // ⏱️ Délai pour lisibilité
     const timeout = setTimeout(() => {
-      const card = hand[0]; // carte simple pour le test
+      const card = hand[0];
       const cardKey = `${card.suit}:${card.value}`;
 
       setGame(g =>
@@ -67,6 +68,19 @@ export default function Table() {
 
     return () => clearTimeout(timeout);
   }, [game]);
+
+  // ======================================================
+  // DERNIER PLI — LECTURE UI (DÉRIVÉ, SANS setState)
+  // ======================================================
+  const lastPliUI = useMemo(() => {
+    if (game.state !== STATES.PLI_EN_LECTURE) return null;
+    if (!game.pli || game.pli.length !== 4) return null;
+
+    return game.pli.map(p => ({
+      suit: p.card.suit,
+      value: p.card.value
+    }));
+  }, [game.state, game.pli]);
 
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
@@ -95,15 +109,28 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-            {/* PLI */}
-            {game.pli?.length > 0 && (
-              <div className="pli-zone">
-                {game.pli.map((play, index) => (
-                  <div
-                    key={index}
-                    className={`pli-card from-${play.playerId}`}
-                  >
-                    {play.card.value} {play.card.suit}
+            {/* PLI EN COURS (CENTRE) */}
+{game.pli?.length > 0 && game.pli.length < 4 && (
+  <div className="pli-zone">
+    {game.pli.map((play, index) => (
+      <div
+        key={index}
+        className={`pli-card from-${play.playerId}`}
+      >
+        {play.card.value} {play.card.suit}
+      </div>
+    ))}
+  </div>
+)}
+
+
+
+            {/* DERNIER PLI (HAUT DROIT — LECTURE) */}
+            {lastPliUI && (
+              <div className="last-pli-zone">
+                {lastPliUI.map((card, index) => (
+                  <div key={index} className="last-pli-card">
+                    {card.value} {card.suit}
                   </div>
                 ))}
               </div>
@@ -127,14 +154,12 @@ export default function Table() {
                   alt="Avatar"
                   className="player-avatar"
                 />
-
                 {activePlayer === player && <div className="active-dot" />}
-
                 <div className="player-pseudo">{player}</div>
               </div>
             ))}
 
-            {/* MAIN JOUEUR — ÉVENTAIL */}
+            {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -202,6 +227,8 @@ export default function Table() {
     </div>
   );
 }
+
+
 
 
 
