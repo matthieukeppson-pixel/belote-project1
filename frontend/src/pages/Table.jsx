@@ -5,9 +5,15 @@ import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 
+// ⚠️ MODE TEST — BOTS ACTIFS
+const IS_TEST_MODE = true;
+
 export default function Table() {
   const navigate = useNavigate();
 
+  // ============================================
+  // STATE JEU
+  // ============================================
   const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
@@ -24,14 +30,31 @@ export default function Table() {
     return g;
   });
 
+  // ============================================
+  // AUTO-PLAY (BOTS)
+  // ============================================
   useEffect(() => {
-    function handleGlobalClick(e) {
-      console.log("CLIC GLOBAL →", e.target);
-    }
-    document.addEventListener("click", handleGlobalClick);
-    return () => document.removeEventListener("click", handleGlobalClick);
-  }, []);
+    if (!IS_TEST_MODE) return;
+    if (game.state !== STATES.PLI_EN_COURS) return;
 
+    const activePlayer = game.players[game.currentPlayerIndex];
+    if (activePlayer === "joueur1") return;
+
+    const hand = game.hands[activePlayer];
+    if (!hand || hand.length === 0) return;
+
+    const timeout = setTimeout(() => {
+      const card = hand[0];
+      const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+      setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [game]);
+
+  // ============================================
+  // HANDLERS
+  // ============================================
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
   }
@@ -48,6 +71,9 @@ export default function Table() {
   const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="table-page">
       <button className="table-back-btn" onClick={() => navigate("/salon")}>
@@ -91,14 +117,12 @@ export default function Table() {
                   alt="Avatar"
                   className="player-avatar"
                 />
-
                 {activePlayer === player && <div className="active-dot" />}
-
                 <div className="player-pseudo">{player}</div>
               </div>
             ))}
 
-            {/* MAIN JOUEUR — ÉVENTAIL */}
+            {/* MAIN JOUEUR — ÉVENTAIL CHEVAUCHÉ */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -113,16 +137,15 @@ export default function Table() {
                       onClick={
                         isMyTurn ? () => handlePlayCard(card) : undefined
                       }
-                    style={{
-  transform: `
-    translateX(${offset * -28}px)
-    translateY(${-8 + Math.abs(offset) * 2}px)
-    rotate(${offset * 4}deg)
-  `,
-  transformOrigin: "bottom center",
-  zIndex: 100 + index
-}}
-
+                      style={{
+                        transform: `
+                          translateX(${offset * -28}px)
+                          translateY(${-8 + Math.abs(offset) * 2}px)
+                          rotate(${offset * 4}deg)
+                        `,
+                        transformOrigin: "bottom center",
+                        zIndex: 100 + index
+                      }}
                     >
                       {card.value} {card.suit}
                     </div>
@@ -131,7 +154,7 @@ export default function Table() {
               </div>
             )}
 
-            {/* PANNEAU ATTOUT */}
+            {/* PANNEAU ATOUT */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
               <div className="atout-panel">
@@ -156,6 +179,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
