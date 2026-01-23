@@ -85,19 +85,30 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-            {/* PLI */}
-            {game.pli?.length > 0 && (
-              <div className="pli-zone">
-                {game.pli.map((play, index) => (
-                  <div
-                    key={index}
-                    className={`pli-card from-${play.playerId}`}
-                  >
-                    {play.card.value} {play.card.suit}
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* PLI EN CROIX — VERSION VÉRO */}
+{game.pli && (
+  <div className="pli-zone">
+    {[
+      ["joueur2", "top"],
+      ["joueur4", "left"],
+      ["joueur3", "right"],
+      ["joueur1", "bottom"]
+    ].map(([playerId, position]) => {
+      const play = game.pli.find(p => p.playerId === playerId);
+      if (!play) return null;
+
+      return (
+        <div
+          key={playerId}
+          className={`pli-card ${position}`}
+        >
+          {play.card.value} {play.card.suit}
+        </div>
+      );
+    })}
+  </div>
+)}
+
 
             {/* AVATARS */}
             {[

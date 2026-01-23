@@ -299,22 +299,24 @@
   font-size: 28px;
 }
 
-/* ============================================
-   PLI — PRÉSENCE VISUELLE FORTE
-============================================ */
+/* ============================= */
+/*        PLI – ZONE CENTRALE    */
+/* ============================= */
 
 .pli-zone {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  gap: 14px;
+  inset: 0;
   z-index: 20;
   pointer-events: none;
 }
 
+/* ============================= */
+/*        CARTE JOUÉE            */
+/* ============================= */
+
 .pli-card {
+  position: absolute;
+
   padding: 14px 18px;
   background: #ffffff;
   border-radius: 14px;
@@ -327,25 +329,37 @@
     0 0 0 3px rgba(220, 180, 120, 0.9),
     0 14px 28px rgba(0, 0, 0, 0.75);
 
-  transform: scale(1.2);
+  transform: scale(1.1);
 }
 
-/* Origine visuelle de la carte jouée */
-.from-joueur1 {
-  transform: translateY(22px) scale(1.05);
+/* ============================= */
+/*        POSITIONS EN CROIX     */
+/* ============================= */
+
+.pli-card.top {
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -100%) scale(1.1);
 }
 
-.from-joueur2 {
-  transform: translateY(-22px) scale(1.05);
+.pli-card.bottom {
+  top: 58%;
+  left: 50%;
+  transform: translate(-50%, 0) scale(1.1);
 }
 
-.from-joueur3 {
-  transform: translateX(22px) scale(1.05);
+.pli-card.left {
+  top: 50%;
+  left: 42%;
+  transform: translate(-100%, -50%) scale(1.1);
 }
 
-.from-joueur4 {
-  transform: translateX(-22px) scale(1.05);
+.pli-card.right {
+  top: 50%;
+  left: 58%;
+  transform: translate(0, -50%) scale(1.1);
 }
+
 
 /* ============================================
    JOUEUR ACTIF — HALO ROUGE
