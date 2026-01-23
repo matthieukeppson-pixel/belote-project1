@@ -52,7 +52,8 @@ export function handleTableIdle(game, event) {
     atoutChoisi: false,
     preneur: null,
     pli: [],
-    couleurDemandee: null
+    couleurDemandee: null,
+    annonceIndex: 0
   };
 }
 
@@ -63,10 +64,7 @@ export function handleTableIdle(game, event) {
 export function handleDistribution(game, event, count) {
   if (!event || event.type !== "DISTRIBUTE_CARDS") return game;
 
-  let deck =
-    game.deck.length === 0
-      ? shuffle(createDeck())
-      : [...game.deck];
+  let deck = game.deck.length === 0 ? shuffle(createDeck()) : [...game.deck];
 
   const hands = { ...game.hands };
   for (const player of game.players) {
@@ -98,7 +96,8 @@ export function handleDistribution(game, event, count) {
       hands,
       pli: [],
       couleurDemandee: null,
-      atoutPropose: null
+      atoutPropose: null,
+      annonceIndex: 0
       // ⚠️ currentPlayerIndex volontairement NON touché
     };
   }
@@ -122,7 +121,8 @@ export function handleDistribution(game, event, count) {
       state: STATES.ANNOUNCE_ATOUT_TOUR_1,
       deck,
       hands,
-      atoutPropose: deck.shift()
+      atoutPropose: deck.shift(),
+      annonceIndex: 0 // ✅ choix A : le tour d'annonce démarre ici
     };
   }
 
@@ -130,40 +130,89 @@ export function handleDistribution(game, event, count) {
 }
 
 // ============================================
-// ANNONCE ATOUT — CORRECTION N°1 OK
+// ANNONCE ATOUT — CORRECTION N°1 OK + FIN D'ANNONCE (CORRECTION N°2)
 // ============================================
 
 export function handleAnnonce(game, event) {
   if (!event) return game;
 
   const playersCount = game.players.length;
-  const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
+  const startIndex = (game.dealerIndex + 1) % playersCount;
+  const nextPlayerIndex = (game.currentPlayerIndex + 1) % playersCount;
 
+  const annonceIndex = typeof game.annonceIndex === "number" ? game.annonceIndex : 0;
+  const nextAnnonceIndex = annonceIndex + 1;
+
+  // =========================
+  // PASS
+  // =========================
   if (event.type === "PASS") {
-    return { ...game, currentPlayerIndex: nextIndex };
+    // Fin de tour : tout le monde a eu la parole
+    if (nextAnnonceIndex >= playersCount) {
+      // Fin Tour 1 -> Tour 2
+      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
+        return {
+          ...game,
+          state: STATES.ANNOUNCE_ATOUT_TOUR_2,
+          currentPlayerIndex: startIndex,
+          annonceIndex: 0
+        };
+      }
+
+      // Fin Tour 2 -> Redistribution complète
+      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+        return {
+          ...game,
+          state: STATES.DISTRIBUTION_3,
+          deck: [],
+          hands: {},
+          atout: null,
+          atoutPropose: null,
+          preneur: null,
+          atoutChoisi: false,
+          pli: [],
+          couleurDemandee: null,
+          annonceIndex: 0
+        };
+      }
+    }
+
+    // Tour continue
+    return {
+      ...game,
+      currentPlayerIndex: nextPlayerIndex,
+      annonceIndex: nextAnnonceIndex
+    };
   }
 
+  // =========================
+  // TAKE ATOUT (tour 1 / tour 2)
+  // =========================
   if (event.type === "TAKE_ATOUT") {
     const preneurIndex = game.currentPlayerIndex;
-    const premierJoueurPli = (preneurIndex + 1) % playersCount;
+    const premierJoueurPli = (preneurIndex + 1) % playersCount; // ✅ correction n°1 conservée
+
+    // Tour 2: l'UI doit fournir la couleur choisie, différente de la retournée
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+      if (!event.suit) return game;
+      if (event.suit === game.atoutPropose?.suit) return game;
+    }
 
     const ng = {
       ...game,
-      atout: event.suit ?? game.atoutPropose.suit,
+      atout: game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ? event.suit : game.atoutPropose.suit,
       atoutChoisi: true,
       preneur: preneurIndex,
-      state: STATES.DISTRIBUTION_3_FINAL
+      state: STATES.DISTRIBUTION_3_FINAL,
+      annonceIndex: 0
     };
 
-    const afterDistribution = handleDistribution(
-      ng,
-      { type: "DISTRIBUTE_CARDS" },
-      3
-    );
+    const afterDistribution = handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
 
     return {
       ...afterDistribution,
-      currentPlayerIndex: premierJoueurPli
+      currentPlayerIndex: premierJoueurPli,
+      annonceIndex: 0
     };
   }
 
@@ -188,8 +237,7 @@ export function handlePli(game, event) {
   const newHand = [...hand];
   const [playedCard] = newHand.splice(idx, 1);
 
-  const couleurDemandee =
-    game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
+  const couleurDemandee = game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
 
   const newPli = [...game.pli, { playerId, card: playedCard }];
   const isComplete = newPli.length === game.players.length;
@@ -218,9 +266,11 @@ export function handleFinDeManche(game) {
     atout: null,
     atoutPropose: null,
     preneur: null,
-    atoutChoisi: false
+    atoutChoisi: false,
+    annonceIndex: 0
   };
 }
+
 
 
 
