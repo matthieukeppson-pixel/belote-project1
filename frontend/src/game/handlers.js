@@ -7,10 +7,6 @@ import { STATES } from "./beloteEngine";
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 
-const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
-const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
-
-// 🔑 CLÉ CANONIQUE CARTE (NOUVEAU)
 function cardKey(card) {
   return `${card.suit}:${card.value}`;
 }
@@ -56,8 +52,7 @@ export function handleTableIdle(game, event) {
     atoutChoisi: false,
     preneur: null,
     pli: [],
-    couleurDemandee: null,
-    plisGagnes: {}
+    couleurDemandee: null
   };
 }
 
@@ -79,13 +74,7 @@ export function handleDistribution(game, event, count) {
   }
 
   if (game.state === STATES.DISTRIBUTION_3_FINAL) {
-    const preneurIndex = game.preneur;
-    const preneurId =
-      typeof preneurIndex === "number" ? game.players[preneurIndex] : null;
-
-    if (!preneurId) return game;
-
-    const turned = game.atoutPropose;
+    const preneurId = game.players[game.preneur];
     let index = (game.dealerIndex + 1) % 4;
 
     for (let i = 0; i < game.players.length; i++) {
@@ -98,26 +87,23 @@ export function handleDistribution(game, event, count) {
       index = (index + 1) % 4;
     }
 
-    if (turned) {
-      hands[preneurId] = [...hands[preneurId], turned];
+    if (game.atoutPropose) {
+      hands[preneurId] = [...hands[preneurId], game.atoutPropose];
     }
 
-  return {
-  ...game,
-  state: STATES.PLI_EN_COURS,
-  deck,
-  hands,
-  pli: [],
-  couleurDemandee: null,
-  atoutPropose: null,
- currentPlayerIndex: 0 // DEBUG: joueur1 commence
-
-};
-
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      pli: [],
+      couleurDemandee: null,
+      atoutPropose: null
+      // ⚠️ currentPlayerIndex volontairement NON touché
+    };
   }
 
   let index = (game.dealerIndex + 1) % 4;
-
   for (let r = 0; r < count; r++) {
     for (let i = 0; i < game.players.length; i++) {
       const playerId = game.players[index];
@@ -131,13 +117,12 @@ export function handleDistribution(game, event, count) {
   }
 
   if (game.state === STATES.DISTRIBUTION_2) {
-    const atoutPropose = deck.shift();
     return {
       ...game,
       state: STATES.ANNOUNCE_ATOUT_TOUR_1,
       deck,
       hands,
-      atoutPropose
+      atoutPropose: deck.shift()
     };
   }
 
@@ -145,67 +130,41 @@ export function handleDistribution(game, event, count) {
 }
 
 // ============================================
-// ANNONCE ATTOUT
+// ANNONCE ATOUT — CORRECTION N°1 OK
 // ============================================
 
 export function handleAnnonce(game, event) {
   if (!event) return game;
 
   const playersCount = game.players.length;
-  const startIndex = (game.dealerIndex + 1) % playersCount;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
   if (event.type === "PASS") {
-    if (nextIndex === startIndex) {
-      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
-        return {
-          ...game,
-          state: STATES.ANNOUNCE_ATOUT_TOUR_2,
-          currentPlayerIndex: startIndex
-        };
-      }
-
-      if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-        return {
-          ...game,
-          state: STATES.DISTRIBUTION_3,
-          deck: [],
-          hands: {},
-          atout: null,
-          atoutPropose: null,
-          preneur: null,
-          atoutChoisi: false
-        };
-      }
-    }
     return { ...game, currentPlayerIndex: nextIndex };
   }
 
   if (event.type === "TAKE_ATOUT") {
-    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
-      const ng = {
-        ...game,
-        atout: game.atoutPropose.suit,
-        atoutChoisi: true,
-        preneur: game.currentPlayerIndex,
-        state: STATES.DISTRIBUTION_3_FINAL
-      };
-      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
-    }
+    const preneurIndex = game.currentPlayerIndex;
+    const premierJoueurPli = (preneurIndex + 1) % playersCount;
 
-    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-      if (!event.suit) return game;
-      if (event.suit === game.atoutPropose.suit) return game;
+    const ng = {
+      ...game,
+      atout: event.suit ?? game.atoutPropose.suit,
+      atoutChoisi: true,
+      preneur: preneurIndex,
+      state: STATES.DISTRIBUTION_3_FINAL
+    };
 
-      const ng = {
-        ...game,
-        atout: event.suit,
-        atoutChoisi: true,
-        preneur: game.currentPlayerIndex,
-        state: STATES.DISTRIBUTION_3_FINAL
-      };
-      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
-    }
+    const afterDistribution = handleDistribution(
+      ng,
+      { type: "DISTRIBUTE_CARDS" },
+      3
+    );
+
+    return {
+      ...afterDistribution,
+      currentPlayerIndex: premierJoueurPli
+    };
   }
 
   return game;
@@ -216,49 +175,33 @@ export function handleAnnonce(game, event) {
 // ============================================
 
 export function handlePli(game, event) {
-  if (!event) return game;
+  if (!event || event.type !== "PLAY_CARD") return game;
+  const playersCount = game.players.length;
 
-  if (
-    game.state !== STATES.PLI_EN_COURS &&
-    game.state !== STATES.TRICK_COMPLETE
-  ) {
-    return game;
-  }
+  const playerId = game.players[game.currentPlayerIndex];
+  if (game.pli.some(p => p.playerId === playerId)) return game;
 
-  if (event.type === "PLAY_CARD") {
-    const playerId = game.players[game.currentPlayerIndex];
-    const hand = game.hands[playerId];
+  const hand = game.hands[playerId];
+  const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
+  if (idx === -1) return game;
 
-    if (game.pli.some(p => p.playerId === playerId)) {
-      return game;
-    }
+  const newHand = [...hand];
+  const [playedCard] = newHand.splice(idx, 1);
 
-    const idx = hand.findIndex(
-      c => cardKey(c) === event.cardKey
-    );
+  const couleurDemandee =
+    game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
 
-    if (idx === -1) return game;
+  const newPli = [...game.pli, { playerId, card: playedCard }];
+  const isComplete = newPli.length === game.players.length;
 
-    const newHand = [...hand];
-    const [playedCard] = newHand.splice(idx, 1);
-
-    const couleurDemandee =
-      game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
-
-    const newPli = [...game.pli, { playerId, card: playedCard }];
-    const isComplete = newPli.length === game.players.length;
-
-    return {
-      ...game,
-      hands: { ...game.hands, [playerId]: newHand },
-      pli: newPli,
-      couleurDemandee,
-      currentPlayerIndex: (game.currentPlayerIndex + 1) % 4,
-      state: isComplete ? STATES.TRICK_COMPLETE : STATES.PLI_EN_COURS
-    };
-  }
-
-  return game;
+  return {
+    ...game,
+    hands: { ...game.hands, [playerId]: newHand },
+    pli: newPli,
+    couleurDemandee,
+    currentPlayerIndex: (game.currentPlayerIndex + 1) % playersCount,
+    state: isComplete ? STATES.FIN_DE_MANCHE : STATES.PLI_EN_COURS
+  };
 }
 
 // ============================================
@@ -278,6 +221,7 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
+
 
 
 
