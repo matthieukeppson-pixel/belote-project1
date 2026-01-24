@@ -84,6 +84,17 @@ export default function Table() {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+{/* CARTE ATOUT — TOUR 1 */}
+{game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
+  <div className="atout-preview">
+    <div className="atout-card">
+      <div className="label">Atout proposé</div>
+      <div className="symbol">
+        {game.atoutPropose.value} {game.atoutPropose.suit}
+      </div>
+    </div>
+  </div>
+)}
 
             {/* PLI */}
             {game.pli?.length > 0 && (
