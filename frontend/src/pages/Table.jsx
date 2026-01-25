@@ -96,19 +96,11 @@ export default function Table() {
   </div>
 )}
 
+
             {/* PLI */}
-            {game.pli?.length > 0 && (
-              <div className="pli-zone">
-                {game.pli.map((play, index) => (
-                  <div
-                    key={index}
-                    className={`pli-card from-${play.playerId}`}
-                  >
-                    {play.card.value} {play.card.suit}
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* PLI (désactivé temporairement) */}
+<div className="pli-zone" />
+
 
             {/* AVATARS */}
             {[
