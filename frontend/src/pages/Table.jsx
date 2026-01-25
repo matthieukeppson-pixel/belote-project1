@@ -32,7 +32,8 @@ export default function Table() {
 
     g = {
       ...g,
-      players: ["joueur1", "joueur2", "joueur3", "joueur4"]
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"]
+
     };
 
     // ⚠️ ORDRE OBLIGATOIRE

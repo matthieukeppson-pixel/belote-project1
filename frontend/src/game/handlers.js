@@ -1,4 +1,7 @@
 import { STATES } from "./beloteEngine";
+function nextPlayerIndex(game, fromIndex = game.currentPlayerIndex) {
+  return (fromIndex + 1) % game.players.length;
+}
 
 // ============================================
 // CARTES
@@ -102,7 +105,7 @@ export function handleDistribution(game, event, count) {
       hands[preneurId] = [...hands[preneurId], turned];
     }
 
-  return {
+return {
   ...game,
   state: STATES.PLI_EN_COURS,
   deck,
@@ -110,9 +113,10 @@ export function handleDistribution(game, event, count) {
   pli: [],
   couleurDemandee: null,
   atoutPropose: null,
- currentPlayerIndex: 0 // DEBUG: joueur1 commence
-
+  currentPlayerIndex: nextPlayerIndex(game, preneurIndex)
 };
+
+
 
   }
 
@@ -153,7 +157,7 @@ export function handleAnnonce(game, event) {
 
   const playersCount = game.players.length;
   const startIndex = (game.dealerIndex + 1) % playersCount;
-  const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
+  const nextIndex = nextPlayerIndex(game);
 
   if (event.type === "PASS") {
     if (nextIndex === startIndex) {
@@ -178,7 +182,11 @@ export function handleAnnonce(game, event) {
         };
       }
     }
-    return { ...game, currentPlayerIndex: nextIndex };
+
+    return {
+      ...game,
+      currentPlayerIndex: nextIndex
+    };
   }
 
   if (event.type === "TAKE_ATOUT") {
@@ -210,6 +218,7 @@ export function handleAnnonce(game, event) {
 
   return game;
 }
+
 
 // ============================================
 // PLI
@@ -253,7 +262,8 @@ export function handlePli(game, event) {
       hands: { ...game.hands, [playerId]: newHand },
       pli: newPli,
       couleurDemandee,
-      currentPlayerIndex: (game.currentPlayerIndex + 1) % 4,
+     currentPlayerIndex: nextPlayerIndex(game),
+
       state: isComplete ? STATES.TRICK_COMPLETE : STATES.PLI_EN_COURS
     };
   }
