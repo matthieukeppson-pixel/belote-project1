@@ -1,7 +1,5 @@
 import { STATES } from "./beloteEngine";
-function nextPlayerIndex(game, fromIndex = game.currentPlayerIndex) {
-  return (fromIndex + 1) % game.players.length;
-}
+import { determineWinningCard } from "./rules/determineWinningCard";
 
 // ============================================
 // CARTES
@@ -10,31 +8,9 @@ function nextPlayerIndex(game, fromIndex = game.currentPlayerIndex) {
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 
-const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
-const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
-
-// 🔑 CLÉ CANONIQUE CARTE (NOUVEAU)
+// 🔑 CLÉ CANONIQUE CARTE
 function cardKey(card) {
   return `${card.suit}:${card.value}`;
-}
-
-function createDeck() {
-  const deck = [];
-  for (const suit of SUITS) {
-    for (const value of VALUES) {
-      deck.push({ suit, value });
-    }
-  }
-  return deck;
-}
-
-function shuffle(deck) {
-  const shuffled = [...deck];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 }
 
 // ============================================
@@ -105,19 +81,16 @@ export function handleDistribution(game, event, count) {
       hands[preneurId] = [...hands[preneurId], turned];
     }
 
-return {
-  ...game,
-  state: STATES.PLI_EN_COURS,
-  deck,
-  hands,
-  pli: [],
-  couleurDemandee: null,
-  atoutPropose: null,
-  currentPlayerIndex: nextPlayerIndex(game, preneurIndex)
-};
-
-
-
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      pli: [],
+      couleurDemandee: null,
+      atoutPropose: null,
+      currentPlayerIndex: (preneurIndex + 1) % 4
+    };
   }
 
   let index = (game.dealerIndex + 1) % 4;
@@ -147,7 +120,6 @@ return {
 
   return game;
 }
-
 // ============================================
 // ANNONCE ATTOUT
 // ============================================
@@ -157,7 +129,7 @@ export function handleAnnonce(game, event) {
 
   const playersCount = game.players.length;
   const startIndex = (game.dealerIndex + 1) % playersCount;
-  const nextIndex = nextPlayerIndex(game);
+  const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
   if (event.type === "PASS") {
     if (nextIndex === startIndex) {
@@ -183,10 +155,7 @@ export function handleAnnonce(game, event) {
       }
     }
 
-    return {
-      ...game,
-      currentPlayerIndex: nextIndex
-    };
+    return { ...game, currentPlayerIndex: nextIndex };
   }
 
   if (event.type === "TAKE_ATOUT") {
@@ -219,7 +188,6 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
-
 // ============================================
 // PLI
 // ============================================
@@ -227,10 +195,7 @@ export function handleAnnonce(game, event) {
 export function handlePli(game, event) {
   if (!event) return game;
 
-  if (
-    game.state !== STATES.PLI_EN_COURS &&
-    game.state !== STATES.TRICK_COMPLETE
-  ) {
+  if (game.state !== STATES.PLI_EN_COURS) {
     return game;
   }
 
@@ -242,10 +207,7 @@ export function handlePli(game, event) {
       return game;
     }
 
-    const idx = hand.findIndex(
-      c => cardKey(c) === event.cardKey
-    );
-
+    const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
     if (idx === -1) return game;
 
     const newHand = [...hand];
@@ -257,14 +219,23 @@ export function handlePli(game, event) {
     const newPli = [...game.pli, { playerId, card: playedCard }];
     const isComplete = newPli.length === game.players.length;
 
+    let winningPlay = null;
+    if (isComplete) {
+      winningPlay = determineWinningCard(
+        newPli,
+        game.atout,
+        couleurDemandee
+      );
+    }
+
     return {
       ...game,
       hands: { ...game.hands, [playerId]: newHand },
       pli: newPli,
       couleurDemandee,
-     currentPlayerIndex: nextPlayerIndex(game),
-
-      state: isComplete ? STATES.TRICK_COMPLETE : STATES.PLI_EN_COURS
+      currentPlayerIndex: (game.currentPlayerIndex + 1) % 4,
+      state: isComplete ? STATES.TRICK_COMPLETE : STATES.PLI_EN_COURS,
+      winningPlay
     };
   }
 
@@ -289,10 +260,25 @@ export function handleFinDeManche(game) {
   };
 }
 
+// ============================================
+// UTILITAIRES INTERNES
+// ============================================
 
+function createDeck() {
+  const deck = [];
+  for (const suit of SUITS) {
+    for (const value of VALUES) {
+      deck.push({ suit, value });
+    }
+  }
+  return deck;
+}
 
-
-
-
-
-
+function shuffle(deck) {
+  const shuffled = [...deck];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
