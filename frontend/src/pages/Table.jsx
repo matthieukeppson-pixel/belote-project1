@@ -8,7 +8,7 @@ import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 // ⚠️ MODE TEST — BOTS ACTIFS
 const IS_TEST_MODE = true;
 
-// 🔒 Mapping UI joueur → slot (indépendant du moteur)
+// Mapping UI joueur → slot (indépendant du moteur)
 const SLOT_BY_PLAYER = {
   joueur2: "top",
   joueur3: "right",
@@ -16,7 +16,7 @@ const SLOT_BY_PLAYER = {
   joueur4: "left",
 };
 
-// 🔒 Lecture passive du pli
+// Lecture passive du pli
 function getPlayedCardForPlayer(game, playerId) {
   return game.pli.find(p => p.playerId === playerId)?.card || null;
 }
@@ -32,11 +32,9 @@ export default function Table() {
 
     g = {
       ...g,
-      players: ["joueur1", "joueur4", "joueur2", "joueur3"]
-
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
     };
 
-    // ⚠️ ORDRE OBLIGATOIRE
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -111,11 +109,10 @@ export default function Table() {
               </div>
             )}
 
-            {/* PLI — CROIX (affichage déterministe) */}
+            {/* PLI — CROIX */}
             <div className="pli-cross">
               {Object.entries(SLOT_BY_PLAYER).map(([playerId, slot]) => {
                 const card = getPlayedCardForPlayer(game, playerId);
-
                 return (
                   <div key={slot} className={`pli-slot ${slot}`}>
                     {card && (
@@ -133,7 +130,7 @@ export default function Table() {
               ["joueur2", "top"],
               ["joueur4", "left"],
               ["joueur3", "right"],
-              ["joueur1", "bottom"]
+              ["joueur1", "bottom"],
             ].map(([player, position]) => (
               <div
                 key={player}
@@ -151,7 +148,7 @@ export default function Table() {
               </div>
             ))}
 
-            {/* MAIN JOUEUR — ÉVENTAIL CHEVAUCHÉ */}
+            {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -173,7 +170,7 @@ export default function Table() {
                           rotate(${offset * 4}deg)
                         `,
                         transformOrigin: "bottom center",
-                        zIndex: 100 + index
+                        zIndex: 100 + index,
                       }}
                     >
                       {card.value} {card.suit}
@@ -188,14 +185,33 @@ export default function Table() {
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
-                <div className="atout-actions">
-                  <button className="atout-btn take" onClick={handleTakeAtout}>
-                    Prendre
-                  </button>
-                  <button className="atout-btn pass" onClick={handlePass}>
-                    Passer
-                  </button>
-                </div>
+
+                {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                  <div className="atout-actions">
+                    <button className="atout-btn take" onClick={handleTakeAtout}>
+                      Prendre
+                    </button>
+                    <button className="atout-btn pass" onClick={handlePass}>
+                      Passer
+                    </button>
+                  </div>
+                )}
+
+                {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && (
+                  <>
+                    <div className="atout-choices">
+                      <div className="atout-choice">♥</div>
+                      <div className="atout-choice">♦</div>
+                      <div className="atout-choice">♣</div>
+                    </div>
+
+                    <div className="atout-actions">
+                      <button className="atout-btn pass" onClick={handlePass}>
+                        Passer
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -208,6 +224,8 @@ export default function Table() {
     </div>
   );
 }
+
+
 
 
 
