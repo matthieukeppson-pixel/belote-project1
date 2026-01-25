@@ -96,10 +96,15 @@ export default function Table() {
   </div>
 )}
 
+{/* PLI — CROIX (structure fixe) */}
+<div className="pli-cross">
+  <div className="pli-slot top" />
+  <div className="pli-slot right" />
+  <div className="pli-slot bottom" />
+  <div className="pli-slot left" />
+</div>
 
-            {/* PLI */}
-          {/* PLI (désactivé temporairement) */}
-<div className="pli-zone" />
+
 
 
             {/* AVATARS */}
