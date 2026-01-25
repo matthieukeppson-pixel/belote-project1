@@ -75,6 +75,10 @@ export default function Table() {
     setGame(g => dispatch(g, { type: "PASS" }));
   }
 
+  function handleChooseAtoutSuit(suit) {
+    setGame(g => dispatch(g, { type: "TAKE_ATOUT", suit }));
+  }
+
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
     setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
@@ -200,9 +204,24 @@ export default function Table() {
                 {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && (
                   <>
                     <div className="atout-choices">
-                      <div className="atout-choice">♥</div>
-                      <div className="atout-choice">♦</div>
-                      <div className="atout-choice">♣</div>
+                      <div
+                        className="atout-choice"
+                        onClick={() => handleChooseAtoutSuit("hearts")}
+                      >
+                        ♥
+                      </div>
+                      <div
+                        className="atout-choice"
+                        onClick={() => handleChooseAtoutSuit("diamonds")}
+                      >
+                        ♦
+                      </div>
+                      <div
+                        className="atout-choice"
+                        onClick={() => handleChooseAtoutSuit("clubs")}
+                      >
+                        ♣
+                      </div>
                     </div>
 
                     <div className="atout-actions">
@@ -224,6 +243,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
