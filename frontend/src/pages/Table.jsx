@@ -8,6 +8,19 @@ import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 // ⚠️ MODE TEST — BOTS ACTIFS
 const IS_TEST_MODE = true;
 
+// 🔒 Mapping UI joueur → slot (indépendant du moteur)
+const SLOT_BY_PLAYER = {
+  joueur2: "top",
+  joueur3: "right",
+  joueur1: "bottom",
+  joueur4: "left",
+};
+
+// 🔒 Lecture passive du pli
+function getPlayedCardForPlayer(game, playerId) {
+  return game.pli.find(p => p.playerId === playerId)?.card || null;
+}
+
 export default function Table() {
   const navigate = useNavigate();
 
@@ -84,28 +97,35 @@ export default function Table() {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
-{/* CARTE ATOUT — TOUR 1 */}
-{game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
-  <div className="atout-preview">
-    <div className="atout-card">
-      <div className="label">Atout proposé</div>
-      <div className="symbol">
-        {game.atoutPropose.value} {game.atoutPropose.suit}
-      </div>
-    </div>
-  </div>
-)}
 
-{/* PLI — CROIX (structure fixe) */}
-<div className="pli-cross">
-  <div className="pli-slot top" />
-  <div className="pli-slot right" />
-  <div className="pli-slot bottom" />
-  <div className="pli-slot left" />
-</div>
+            {/* CARTE ATOUT — TOUR 1 */}
+            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
+              <div className="atout-preview">
+                <div className="atout-card">
+                  <div className="label">Atout proposé</div>
+                  <div className="symbol">
+                    {game.atoutPropose.value} {game.atoutPropose.suit}
+                  </div>
+                </div>
+              </div>
+            )}
 
+            {/* PLI — CROIX (affichage déterministe) */}
+            <div className="pli-cross">
+              {Object.entries(SLOT_BY_PLAYER).map(([playerId, slot]) => {
+                const card = getPlayedCardForPlayer(game, playerId);
 
-
+                return (
+                  <div key={slot} className={`pli-slot ${slot}`}>
+                    {card && (
+                      <div className="pli-card">
+                        {card.value} {card.suit}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
             {/* AVATARS */}
             {[
@@ -187,6 +207,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 

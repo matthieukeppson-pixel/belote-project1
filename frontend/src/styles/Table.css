@@ -79,14 +79,17 @@
 ============================================ */
 
 .table-image {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
 
   background-image: url("/table_vero.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+
+  z-index: 1;
 }
+
 
 /* ============================================
    AVATARS JOUEURS (TABLE UNIQUEMENT)
@@ -299,53 +302,7 @@
   font-size: 28px;
 }
 
-/* ============================================
-   PLI — PRÉSENCE VISUELLE FORTE
-============================================ */
 
-.pli-zone {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  gap: 14px;
-  z-index: 20;
-  pointer-events: none;
-}
-
-.pli-card {
-  padding: 14px 18px;
-  background: #ffffff;
-  border-radius: 14px;
-
-  font-weight: 800;
-  font-size: 18px;
-  color: #111;
-
-  box-shadow:
-    0 0 0 3px rgba(220, 180, 120, 0.9),
-    0 14px 28px rgba(0, 0, 0, 0.75);
-
-  transform: scale(1.2);
-}
-
-/* Origine visuelle de la carte jouée */
-.from-joueur1 {
-  transform: translateY(22px) scale(1.05);
-}
-
-.from-joueur2 {
-  transform: translateY(-22px) scale(1.05);
-}
-
-.from-joueur3 {
-  transform: translateX(22px) scale(1.05);
-}
-
-.from-joueur4 {
-  transform: translateX(-22px) scale(1.05);
-}
 
 /* ============================================
    JOUEUR ACTIF — HALO ROUGE
@@ -395,7 +352,73 @@
   }
 }
 
-/* Animation appliquée à chaque carte du pli */
+
 .pli-card {
-  animation: pli-appear 180ms ease-out;
+  width: 64px;
+  height: 96px;
+
+  background: #ffffff;
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 800;
+  font-size: 16px;
+  color: #111;
+
+  box-shadow:
+    0 0 0 2px rgba(220, 180, 120, 0.9),
+    0 8px 18px rgba(0, 0, 0, 0.6);
+
+  animation: pli-appear 160ms ease-out;
+}
+
+/* ============================================
+   PLI — CROIX (NOUVEAU SYSTÈME STABLE)
+============================================ */
+
+.pli-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.pli-slot {
+  position: absolute;
+  width: 64px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pli-slot.top {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pli-slot.bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pli-slot.left {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pli-slot.right {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
