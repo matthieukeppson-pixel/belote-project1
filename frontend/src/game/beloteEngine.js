@@ -67,12 +67,19 @@ export function createInitialGameState() {
     currentPlayerIndex: 0,
     pli: [],
 
+    plisGagnes: {
+      A: 0,
+      B: 0
+    },
+    lastTrickWinner: null,
+
     score: {
       equipeA: 0,
       equipeB: 0
     }
   };
 }
+
 
 // ============================================
 // DISPATCH
