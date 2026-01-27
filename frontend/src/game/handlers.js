@@ -30,7 +30,7 @@ export function handleTableIdle(game, event) {
     currentPlayerIndex,
     deck: [],
     hands: {},
-    trickIndex: 1,
+    trickIndex: 1, // ✅ reset manche
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
@@ -127,7 +127,7 @@ export function handleDistribution(game, event, count) {
 }
 
 // ============================================
-// ANNONCE ATOUT
+// ANNONCE ATTOUT
 // ============================================
 
 export function handleAnnonce(game, event) {
@@ -200,13 +200,21 @@ export function handleAnnonce(game, event) {
 
 export function handlePli(game, event) {
   if (!event) return game;
-  if (game.state !== STATES.PLI_EN_COURS) return game;
-  if (event.type !== "PLAY_CARD") return game;
+
+  if (game.state !== STATES.PLI_EN_COURS) {
+    return game;
+  }
+
+  if (event.type !== "PLAY_CARD") {
+    return game;
+  }
 
   const playerId = game.players[game.currentPlayerIndex];
   const hand = game.hands[playerId];
 
-  if (game.pli.some(p => p.playerId === playerId)) return game;
+  if (game.pli.some(p => p.playerId === playerId)) {
+    return game;
+  }
 
   const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
   if (idx === -1) return game;
@@ -220,7 +228,7 @@ export function handlePli(game, event) {
   const newPli = [...game.pli, { playerId, card: playedCard }];
   const isComplete = newPli.length === game.players.length;
 
-  // Pli non terminé
+  // Pli non terminé → joueur suivant
   if (!isComplete) {
     return {
       ...game,
@@ -237,12 +245,7 @@ export function handlePli(game, event) {
   // ATTRIBUTION DU PLI
   // ============================
 
-  const winningPlay = determineWinningCard(
-    newPli,
-    game.atout,
-    couleurDemandee
-  );
-
+  const winningPlay = determineWinningCard(newPli, game.atout, couleurDemandee);
   const winnerPlayerId = winningPlay.playerId;
 
   const team =
@@ -252,26 +255,40 @@ export function handlePli(game, event) {
 
   const plisGagnes = {
     ...game.plisGagnes,
-    [team]: game.plisGagnes[team] + 1
+    [team]: (game.plisGagnes[team] || 0) + 1
   };
 
   const winnerIndex = game.players.indexOf(winnerPlayerId);
 
+  // ✅ Étape 3/4 : compteur + fin de manche
+  const nextTrickIndex = game.trickIndex + 1;
+  const isLastTrickFinished = nextTrickIndex === 9;
+
+  // ✅ Étape 5 : 10 de der (uniquement dernier pli)
+  const score = isLastTrickFinished
+    ? {
+        ...game.score,
+        ...(team === "A"
+          ? { equipeA: game.score.equipeA + 10 }
+          : { equipeB: game.score.equipeB + 10 })
+      }
+    : game.score;
+
   return {
     ...game,
     hands: { ...game.hands, [playerId]: newHand },
-    pli: newPli,
+    pli: newPli, // on garde les 4 cartes visibles
     couleurDemandee: null,
     plisGagnes,
     lastTrickWinner: winnerPlayerId,
 
-    // 🔒 ÉTAPE 3 — compteur de pli
-    trickIndex: game.trickIndex + 1,
+    trickIndex: nextTrickIndex,
+    score,
 
     currentPlayerIndex: winnerIndex,
-    state: STATES.PLI_EN_COURS
+    state: isLastTrickFinished ? STATES.FIN_DE_MANCHE : STATES.PLI_EN_COURS
   };
-}
+} // ✅ fermeture handlePli
 
 // ============================================
 // FIN DE MANCHE
@@ -313,4 +330,6 @@ function shuffle(deck) {
   }
   return shuffled;
 }
+
+
 
