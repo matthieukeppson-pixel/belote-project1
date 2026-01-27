@@ -53,25 +53,45 @@ const ALLOWED_EVENTS_BY_STATE = {
 
 export function createInitialGameState() {
   return {
+    // =========================
+    // ÉTAT GLOBAL
+    // =========================
     state: STATES.TABLE_IDLE,
 
+    // =========================
+    // JOUEURS & CARTES
+    // =========================
     players: [],
     hands: {},
     deck: [],
 
+    // =========================
+    // STRUCTURE DE MANCHE
+    // =========================
+    trickIndex: 1, // 🔒 Compteur de pli (1 → 8)
+
+    // =========================
+    // ATOUT & ANNONCES
+    // =========================
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
 
+    // =========================
+    // JEU EN COURS
+    // =========================
     currentPlayerIndex: 0,
     pli: [],
+    lastTrickWinner: null,
 
+    // =========================
+    // PLIS & SCORE
+    // =========================
     plisGagnes: {
       A: 0,
       B: 0
     },
-    lastTrickWinner: null,
 
     score: {
       equipeA: 0,
@@ -79,6 +99,8 @@ export function createInitialGameState() {
     }
   };
 }
+
+
 
 
 // ============================================

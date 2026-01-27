@@ -1,7 +1,6 @@
 import { STATES } from "./beloteEngine";
 import { determineWinningCard } from "./rules/determineWinningCard";
 
-
 // ============================================
 // CARTES
 // ============================================
@@ -31,13 +30,18 @@ export function handleTableIdle(game, event) {
     currentPlayerIndex,
     deck: [],
     hands: {},
+    trickIndex: 1,
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
     pli: [],
     couleurDemandee: null,
-    plisGagnes: {}
+    lastTrickWinner: null,
+    plisGagnes: {
+      A: 0,
+      B: 0
+    }
   };
 }
 
@@ -121,8 +125,9 @@ export function handleDistribution(game, event, count) {
 
   return game;
 }
+
 // ============================================
-// ANNONCE ATTOUT
+// ANNONCE ATOUT
 // ============================================
 
 export function handleAnnonce(game, event) {
@@ -195,21 +200,13 @@ export function handleAnnonce(game, event) {
 
 export function handlePli(game, event) {
   if (!event) return game;
-
-  if (game.state !== STATES.PLI_EN_COURS) {
-    return game;
-  }
-
-  if (event.type !== "PLAY_CARD") {
-    return game;
-  }
+  if (game.state !== STATES.PLI_EN_COURS) return game;
+  if (event.type !== "PLAY_CARD") return game;
 
   const playerId = game.players[game.currentPlayerIndex];
   const hand = game.hands[playerId];
 
-  if (game.pli.some(p => p.playerId === playerId)) {
-    return game;
-  }
+  if (game.pli.some(p => p.playerId === playerId)) return game;
 
   const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
   if (idx === -1) return game;
@@ -223,7 +220,7 @@ export function handlePli(game, event) {
   const newPli = [...game.pli, { playerId, card: playedCard }];
   const isComplete = newPli.length === game.players.length;
 
-  // Pli non terminé → joueur suivant
+  // Pli non terminé
   if (!isComplete) {
     return {
       ...game,
@@ -240,7 +237,13 @@ export function handlePli(game, event) {
   // ATTRIBUTION DU PLI
   // ============================
 
-  const winnerPlayerId = determineWinningCard(newPli, game.atout);
+  const winningPlay = determineWinningCard(
+    newPli,
+    game.atout,
+    couleurDemandee
+  );
+
+  const winnerPlayerId = winningPlay.playerId;
 
   const team =
     winnerPlayerId === "joueur1" || winnerPlayerId === "joueur2"
@@ -249,7 +252,7 @@ export function handlePli(game, event) {
 
   const plisGagnes = {
     ...game.plisGagnes,
-    [team]: (game.plisGagnes[team] || 0) + 1
+    [team]: game.plisGagnes[team] + 1
   };
 
   const winnerIndex = game.players.indexOf(winnerPlayerId);
@@ -257,16 +260,18 @@ export function handlePli(game, event) {
   return {
     ...game,
     hands: { ...game.hands, [playerId]: newHand },
-     pli: newPli,                 // ✅ on garde les 4 cartes visibles
+    pli: newPli,
     couleurDemandee: null,
     plisGagnes,
     lastTrickWinner: winnerPlayerId,
+
+    // 🔒 ÉTAPE 3 — compteur de pli
+    trickIndex: game.trickIndex + 1,
+
     currentPlayerIndex: winnerIndex,
     state: STATES.PLI_EN_COURS
   };
 }
-
-
 
 // ============================================
 // FIN DE MANCHE
@@ -285,14 +290,6 @@ export function handleFinDeManche(game) {
     atoutChoisi: false
   };
 }
-
-
-
-
-
-
-
-
 
 // ============================================
 // UTILITAIRES INTERNES
@@ -316,3 +313,4 @@ function shuffle(deck) {
   }
   return shuffled;
 }
+
