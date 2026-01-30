@@ -25,6 +25,7 @@ export const STATES = {
   ANNOUNCE_ATOUT_TOUR_2: "ANNOUNCE_ATOUT_TOUR_2",
 
   PLI_EN_COURS: "PLI_EN_COURS",
+  PLI_TERMINE: "PLI_TERMINE",   // 🆕 NOUVEL ÉTAT
   FIN_DE_MANCHE: "FIN_DE_MANCHE"
 };
 
@@ -43,6 +44,8 @@ const ALLOWED_EVENTS_BY_STATE = {
   [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS"],
 
   [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
+
+  [STATES.PLI_TERMINE]: ["NEXT_PLI"],  // 🆕 NETTOYAGE DU PLI
 
   [STATES.FIN_DE_MANCHE]: []
 };
@@ -66,6 +69,7 @@ export function createInitialGameState() {
 
     currentPlayerIndex: 0,
     pli: [],
+    winnerIndex: null, // 🆕 mémorisation du gagnant du pli
 
     score: {
       equipeA: 0,
@@ -85,7 +89,6 @@ export function dispatch(game, event) {
   const allowed = ALLOWED_EVENTS_BY_STATE[game.state];
 
   if (!allowed || !allowed.includes(event.type)) {
-    // Action invalide pour cet état → ignorée
     return game;
   }
 
@@ -107,6 +110,7 @@ export function dispatch(game, event) {
       return handleAnnonce(game, event);
 
     case STATES.PLI_EN_COURS:
+    case STATES.PLI_TERMINE:   // 🆕 même handler
       return handlePli(game, event);
 
     case STATES.FIN_DE_MANCHE:
@@ -116,6 +120,7 @@ export function dispatch(game, event) {
       return game;
   }
 }
+
 
 
 

@@ -10,12 +10,10 @@ const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
 const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
 
-// ============================================
-// UTILITAIRES
-// ============================================
-
+// 🔑 clé canonique compatible avec Table.jsx (qui upper-case)
 function cardKey(card) {
-  return `${card.suit}:${card.value}`;
+  if (!card) return "";
+  return `${card.suit}:${String(card.value).toUpperCase()}`;
 }
 
 function createDeck() {
@@ -37,18 +35,42 @@ function shuffle(deck) {
   return shuffled;
 }
 
-// 🔑 GAGNANT DU PLI — VERSION SIMPLE V1
-function getPliWinnerSimple(pli, couleurDemandee) {
-  const candidates = pli.filter(p => p.card.suit === couleurDemandee);
-  if (candidates.length === 0) return pli[0].playerId;
+// ============================================
+// GAGNANT DU PLI (V1) — atout + couleur demandée
+// ============================================
 
-  let best = candidates[0];
-  for (const p of candidates.slice(1)) {
-    const pRank = NORMAL_ORDER.indexOf(p.card.value);
-    const bestRank = NORMAL_ORDER.indexOf(best.card.value);
-    if (pRank < bestRank) {
-      best = p;
-    }
+function rankValue(value, isAtout) {
+  const v = String(value).toUpperCase();
+  const order = isAtout ? ATTOUT_ORDER : NORMAL_ORDER;
+  return order.indexOf(v);
+}
+
+function getPliWinner(pli, couleurDemandee, atoutSuit) {
+  // sécurités
+  const valid = Array.isArray(pli) ? pli.filter(p => p && p.card) : [];
+  if (valid.length === 0) return null;
+
+  const atouts = atoutSuit
+    ? valid.filter(p => p.card.suit === atoutSuit)
+    : [];
+
+  const pool = atouts.length > 0
+    ? atouts.map(p => ({ ...p, _isAtout: true }))
+    : valid
+        .filter(p => p.card.suit === couleurDemandee)
+        .map(p => ({ ...p, _isAtout: false }));
+
+  if (pool.length === 0) {
+    // fallback si couleurDemandee incohérente
+    return valid[0].playerId;
+  }
+
+  let best = pool[0];
+  for (const p of pool.slice(1)) {
+    const pr = rankValue(p.card.value, p._isAtout);
+    const br = rankValue(best.card.value, best._isAtout);
+    // plus petit index = plus fort
+    if (pr !== -1 && br !== -1 && pr < br) best = p;
   }
   return best.playerId;
 }
@@ -61,7 +83,7 @@ export function handleTableIdle(game, event) {
   if (!event || event.type !== "TABLE_READY") return game;
 
   const dealerIndex = 0;
-  const currentPlayerIndex = (dealerIndex + 1) % 4;
+  const currentPlayerIndex = (dealerIndex + 1) % 4; // joueur à gauche du donneur
 
   return {
     ...game,
@@ -75,7 +97,8 @@ export function handleTableIdle(game, event) {
     atoutChoisi: false,
     preneur: null,
     pli: [],
-    couleurDemandee: null
+    couleurDemandee: null,
+    winnerIndex: null
   };
 }
 
@@ -86,22 +109,28 @@ export function handleTableIdle(game, event) {
 export function handleDistribution(game, event, count) {
   if (!event || event.type !== "DISTRIBUTE_CARDS") return game;
 
+  // init deck si nécessaire
   let deck =
-    game.deck.length === 0
-      ? shuffle(createDeck())
-      : [...game.deck];
+    game.deck && game.deck.length > 0
+      ? [...game.deck]
+      : shuffle(createDeck());
 
   const hands = { ...game.hands };
   for (const player of game.players) {
     if (!hands[player]) hands[player] = [];
   }
 
-  // Distribution finale après preneur
+  // ----------------------------
+  // DISTRIBUTION FINALE (après preneur)
+  // ----------------------------
   if (game.state === STATES.DISTRIBUTION_3_FINAL) {
     const preneurIndex = game.preneur;
-    const preneurId = game.players[preneurIndex];
-    const turned = game.atoutPropose;
+    const preneurId =
+      typeof preneurIndex === "number" ? game.players[preneurIndex] : null;
 
+    if (!preneurId) return game;
+
+    const turned = game.atoutPropose; // carte retournée
     let index = (game.dealerIndex + 1) % 4;
 
     for (let i = 0; i < game.players.length; i++) {
@@ -114,9 +143,13 @@ export function handleDistribution(game, event, count) {
       index = (index + 1) % 4;
     }
 
+    // le preneur prend la carte retournée
     if (turned) {
       hands[preneurId] = [...hands[preneurId], turned];
     }
+
+    // 1er pli : joueur à gauche du preneur
+    const firstTrickIndex = (preneurIndex + 1) % 4;
 
     return {
       ...game,
@@ -125,13 +158,17 @@ export function handleDistribution(game, event, count) {
       hands,
       pli: [],
       couleurDemandee: null,
+      winnerIndex: null,
       atoutPropose: null,
-      currentPlayerIndex: (preneurIndex + 1) % 4
+      currentPlayerIndex: firstTrickIndex
     };
   }
 
-  // Distributions normales
+  // ----------------------------
+  // DISTRIBUTIONS NORMALES (3 puis 2)
+  // ----------------------------
   let index = (game.dealerIndex + 1) % 4;
+
   for (let r = 0; r < count; r++) {
     for (let i = 0; i < game.players.length; i++) {
       const playerId = game.players[index];
@@ -151,11 +188,12 @@ export function handleDistribution(game, event, count) {
       state: STATES.ANNOUNCE_ATOUT_TOUR_1,
       deck,
       hands,
-      atoutPropose
+      atoutPropose,
+      currentPlayerIndex: (game.dealerIndex + 1) % 4
     };
   }
 
-  return game;
+  return { ...game, deck, hands };
 }
 
 // ============================================
@@ -169,7 +207,9 @@ export function handleAnnonce(game, event) {
   const startIndex = (game.dealerIndex + 1) % playersCount;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
+  // PASS
   if (event.type === "PASS") {
+    // boucle complète
     if (nextIndex === startIndex) {
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
         return {
@@ -180,6 +220,7 @@ export function handleAnnonce(game, event) {
       }
 
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+        // tout le monde a passé au 2e tour => on relance une donne
         return {
           ...game,
           state: STATES.DISTRIBUTION_3,
@@ -188,38 +229,65 @@ export function handleAnnonce(game, event) {
           atout: null,
           atoutPropose: null,
           preneur: null,
-          atoutChoisi: false
+          atoutChoisi: false,
+          pli: [],
+          couleurDemandee: null,
+          winnerIndex: null
         };
       }
     }
     return { ...game, currentPlayerIndex: nextIndex };
   }
 
+  // TAKE
   if (event.type === "TAKE_ATOUT") {
-    const ng = {
-      ...game,
-      atout: event.suit ?? game.atoutPropose.suit,
-      atoutChoisi: true,
-      preneur: game.currentPlayerIndex,
-      state: STATES.DISTRIBUTION_3_FINAL
-    };
-    return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
+    // Tour 1 : prendre la couleur de la carte retournée
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
+      if (!game.atoutPropose) return game;
+
+      const ng = {
+        ...game,
+        atout: game.atoutPropose.suit,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
+      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
+    }
+
+    // Tour 2 : event.suit obligatoire, différente de la carte retournée
+    if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
+      if (!event.suit) return game;
+      if (game.atoutPropose && event.suit === game.atoutPropose.suit) return game;
+
+      const ng = {
+        ...game,
+        atout: event.suit,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
+      return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
+    }
   }
 
   return game;
 }
 
 // ============================================
-// PLI — FIN DU PLI FONCTIONNELLE
+// PLI — FIN EN 2 TEMPS
 // ============================================
 
 export function handlePli(game, event) {
-  if (!event || game.state !== STATES.PLI_EN_COURS) return game;
+  if (!event) return game;
 
-  if (event.type === "PLAY_CARD") {
+  // 1) Jouer une carte
+  if (game.state === STATES.PLI_EN_COURS && event.type === "PLAY_CARD") {
     const playerId = game.players[game.currentPlayerIndex];
     const hand = game.hands[playerId];
+    if (!Array.isArray(hand)) return game;
 
+    // sécurité : un joueur ne joue pas 2 fois dans le même pli
     if (game.pli.some(p => p.playerId === playerId)) return game;
 
     const idx = hand.findIndex(c => cardKey(c) === event.cardKey);
@@ -233,28 +301,41 @@ export function handlePli(game, event) {
 
     const newPli = [...game.pli, { playerId, card: playedCard }];
 
-    // Pli pas fini
+    // pli pas terminé
     if (newPli.length < game.players.length) {
       return {
         ...game,
         hands: { ...game.hands, [playerId]: newHand },
         pli: newPli,
         couleurDemandee,
-        currentPlayerIndex:
-          (game.currentPlayerIndex + 1) % game.players.length
+        currentPlayerIndex: (game.currentPlayerIndex + 1) % game.players.length
       };
     }
 
-    // FIN DU PLI
-    const winnerId = getPliWinnerSimple(newPli, couleurDemandee);
-    const winnerIndex = game.players.indexOf(winnerId);
+    // pli terminé : on calcule le gagnant mais on garde les 4 cartes visibles
+    const winnerId = getPliWinner(newPli, couleurDemandee, game.atout);
+    const winnerIndex =
+      winnerId != null ? game.players.indexOf(winnerId) : game.currentPlayerIndex;
 
     return {
       ...game,
       hands: { ...game.hands, [playerId]: newHand },
+      pli: newPli, // ✅ 4 cartes visibles
+      couleurDemandee,
+      winnerIndex,
+      state: STATES.PLI_TERMINE
+    };
+  }
+
+  // 2) Nettoyer le pli après délai UI
+  if (game.state === STATES.PLI_TERMINE && event.type === "NEXT_PLI") {
+    return {
+      ...game,
       pli: [],
       couleurDemandee: null,
-      currentPlayerIndex: winnerIndex
+      currentPlayerIndex: game.winnerIndex,
+      winnerIndex: null,
+      state: STATES.PLI_EN_COURS
     };
   }
 
@@ -275,15 +356,11 @@ export function handleFinDeManche(game) {
     atout: null,
     atoutPropose: null,
     preneur: null,
-    atoutChoisi: false
+    atoutChoisi: false,
+    couleurDemandee: null,
+    winnerIndex: null
   };
 }
-
-
-
-
-
-
 
 
 
