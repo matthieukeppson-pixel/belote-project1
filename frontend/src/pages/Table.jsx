@@ -5,6 +5,23 @@ import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 
+// ============================================
+// HELPERS ATTOUT — UI TABLE UNIQUEMENT
+// ============================================
+
+const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
+
+function suitLabel(suit) {
+  switch (suit) {
+    case "hearts": return "♥";
+    case "diamonds": return "♦";
+    case "clubs": return "♣";
+    case "spades": return "♠";
+    default: return "";
+  }
+}
+
+
 export default function Table() {
   const navigate = useNavigate();
 
@@ -29,27 +46,23 @@ export default function Table() {
   const [displayPli, setDisplayPli] = useState([]);
 
   useEffect(() => {
-    // Quand une carte est ajoutée → on affiche via timeout (async)
     if (game.pli.length > 0) {
       const showTimer = setTimeout(() => {
         setDisplayPli(game.pli);
       }, 0);
-
       return () => clearTimeout(showTimer);
     }
 
-    // Quand le moteur vide le pli → on garde l’affichage 700 ms
     if (game.pli.length === 0 && displayPli.length > 0) {
       const hideTimer = setTimeout(() => {
         setDisplayPli([]);
       }, 700);
-
       return () => clearTimeout(hideTimer);
     }
   }, [game.pli, displayPli]);
 
   // =====================================================
-  // BOT AUTO — FAIT JOUER LES AUTRES JOUEURS
+  // BOT AUTO
   // =====================================================
   useEffect(() => {
     if (game.state !== STATES.PLI_EN_COURS) return;
@@ -70,18 +83,18 @@ export default function Table() {
       return () => clearTimeout(timer);
     }
   }, [game]);
-// =====================================================
-// FIN DE PLI — déclenche NEXT_PLI après affichage
-// =====================================================
-useEffect(() => {
-  if (game.state === STATES.PLI_TERMINE) {
-    const timer = setTimeout(() => {
-      setGame(g => dispatch(g, { type: "NEXT_PLI" }));
-    }, 800); // durée d’affichage du pli
 
-    return () => clearTimeout(timer);
-  }
-}, [game.state]);
+  // =====================================================
+  // FIN DE PLI
+  // =====================================================
+  useEffect(() => {
+    if (game.state === STATES.PLI_TERMINE) {
+      const timer = setTimeout(() => {
+        setGame(g => dispatch(g, { type: "NEXT_PLI" }));
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [game.state]);
 
   // =====================================================
   // ACTIONS
@@ -115,31 +128,29 @@ useEffect(() => {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
-{/* CARTE D’ATOUT PROPOSÉE (tour 1 uniquement) */}
-{game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
-  <div className="atout-card">
-    <div className="label">Atout</div>
-    <div className="symbol">
-      {game.atoutPropose.value} {game.atoutPropose.suit}
-    </div>
-  </div>
-)}
+
+            {/* CARTE D’ATOUT PROPOSÉE — TOUR 1 */}
+            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
+              <div className="atout-card">
+                <div className="label">Atout</div>
+                <div className="symbol">
+                  {game.atoutPropose.value} {game.atoutPropose.suit}
+                </div>
+              </div>
+            )}
 
             {/* PLI */}
-        {/* PLI — cartes posées devant chaque joueur */}
-{displayPli.map((play, index) => {
-  if (!play || !play.card) return null;
-
-  return (
-    <div
-      key={index}
-      className={`pli-card pli-${play.playerId}`}
-    >
-      {play.card.value} {play.card.suit}
-    </div>
-  );
-})}
-
+            {displayPli.map((play, index) => {
+              if (!play || !play.card) return null;
+              return (
+                <div
+                  key={index}
+                  className={`pli-card pli-${play.playerId}`}
+                >
+                  {play.card.value} {play.card.suit}
+                </div>
+              );
+            })}
 
             {/* AVATARS */}
             {[
@@ -192,9 +203,8 @@ useEffect(() => {
               </div>
             )}
 
-            {/* PANNEAU ATTOUT */}
-            {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
+            {/* PANNEAU ATTOUT — TOUR 1 */}
+            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
                 <div className="atout-actions">
@@ -207,6 +217,42 @@ useEffect(() => {
                 </div>
               </div>
             )}
+
+            {/* PANNEAU ATTOUT — TOUR 2 */}
+            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && game.atoutPropose && (
+              <div className="atout-panel">
+                <div className="atout-title">Choisir l’atout</div>
+
+                <div className="atout-actions">
+                  {ALL_SUITS
+                    .filter(suit => suit !== game.atoutPropose.suit)
+                    .map(suit => (
+                    
+                   <button
+  key={suit}
+  className="atout-btn take atout-suit-btn"
+  onClick={() =>
+    setGame(g =>
+      dispatch(g, { type: "TAKE_ATOUT", suit })
+    )
+  }
+>
+  <span className={`atout-suit-symbol ${suit}`}>
+    {suitLabel(suit)}
+  </span>
+</button>
+
+                    ))}
+                </div>
+
+                <div className="atout-actions" style={{ marginTop: 10 }}>
+                  <button className="atout-btn pass" onClick={handlePass}>
+                    Passer
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -217,6 +263,7 @@ useEffect(() => {
     </div>
   );
 }
+
 
 
 
