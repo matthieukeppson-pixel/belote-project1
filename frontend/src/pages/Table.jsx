@@ -13,10 +13,11 @@ export default function Table() {
 
     g = {
       ...g,
-      players: ["joueur1", "joueur2", "joueur3", "joueur4"]
+      // 🔑 ORDRE LOGIQUE ALIGNÉ AVEC L’UI (gauche = joueur4)
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"]
     };
 
-    // ⚠️ ORDRE OBLIGATOIRE
+    // Initialisation moteur
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -24,6 +25,33 @@ export default function Table() {
     return g;
   });
 
+  // =====================================================
+  // BOT AUTO — FAIT JOUER LES AUTRES JOUEURS
+  // =====================================================
+  useEffect(() => {
+    if (game.state !== STATES.PLI_EN_COURS) return;
+
+    const activePlayer = game.players[game.currentPlayerIndex];
+
+    // Tous sauf joueur1 jouent automatiquement
+    if (activePlayer !== "joueur1") {
+      const hand = game.hands[activePlayer];
+      if (!hand || hand.length === 0) return;
+
+      const card = hand[0];
+      const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+
+      const timer = setTimeout(() => {
+        setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
+      }, 600);
+
+      return () => clearTimeout(timer);
+    }
+  }, [game]);
+
+  // =====================================================
+  // DEBUG CLICK (optionnel)
+  // =====================================================
   useEffect(() => {
     function handleGlobalClick(e) {
       console.log("CLIC GLOBAL →", e.target);
@@ -32,6 +60,9 @@ export default function Table() {
     return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
 
+  // =====================================================
+  // ACTIONS
+  // =====================================================
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
   }
@@ -48,6 +79,9 @@ export default function Table() {
   const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
+  // =====================================================
+  // RENDER
+  // =====================================================
   return (
     <div className="table-page">
       <button className="table-back-btn" onClick={() => navigate("/salon")}>
@@ -58,7 +92,6 @@ export default function Table() {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
-
 
             {/* PLI */}
             {game.pli?.length > 0 && (
@@ -99,7 +132,7 @@ export default function Table() {
               </div>
             ))}
 
-            {/* MAIN JOUEUR — ÉVENTAIL */}
+            {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -114,16 +147,15 @@ export default function Table() {
                       onClick={
                         isMyTurn ? () => handlePlayCard(card) : undefined
                       }
-                    style={{
-  transform: `
-    translateX(${offset * -28}px)
-    translateY(${-8 + Math.abs(offset) * 2}px)
-    rotate(${offset * 4}deg)
-  `,
-  transformOrigin: "bottom center",
-  zIndex: 100 + index
-}}
-
+                      style={{
+                        transform: `
+                          translateX(${offset * -28}px)
+                          translateY(${-8 + Math.abs(offset) * 2}px)
+                          rotate(${offset * 4}deg)
+                        `,
+                        transformOrigin: "bottom center",
+                        zIndex: 100 + index
+                      }}
                     >
                       {card.value} {card.suit}
                     </div>
@@ -132,16 +164,16 @@ export default function Table() {
               </div>
             )}
 
-{/* CARTE D’ATOUT */}
-{game.atoutPropose &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-    <div className="atout-card">
-      <div className="label">Atout</div>
-      <div className="symbol">
-        {game.atoutPropose.value} {game.atoutPropose.suit}
-      </div>
-    </div>
-)}
+            {/* CARTE D’ATOUT */}
+            {game.atoutPropose &&
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                <div className="atout-card">
+                  <div className="label">Atout</div>
+                  <div className="symbol">
+                    {game.atoutPropose.value} {game.atoutPropose.suit}
+                  </div>
+                </div>
+              )}
 
             {/* PANNEAU ATTOUT */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
@@ -168,6 +200,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
