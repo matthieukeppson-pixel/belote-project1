@@ -13,17 +13,40 @@ export default function Table() {
 
     g = {
       ...g,
-      // 🔑 ORDRE LOGIQUE ALIGNÉ AVEC L’UI (gauche = joueur4)
       players: ["joueur1", "joueur4", "joueur2", "joueur3"]
     };
 
-    // Initialisation moteur
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
 
     return g;
   });
+
+  // =====================================================
+  // AFFICHAGE DU PLI (SANS setState SYNCHRONE)
+  // =====================================================
+  const [displayPli, setDisplayPli] = useState([]);
+
+  useEffect(() => {
+    // Quand une carte est ajoutée → on affiche via timeout (async)
+    if (game.pli.length > 0) {
+      const showTimer = setTimeout(() => {
+        setDisplayPli(game.pli);
+      }, 0);
+
+      return () => clearTimeout(showTimer);
+    }
+
+    // Quand le moteur vide le pli → on garde l’affichage 700 ms
+    if (game.pli.length === 0 && displayPli.length > 0) {
+      const hideTimer = setTimeout(() => {
+        setDisplayPli([]);
+      }, 700);
+
+      return () => clearTimeout(hideTimer);
+    }
+  }, [game.pli, displayPli]);
 
   // =====================================================
   // BOT AUTO — FAIT JOUER LES AUTRES JOUEURS
@@ -33,7 +56,6 @@ export default function Table() {
 
     const activePlayer = game.players[game.currentPlayerIndex];
 
-    // Tous sauf joueur1 jouent automatiquement
     if (activePlayer !== "joueur1") {
       const hand = game.hands[activePlayer];
       if (!hand || hand.length === 0) return;
@@ -48,17 +70,18 @@ export default function Table() {
       return () => clearTimeout(timer);
     }
   }, [game]);
+// =====================================================
+// FIN DE PLI — déclenche NEXT_PLI après affichage
+// =====================================================
+useEffect(() => {
+  if (game.state === STATES.PLI_TERMINE) {
+    const timer = setTimeout(() => {
+      setGame(g => dispatch(g, { type: "NEXT_PLI" }));
+    }, 800); // durée d’affichage du pli
 
-  // =====================================================
-  // DEBUG CLICK (optionnel)
-  // =====================================================
-  useEffect(() => {
-    function handleGlobalClick(e) {
-      console.log("CLIC GLOBAL →", e.target);
-    }
-    document.addEventListener("click", handleGlobalClick);
-    return () => document.removeEventListener("click", handleGlobalClick);
-  }, []);
+    return () => clearTimeout(timer);
+  }
+}, [game.state]);
 
   // =====================================================
   // ACTIONS
@@ -94,9 +117,9 @@ export default function Table() {
             <div className="table-image" />
 
             {/* PLI */}
-            {game.pli?.length > 0 && (
+            {displayPli.length > 0 && (
               <div className="pli-zone">
-                {game.pli.map((play, index) => (
+                {displayPli.map((play, index) => (
                   <div
                     key={index}
                     className={`pli-card from-${play.playerId}`}
@@ -120,14 +143,8 @@ export default function Table() {
                   activePlayer === player ? "active" : ""
                 }`}
               >
-                <img
-                  src="/avatar.png"
-                  alt="Avatar"
-                  className="player-avatar"
-                />
-
+                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
                 {activePlayer === player && <div className="active-dot" />}
-
                 <div className="player-pseudo">{player}</div>
               </div>
             ))}
@@ -164,17 +181,6 @@ export default function Table() {
               </div>
             )}
 
-            {/* CARTE D’ATOUT */}
-            {game.atoutPropose &&
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-                <div className="atout-card">
-                  <div className="label">Atout</div>
-                  <div className="symbol">
-                    {game.atoutPropose.value} {game.atoutPropose.suit}
-                  </div>
-                </div>
-              )}
-
             {/* PANNEAU ATTOUT */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) && (
@@ -200,6 +206,9 @@ export default function Table() {
     </div>
   );
 }
+
+
+
 
 
 
