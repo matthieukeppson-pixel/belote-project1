@@ -115,6 +115,15 @@ useEffect(() => {
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+{/* CARTE D’ATOUT PROPOSÉE (tour 1 uniquement) */}
+{game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
+  <div className="atout-card">
+    <div className="label">Atout</div>
+    <div className="symbol">
+      {game.atoutPropose.value} {game.atoutPropose.suit}
+    </div>
+  </div>
+)}
 
             {/* PLI */}
         {/* PLI — cartes posées devant chaque joueur */}
