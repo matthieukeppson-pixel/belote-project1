@@ -117,18 +117,20 @@ useEffect(() => {
             <div className="table-image" />
 
             {/* PLI */}
-            {displayPli.length > 0 && (
-              <div className="pli-zone">
-                {displayPli.map((play, index) => (
-                  <div
-                    key={index}
-                    className={`pli-card from-${play.playerId}`}
-                  >
-                    {play.card.value} {play.card.suit}
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* PLI — cartes posées devant chaque joueur */}
+{displayPli.map((play, index) => {
+  if (!play || !play.card) return null;
+
+  return (
+    <div
+      key={index}
+      className={`pli-card pli-${play.playerId}`}
+    >
+      {play.card.value} {play.card.suit}
+    </div>
+  );
+})}
+
 
             {/* AVATARS */}
             {[

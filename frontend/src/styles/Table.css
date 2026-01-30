@@ -305,22 +305,15 @@
 }
 
 /* ============================================
-   PLI — PRÉSENCE VISUELLE FORTE
+   PLI — CARTES POSÉES DEVANT CHAQUE JOUEUR
 ============================================ */
 
-.pli-zone {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  gap: 14px;
-  z-index: 20;
-  pointer-events: none;
-}
-
 .pli-card {
-  padding: 14px 18px;
+  position: absolute;
+
+  width: 64px;
+  height: 96px;
+
   background: #ffffff;
   border-radius: 14px;
 
@@ -328,29 +321,46 @@
   font-size: 18px;
   color: #111;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   box-shadow:
     0 0 0 3px rgba(220, 180, 120, 0.9),
     0 14px 28px rgba(0, 0, 0, 0.75);
 
-  transform: scale(1.2);
+  z-index: 20;
 }
 
-/* Origine visuelle de la carte jouée */
-.from-joueur1 {
-  transform: translateY(22px) scale(1.05);
+/* Joueur du bas (local) */
+.pli-joueur1 {
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.from-joueur2 {
-  transform: translateY(-22px) scale(1.05);
+/* Joueur du haut */
+.pli-joueur2 {
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.from-joueur3 {
-  transform: translateX(22px) scale(1.05);
+/* Joueur de droite */
+.pli-joueur3 {
+  top: 50%;
+  right: 22%;
+  transform: translateY(-50%);
 }
 
-.from-joueur4 {
-  transform: translateX(-22px) scale(1.05);
+/* Joueur de gauche */
+.pli-joueur4 {
+  top: 50%;
+  left: 22%;
+  transform: translateY(-50%);
 }
+
+
 
 /* ============================================
    JOUEUR ACTIF — HALO ROUGE
