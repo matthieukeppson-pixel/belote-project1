@@ -149,9 +149,16 @@ export function handleTableIdle(game, event) {
     preneur: null,
     pli: [],
     couleurDemandee: null,
-    winnerIndex: null
+    winnerIndex: null,
+
+    // 🔹 score temporaire de la manche
+    scoreManche: {
+      nous: 0,
+      eux: 0
+    }
   };
 }
+
 
 // ============================================
 // DISTRIBUTION
