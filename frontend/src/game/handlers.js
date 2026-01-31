@@ -406,6 +406,41 @@ if (isLastPli) {
     scoreManche.eux += 10;
   }
 }
+// ============================================
+// FIN DE MANCHE + CHUTE
+// ============================================
+
+let finDeManche = null;
+
+if (isLastPli) {
+  // 🔹 équipe du preneur
+  const preneurId = game.players[game.preneur];
+  const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
+
+  const pointsPreneur = scoreManche[preneurEquipe];
+
+  // 🔹 seuil : 82 si dix de der pris, sinon 92
+  const totalManche = scoreManche.nous + scoreManche.eux;
+  const aPrisDixDeDer = totalManche === 172;
+  const seuil = aPrisDixDeDer ? 82 : 92;
+
+  // 🔹 chute ?
+  const chute = pointsPreneur < seuil;
+
+  if (chute) {
+    // preneur = 0, adversaires = tout
+    scoreManche[preneurEquipe] = 0;
+    scoreManche[autreEquipe] = totalManche;
+  }
+
+  finDeManche = {
+    chute,
+    preneurEquipe,
+    seuil,
+    scoreFinal: { ...scoreManche }
+  };
+}
 
 return {
   ...game,
@@ -414,8 +449,10 @@ return {
   couleurDemandee,
   winnerIndex,
   scoreManche,
-  state: STATES.PLI_TERMINE
+  finDeManche, // ✅ UTILISÉ → ESLint OK
+  state: isLastPli ? STATES.FIN_DE_MANCHE : STATES.PLI_TERMINE
 };
+
 
   }
 
