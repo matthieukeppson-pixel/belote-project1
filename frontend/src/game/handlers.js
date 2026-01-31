@@ -370,19 +370,53 @@ export function handlePli(game, event) {
       };
     }
 
-    // pli terminé : on calcule le gagnant mais on garde les 4 cartes visibles
-    const winnerId = getPliWinner(newPli, couleurDemandee, game.atout);
-    const winnerIndex =
-      winnerId != null ? game.players.indexOf(winnerId) : game.currentPlayerIndex;
+// pli terminé : gagnant + score
+const winnerId = getPliWinner(newPli, couleurDemandee, game.atout);
+const winnerIndex =
+  winnerId != null ? game.players.indexOf(winnerId) : game.currentPlayerIndex;
 
-    return {
-      ...game,
-      hands: { ...game.hands, [playerId]: newHand },
-      pli: newPli, // ✅ 4 cartes visibles
-      couleurDemandee,
-      winnerIndex,
-      state: STATES.PLI_TERMINE
-    };
+// 🔹 points du pli
+const pliPoints = getPliPoints(newPli, game.atout);
+
+// 🔹 score de manche (copie sécurisée)
+const scoreManche = game.scoreManche
+  ? { ...game.scoreManche }
+  : { nous: 0, eux: 0 };
+
+// 🔹 attribution des points à l’équipe gagnante
+if (game.teams.nous.includes(winnerId)) {
+  scoreManche.nous += pliPoints;
+} else if (game.teams.eux.includes(winnerId)) {
+  scoreManche.eux += pliPoints;
+}
+
+// 🔹 dix de der (dernier pli)
+const handsAfterPlay = {
+  ...game.hands,
+  [playerId]: newHand
+};
+
+const isLastPli = Object.values(handsAfterPlay)
+  .every(hand => Array.isArray(hand) && hand.length === 0);
+
+if (isLastPli) {
+  if (game.teams.nous.includes(winnerId)) {
+    scoreManche.nous += 10;
+  } else if (game.teams.eux.includes(winnerId)) {
+    scoreManche.eux += 10;
+  }
+}
+
+return {
+  ...game,
+  hands: { ...game.hands, [playerId]: newHand },
+  pli: newPli, // ✅ 4 cartes visibles
+  couleurDemandee,
+  winnerIndex,
+  scoreManche,
+  state: STATES.PLI_TERMINE
+};
+
   }
 
   // 2) Nettoyer le pli après délai UI
