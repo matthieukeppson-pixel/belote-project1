@@ -34,6 +34,44 @@ function shuffle(deck) {
   }
   return shuffled;
 }
+// ============================================
+// POINTS DES CARTES — BELOTE CLASSIQUE
+// ============================================
+
+const ATOUT_POINTS = {
+  J: 20,
+  9: 14,
+  A: 11,
+  10: 10,
+  K: 4,
+  Q: 3,
+  8: 0,
+  7: 0
+};
+
+const NORMAL_POINTS = {
+  A: 11,
+  10: 10,
+  K: 4,
+  Q: 3,
+  J: 2,
+  9: 0,
+  8: 0,
+  7: 0
+};
+
+export function getCardPoints(card, atoutSuit) {
+  if (!card || !card.value || !card.suit) return 0;
+
+  const value = String(card.value).toUpperCase();
+  const isAtout = card.suit === atoutSuit;
+
+  if (isAtout) {
+    return ATOUT_POINTS[value] ?? 0;
+  }
+
+  return NORMAL_POINTS[value] ?? 0;
+}
 
 // ============================================
 // GAGNANT DU PLI (V1) — atout + couleur demandée
