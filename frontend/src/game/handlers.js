@@ -72,6 +72,19 @@ export function getCardPoints(card, atoutSuit) {
 
   return NORMAL_POINTS[value] ?? 0;
 }
+// ============================================
+// POINTS D’UN PLI — SOMME DES CARTES
+// ============================================
+
+export function getPliPoints(pli, atoutSuit) {
+  if (!Array.isArray(pli) || pli.length === 0) return 0;
+
+  return pli.reduce((total, play) => {
+    if (!play || !play.card) return total;
+
+    return total + getCardPoints(play.card, atoutSuit);
+  }, 0);
+}
 
 // ============================================
 // GAGNANT DU PLI (V1) — atout + couleur demandée
