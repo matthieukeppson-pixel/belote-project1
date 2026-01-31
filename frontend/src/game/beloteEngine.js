@@ -62,6 +62,12 @@ export function createInitialGameState() {
     hands: {},
     deck: [],
 
+    // 🔹 ÉQUIPES (RÈGLE FIGÉE)
+    teams: {
+      nous: ["joueur1", "joueur2"],
+      eux: ["joueur3", "joueur4"]
+    },
+
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
@@ -69,14 +75,16 @@ export function createInitialGameState() {
 
     currentPlayerIndex: 0,
     pli: [],
-    winnerIndex: null, // 🆕 mémorisation du gagnant du pli
+    winnerIndex: null,
 
+    // 🔹 SCORE GLOBAL (sera utilisé plus tard)
     score: {
-      equipeA: 0,
-      equipeB: 0
+      nous: 0,
+      eux: 0
     }
   };
 }
+
 
 // ============================================
 // DISPATCH
