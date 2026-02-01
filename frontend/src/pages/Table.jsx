@@ -13,18 +13,25 @@ const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
 
 function suitLabel(suit) {
   switch (suit) {
-    case "hearts": return "♥";
-    case "diamonds": return "♦";
-    case "clubs": return "♣";
-    case "spades": return "♠";
-    default: return "";
+    case "hearts":
+      return "♥";
+    case "diamonds":
+      return "♦";
+    case "clubs":
+      return "♣";
+    case "spades":
+      return "♠";
+    default:
+      return "";
   }
 }
-
 
 export default function Table() {
   const navigate = useNavigate();
 
+  // ============================================
+  // GAME STATE
+  // ============================================
   const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
@@ -40,16 +47,22 @@ export default function Table() {
     return g;
   });
 
-  // =====================================================
-  // AFFICHAGE DU PLI (SANS setState SYNCHRONE)
-  // =====================================================
+  // ============================================
+  // UI STATES (⚠️ TOUJOURS AVANT useEffect)
+  // ============================================
   const [displayPli, setDisplayPli] = useState([]);
+  const [hideLastPli, setHideLastPli] = useState(false);
 
+  // ============================================
+  // AFFICHAGE DU PLI (logique UI uniquement)
+  // ============================================
   useEffect(() => {
     if (game.pli.length > 0) {
       const showTimer = setTimeout(() => {
-        setDisplayPli(game.pli);
+        setHideLastPli(false);      // reset UI
+        setDisplayPli(game.pli);   // afficher le pli
       }, 0);
+
       return () => clearTimeout(showTimer);
     }
 
@@ -57,13 +70,27 @@ export default function Table() {
       const hideTimer = setTimeout(() => {
         setDisplayPli([]);
       }, 700);
+
       return () => clearTimeout(hideTimer);
     }
   }, [game.pli, displayPli]);
 
-  // =====================================================
+  // ============================================
+  // FIN DE MANCHE — MASQUAGE DU DERNIER PLI (DELAI)
+  // ============================================
+  useEffect(() => {
+    if (game.state !== STATES.FIN_DE_MANCHE) return;
+
+    const timer = setTimeout(() => {
+      setHideLastPli(true);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [game.state]);
+
+  // ============================================
   // BOT AUTO
-  // =====================================================
+  // ============================================
   useEffect(() => {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
@@ -84,21 +111,22 @@ export default function Table() {
     }
   }, [game]);
 
-  // =====================================================
-  // FIN DE PLI
-  // =====================================================
+  // ============================================
+  // FIN DE PLI (passage au pli suivant)
+  // ============================================
   useEffect(() => {
-    if (game.state === STATES.PLI_TERMINE) {
-      const timer = setTimeout(() => {
-        setGame(g => dispatch(g, { type: "NEXT_PLI" }));
-      }, 800);
-      return () => clearTimeout(timer);
-    }
+    if (game.state !== STATES.PLI_TERMINE) return;
+
+    const timer = setTimeout(() => {
+      setGame(g => dispatch(g, { type: "NEXT_PLI" }));
+    }, 800);
+
+    return () => clearTimeout(timer);
   }, [game.state]);
 
-  // =====================================================
+  // ============================================
   // ACTIONS
-  // =====================================================
+  // ============================================
   function handleTakeAtout() {
     setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
   }
@@ -115,9 +143,15 @@ export default function Table() {
   const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
-  // =====================================================
+  // ============================================
+  // SCORE UI
+  // ============================================
+  const scoreUI = game.scoreManche || game.score || null;
+  const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+
+  // ============================================
   // RENDER
-  // =====================================================
+  // ============================================
   return (
     <div className="table-page">
       <button className="table-back-btn" onClick={() => navigate("/salon")}>
@@ -129,28 +163,25 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-            {/* CARTE D’ATOUT PROPOSÉE — TOUR 1 */}
-            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && game.atoutPropose && (
-              <div className="atout-card">
-                <div className="label">Atout</div>
-                <div className="symbol">
-                  {game.atoutPropose.value} {game.atoutPropose.suit}
-                </div>
+            {/* SCORE */}
+            {scoreUI && (
+              <div className="score-overlay">
+                <span className="score-nous">Nous {scoreUI.nous}</span>
+                <span className="score-separator"> — </span>
+                <span className="score-eux">Eux {scoreUI.eux}</span>
               </div>
             )}
 
             {/* PLI */}
-            {displayPli.map((play, index) => {
-              if (!play || !play.card) return null;
-              return (
-                <div
-                  key={index}
-                  className={`pli-card pli-${play.playerId}`}
-                >
-                  {play.card.value} {play.card.suit}
-                </div>
-              );
-            })}
+            {shouldShowPli &&
+              displayPli.map((play, index) => {
+                if (!play || !play.card) return null;
+                return (
+                  <div key={index} className={`pli-card pli-${play.playerId}`}>
+                    {play.card.value} {play.card.suit}
+                  </div>
+                );
+              })}
 
             {/* AVATARS */}
             {[
@@ -183,9 +214,7 @@ export default function Table() {
                     <div
                       key={`${card.suit}-${card.value}`}
                       className={`card ${!isMyTurn ? "disabled" : ""}`}
-                      onClick={
-                        isMyTurn ? () => handlePlayCard(card) : undefined
-                      }
+                      onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
                       style={{
                         transform: `
                           translateX(${offset * -28}px)
@@ -222,27 +251,24 @@ export default function Table() {
             {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && game.atoutPropose && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
-
                 <div className="atout-actions">
-                  {ALL_SUITS
-                    .filter(suit => suit !== game.atoutPropose.suit)
-                    .map(suit => (
-                    
-                   <button
-  key={suit}
-  className="atout-btn take atout-suit-btn"
-  onClick={() =>
-    setGame(g =>
-      dispatch(g, { type: "TAKE_ATOUT", suit })
-    )
-  }
->
-  <span className={`atout-suit-symbol ${suit}`}>
-    {suitLabel(suit)}
-  </span>
-</button>
-
-                    ))}
+                  {ALL_SUITS.filter(
+                    suit => suit !== game.atoutPropose.suit
+                  ).map(suit => (
+                    <button
+                      key={suit}
+                      className="atout-btn take atout-suit-btn"
+                      onClick={() =>
+                        setGame(g =>
+                          dispatch(g, { type: "TAKE_ATOUT", suit })
+                        )
+                      }
+                    >
+                      <span className={`atout-suit-symbol ${suit}`}>
+                        {suitLabel(suit)}
+                      </span>
+                    </button>
+                  ))}
                 </div>
 
                 <div className="atout-actions" style={{ marginTop: 10 }}>
@@ -252,7 +278,6 @@ export default function Table() {
                 </div>
               </div>
             )}
-
           </div>
         </div>
 
@@ -263,6 +288,8 @@ export default function Table() {
     </div>
   );
 }
+
+
 
 
 
