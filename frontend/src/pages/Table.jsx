@@ -163,14 +163,21 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
-            {/* SCORE */}
-            {scoreUI && (
-              <div className="score-overlay">
-                <span className="score-nous">Nous {scoreUI.nous}</span>
-                <span className="score-separator"> — </span>
-                <span className="score-eux">Eux {scoreUI.eux}</span>
-              </div>
-            )}
+
+        {scoreUI && (
+  <div className="score-overlay score-pill">
+    <span className="score-side">Nous</span>
+
+    <div className="score-pill-box">
+      {scoreUI.nous}
+      <span className="score-sep">–</span>
+      {scoreUI.eux}
+    </div>
+
+    <span className="score-side">Eux</span>
+  </div>
+)}
+
 
             {/* PLI */}
             {shouldShowPli &&

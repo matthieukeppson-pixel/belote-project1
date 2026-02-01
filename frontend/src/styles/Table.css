@@ -468,5 +468,67 @@
   color: #111; /* noir */
 }
 
+/* ================================
+   SCORE — PILULE NON CLIQUABLE
+   ================================ */
+
+.score-overlay.score-pill {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  color: white;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.score-side {
+  font-size: 16px;
+  font-weight: 800;          /* gras prononcé */
+  text-transform: uppercase; /* MAJUSCULES */
+  letter-spacing: 0.6px;     /* meilleure lisibilité */
+  opacity: 1;
+}
+
+
+
+.score-pill-box {
+  padding: 4px 14px;
+  min-width: 84px;
+
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 200, 120, 0.85);
+
+  background: linear-gradient(
+    180deg,
+    rgba(255, 190, 120, 0.15),
+    rgba(180, 80, 20, 0.25)
+  );
+
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+
+  text-align: center;
+
+  box-shadow:
+    0 0 0 1px rgba(255, 170, 90, 0.25),
+    inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+
+
+.score-sep {
+  margin: 0 6px;
+  opacity: 0.75;
+}
+
+
+
 
 
