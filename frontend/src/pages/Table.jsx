@@ -253,6 +253,17 @@ export default function Table() {
                 </div>
               </div>
             )}
+{/* CARTE D’ATOUT RETOURNÉE — visible pendant les annonces */}
+{(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
+  game.atoutPropose && (
+    <div className="atout-card">
+      <div className="label">Atout</div>
+      <div className="symbol">
+        {game.atoutPropose.value} {game.atoutPropose.suit}
+      </div>
+    </div>
+)}
 
             {/* PANNEAU ATTOUT — TOUR 2 */}
             {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && game.atoutPropose && (
