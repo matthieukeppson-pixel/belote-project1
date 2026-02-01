@@ -239,17 +239,26 @@ export function handleDistribution(game, event, count) {
     return { ...game, state: STATES.DISTRIBUTION_2, deck, hands };
   }
 
-  if (game.state === STATES.DISTRIBUTION_2) {
-    const atoutPropose = deck.shift();
-    return {
-      ...game,
-      state: STATES.ANNOUNCE_ATOUT_TOUR_1,
-      deck,
-      hands,
-      atoutPropose,
-      currentPlayerIndex: (game.dealerIndex + 1) % 4
-    };
-  }
+if (game.state === STATES.DISTRIBUTION_2) {
+  const atoutPropose = deck.shift();
+
+  console.log(
+    "[ANNONCES] dealerIndex =",
+    game.dealerIndex,
+    "premier à parler =",
+    game.players[(game.dealerIndex + 1) % game.players.length]
+  );
+
+  return {
+    ...game,
+    state: STATES.ANNOUNCE_ATOUT_TOUR_1,
+    deck,
+    hands,
+    atoutPropose,
+    currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
+  };
+}
+
 
   return { ...game, deck, hands };
 }
