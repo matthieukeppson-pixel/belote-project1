@@ -53,6 +53,7 @@ export default function Table() {
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
 
+
   // ============================================
   // AFFICHAGE DU PLI (logique UI uniquement)
   // ============================================
@@ -87,6 +88,7 @@ export default function Table() {
 
     return () => clearTimeout(timer);
   }, [game.state]);
+
 
   // ============================================
   // BOT AUTO
@@ -177,6 +179,7 @@ export default function Table() {
     <span className="score-side">Eux</span>
   </div>
 )}
+
 
 
             {/* PLI */}
