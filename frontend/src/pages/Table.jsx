@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
+import Partie from "../game/Partie";
 
 // ============================================
 // HELPERS ATTOUT — UI TABLE UNIQUEMENT
@@ -13,21 +14,30 @@ const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
 
 function suitLabel(suit) {
   switch (suit) {
-    case "hearts":
-      return "♥";
-    case "diamonds":
-      return "♦";
-    case "clubs":
-      return "♣";
-    case "spades":
-      return "♠";
-    default:
-      return "";
+    case "hearts": return "♥";
+    case "diamonds": return "♦";
+    case "clubs": return "♣";
+    case "spades": return "♠";
+    default: return "";
   }
 }
 
 export default function Table() {
   const navigate = useNavigate();
+
+  // ============================================
+  // PARTIE (présente mais non pilotante)
+  // ============================================
+  const partieRef = useRef(null);
+
+  useEffect(() => {
+    if (partieRef.current === null) {
+      partieRef.current = new Partie({
+        players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+        startingPlayerIndex: 0,
+      });
+    }
+  }, []);
 
   // ============================================
   // GAME STATE
@@ -37,7 +47,7 @@ export default function Table() {
 
     g = {
       ...g,
-      players: ["joueur1", "joueur4", "joueur2", "joueur3"]
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
     };
 
     g = dispatch(g, { type: "TABLE_READY" });
@@ -48,22 +58,20 @@ export default function Table() {
   });
 
   // ============================================
-  // UI STATES (⚠️ TOUJOURS AVANT useEffect)
+  // UI STATES
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
 
-
   // ============================================
-  // AFFICHAGE DU PLI (logique UI uniquement)
+  // AFFICHAGE DU PLI
   // ============================================
   useEffect(() => {
     if (game.pli.length > 0) {
       const showTimer = setTimeout(() => {
-        setHideLastPli(false);      // reset UI
-        setDisplayPli(game.pli);   // afficher le pli
+        setHideLastPli(false);
+        setDisplayPli(game.pli);
       }, 0);
-
       return () => clearTimeout(showTimer);
     }
 
@@ -71,13 +79,12 @@ export default function Table() {
       const hideTimer = setTimeout(() => {
         setDisplayPli([]);
       }, 700);
-
       return () => clearTimeout(hideTimer);
     }
   }, [game.pli, displayPli]);
 
   // ============================================
-  // FIN DE MANCHE — MASQUAGE DU DERNIER PLI (DELAI)
+  // FIN DE MANCHE
   // ============================================
   useEffect(() => {
     if (game.state !== STATES.FIN_DE_MANCHE) return;
@@ -89,14 +96,14 @@ export default function Table() {
     return () => clearTimeout(timer);
   }, [game.state]);
 
-
   // ============================================
   // BOT AUTO
   // ============================================
   useEffect(() => {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
-    const activePlayer = game.players[game.currentPlayerIndex];
+    const activePlayer =
+      game.players[game.currentPlayerIndex];
 
     if (activePlayer !== "joueur1") {
       const hand = game.hands[activePlayer];
@@ -114,7 +121,7 @@ export default function Table() {
   }, [game]);
 
   // ============================================
-  // FIN DE PLI (passage au pli suivant)
+  // FIN DE PLI
   // ============================================
   useEffect(() => {
     if (game.state !== STATES.PLI_TERMINE) return;
@@ -142,14 +149,13 @@ export default function Table() {
     setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
 
-  const activePlayer = game.players[game.currentPlayerIndex];
+  const activePlayer =
+    game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
-  // ============================================
-  // SCORE UI
-  // ============================================
   const scoreUI = game.scoreManche || game.score || null;
-  const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+  const shouldShowPli =
+    !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
 
   // ============================================
   // RENDER
@@ -165,40 +171,32 @@ export default function Table() {
           <div className="table-board">
             <div className="table-image" />
 
+            {scoreUI && (
+              <div className="score-overlay score-pill">
+                <span className="score-side">Nous</span>
+                <div className="score-pill-box">
+                  {scoreUI.nous}
+                  <span className="score-sep">–</span>
+                  {scoreUI.eux}
+                </div>
+                <span className="score-side">Eux</span>
+              </div>
+            )}
 
-        {scoreUI && (
-  <div className="score-overlay score-pill">
-    <span className="score-side">Nous</span>
-
-    <div className="score-pill-box">
-      {scoreUI.nous}
-      <span className="score-sep">–</span>
-      {scoreUI.eux}
-    </div>
-
-    <span className="score-side">Eux</span>
-  </div>
-)}
-
-
-
-            {/* PLI */}
             {shouldShowPli &&
-              displayPli.map((play, index) => {
-                if (!play || !play.card) return null;
-                return (
+              displayPli.map((play, index) =>
+                play?.card ? (
                   <div key={index} className={`pli-card pli-${play.playerId}`}>
                     {play.card.value} {play.card.suit}
                   </div>
-                );
-              })}
+                ) : null
+              )}
 
-            {/* AVATARS */}
             {[
               ["joueur2", "top"],
               ["joueur4", "left"],
               ["joueur3", "right"],
-              ["joueur1", "bottom"]
+              ["joueur1", "bottom"],
             ].map(([player, position]) => (
               <div
                 key={player}
@@ -212,7 +210,6 @@ export default function Table() {
               </div>
             ))}
 
-            {/* MAIN JOUEUR */}
             {game.hands["joueur1"] && (
               <div className="player-bottom">
                 {game.hands["joueur1"].map((card, index) => {
@@ -232,7 +229,7 @@ export default function Table() {
                           rotate(${offset * 4}deg)
                         `,
                         transformOrigin: "bottom center",
-                        zIndex: 100 + index
+                        zIndex: 100 + index,
                       }}
                     >
                       {card.value} {card.suit}
@@ -242,7 +239,6 @@ export default function Table() {
               </div>
             )}
 
-            {/* PANNEAU ATTOUT — TOUR 1 */}
             {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
               <div className="atout-panel">
                 <div className="atout-title">Choisir l’atout</div>
@@ -256,49 +252,49 @@ export default function Table() {
                 </div>
               </div>
             )}
-{/* CARTE D’ATOUT RETOURNÉE — visible pendant les annonces */}
-{(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
-  game.atoutPropose && (
-    <div className="atout-card">
-      <div className="label">Atout</div>
-      <div className="symbol">
-        {game.atoutPropose.value} {game.atoutPropose.suit}
-      </div>
-    </div>
-)}
 
-            {/* PANNEAU ATTOUT — TOUR 2 */}
-            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 && game.atoutPropose && (
-              <div className="atout-panel">
-                <div className="atout-title">Choisir l’atout</div>
-                <div className="atout-actions">
-                  {ALL_SUITS.filter(
-                    suit => suit !== game.atoutPropose.suit
-                  ).map(suit => (
-                    <button
-                      key={suit}
-                      className="atout-btn take atout-suit-btn"
-                      onClick={() =>
-                        setGame(g =>
-                          dispatch(g, { type: "TAKE_ATOUT", suit })
-                        )
-                      }
-                    >
-                      <span className={`atout-suit-symbol ${suit}`}>
-                        {suitLabel(suit)}
-                      </span>
+            {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
+              game.atoutPropose && (
+                <div className="atout-card">
+                  <div className="label">Atout</div>
+                  <div className="symbol">
+                    {game.atoutPropose.value} {game.atoutPropose.suit}
+                  </div>
+                </div>
+              )}
+
+            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+              game.atoutPropose && (
+                <div className="atout-panel">
+                  <div className="atout-title">Choisir l’atout</div>
+                  <div className="atout-actions">
+                    {ALL_SUITS.filter(
+                      suit => suit !== game.atoutPropose.suit
+                    ).map(suit => (
+                      <button
+                        key={suit}
+                        className="atout-btn take atout-suit-btn"
+                        onClick={() =>
+                          setGame(g =>
+                            dispatch(g, { type: "TAKE_ATOUT", suit })
+                          )
+                        }
+                      >
+                        <span className={`atout-suit-symbol ${suit}`}>
+                          {suitLabel(suit)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="atout-actions" style={{ marginTop: 10 }}>
+                    <button className="atout-btn pass" onClick={handlePass}>
+                      Passer
                     </button>
-                  ))}
+                  </div>
                 </div>
-
-                <div className="atout-actions" style={{ marginTop: 10 }}>
-                  <button className="atout-btn pass" onClick={handlePass}>
-                    Passer
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
 
@@ -309,6 +305,7 @@ export default function Table() {
     </div>
   );
 }
+
 
 
 
