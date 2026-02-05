@@ -83,18 +83,75 @@ export default function Table() {
     }
   }, [game.pli, displayPli]);
 
-  // ============================================
-  // FIN DE MANCHE
-  // ============================================
-  useEffect(() => {
-    if (game.state !== STATES.FIN_DE_MANCHE) return;
+// ============================================
+// FIN DE MANCHE — VISUEL (dernier pli)
+// ============================================
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
 
-    const timer = setTimeout(() => {
-      setHideLastPli(true);
-    }, 800);
+  const timer = setTimeout(() => {
+    setHideLastPli(true);
+ }, 1500);
 
-    return () => clearTimeout(timer);
-  }, [game.state]);
+
+  return () => clearTimeout(timer);
+}, [game.state]);
+
+
+// ============================================
+// RELANCE DE MANCHE VIA PARTIE (APRÈS VISUEL)
+// ============================================
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
+  if (!partieRef.current) return;
+
+  const timer = setTimeout(() => {
+    const next = partieRef.current.onFinDeManche({
+      players: game.players,
+      dealerIndex: game.dealerIndex,
+      winnerIndex: game.winnerIndex,
+      preneur: game.preneur,
+      scoreManche: game.scoreManche,
+      finDeManche: game.finDeManche,
+    });
+
+    if (!next) return;
+
+    // ✅ RESET UI AVANT NOUVELLE MANCHE
+    setDisplayPli([]);
+    setHideLastPli(false);
+
+    let g = createInitialGameState();
+
+    g = {
+      ...g,
+      players: game.players,
+      dealerIndex: next.dealerIndex,
+      currentPlayerIndex: next.startingPlayerIndex,
+    };
+
+    g = dispatch(g, { type: "TABLE_READY" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+
+    setGame(g);
+  }, 1600);
+
+
+  return () => clearTimeout(timer);
+}, [
+  game.state,
+  game.players,
+  game.dealerIndex,
+  game.winnerIndex,
+  game.preneur,
+  game.scoreManche,
+  game.finDeManche,
+]);
+
+
+
+
 
   // ============================================
   // BOT AUTO
