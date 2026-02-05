@@ -133,8 +133,14 @@ function getPliWinner(pli, couleurDemandee, atoutSuit) {
 export function handleTableIdle(game, event) {
   if (!event || event.type !== "TABLE_READY") return game;
 
-  const dealerIndex = 0;
-  const currentPlayerIndex = (dealerIndex + 1) % 4; // joueur à gauche du donneur
+const dealerIndex =
+  typeof game.dealerIndex === "number" ? game.dealerIndex : 0;
+
+const currentPlayerIndex =
+  typeof game.currentPlayerIndex === "number"
+    ? game.currentPlayerIndex
+    : (dealerIndex + 1) % game.players.length;
+
 
   return {
     ...game,
