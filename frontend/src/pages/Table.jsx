@@ -29,6 +29,7 @@ export default function Table() {
   // PARTIE (présente mais non pilotante)
   // ============================================
   const partieRef = useRef(null);
+ const finDeMancheRef = useRef(null);
 
   useEffect(() => {
     if (partieRef.current === null) {
@@ -62,7 +63,8 @@ export default function Table() {
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
-
+// ✅ SCORE DE PARTIE (501)
+const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
   // ============================================
   // AFFICHAGE DU PLI
   // ============================================
@@ -97,27 +99,44 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, [game.state]);
 
-
 // ============================================
-// RELANCE DE MANCHE VIA PARTIE (APRÈS VISUEL)
+// FIN DE MANCHE — CALCUL PARTIE (UNE SEULE FOIS)
 // ============================================
 useEffect(() => {
   if (game.state !== STATES.FIN_DE_MANCHE) return;
   if (!partieRef.current) return;
 
+  const next = partieRef.current.onFinDeManche({
+    players: game.players,
+    dealerIndex: game.dealerIndex,
+    winnerIndex: game.winnerIndex,
+    preneur: game.preneur,
+    scoreManche: game.scoreManche,
+    finDeManche: game.finDeManche,
+  });
+
+  finDeMancheRef.current = next;
+
+  if (next?.scorePartie) {
+    setScorePartie(next.scorePartie);
+  }
+// ⬇️⬇️⬇️ AJOUTE CETTE LIGNE ⬇️⬇️⬇️
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [game.state]);
+
+
+
+
+// ============================================
+// RELANCE DE MANCHE (APRÈS VISUEL)
+// ============================================
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
+
   const timer = setTimeout(() => {
-    const next = partieRef.current.onFinDeManche({
-      players: game.players,
-      dealerIndex: game.dealerIndex,
-      winnerIndex: game.winnerIndex,
-      preneur: game.preneur,
-      scoreManche: game.scoreManche,
-      finDeManche: game.finDeManche,
-    });
+    const next = finDeMancheRef.current;
+    if (!next || next.partieTerminee) return;
 
-    if (!next) return;
-
-    // ✅ RESET UI AVANT NOUVELLE MANCHE
     setDisplayPli([]);
     setHideLastPli(false);
 
@@ -137,17 +156,12 @@ useEffect(() => {
     setGame(g);
   }, 1600);
 
-
   return () => clearTimeout(timer);
-}, [
-  game.state,
-  game.players,
-  game.dealerIndex,
-  game.winnerIndex,
-  game.preneur,
-  game.scoreManche,
-  game.finDeManche,
-]);
+// ⬇️⬇️⬇️ AJOUTE CETTE LIGNE ⬇️⬇️⬇️
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [game.state]);
+
+
 
 
 
@@ -210,7 +224,8 @@ useEffect(() => {
     game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
-  const scoreUI = game.scoreManche || game.score || null;
+ const scoreUI = scorePartie;
+
   const shouldShowPli =
     !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
 
