@@ -142,6 +142,10 @@ useEffect(() => {
     setDisplayPli([]);
     setHideLastPli(false);
 
+    // 🔑 RÉARMEMENT DU VERROU POUR LA PROCHAINE MANCHE
+    finDeMancheCompteeRef.current = false;
+    finDeMancheRef.current = null; // optionnel mais propre
+
     let g = createInitialGameState();
 
     g = {
@@ -159,9 +163,9 @@ useEffect(() => {
   }, 1600);
 
   return () => clearTimeout(timer);
-// ⬇️⬇️⬇️ AJOUTE CETTE LIGNE ⬇️⬇️⬇️
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [game.state]);
+
 
 
 
