@@ -29,7 +29,9 @@ export default function Table() {
   // PARTIE (présente mais non pilotante)
   // ============================================
   const partieRef = useRef(null);
- const finDeMancheRef = useRef(null);
+  // 🔒 CADENAS : empêche de compter deux fois une fin de manche
+  const finDeMancheCompteeRef = useRef(false);
+const finDeMancheRef = useRef(null);
 
   useEffect(() => {
     if (partieRef.current === null) {
@@ -106,12 +108,11 @@ useEffect(() => {
   if (game.state !== STATES.FIN_DE_MANCHE) return;
   if (!partieRef.current) return;
 
+  if (finDeMancheCompteeRef.current) return;
+  finDeMancheCompteeRef.current = true;
+
   const next = partieRef.current.onFinDeManche({
-    players: game.players,
     dealerIndex: game.dealerIndex,
-    winnerIndex: game.winnerIndex,
-    preneur: game.preneur,
-    scoreManche: game.scoreManche,
     finDeManche: game.finDeManche,
   });
 
@@ -120,9 +121,10 @@ useEffect(() => {
   if (next?.scorePartie) {
     setScorePartie(next.scorePartie);
   }
-// ⬇️⬇️⬇️ AJOUTE CETTE LIGNE ⬇️⬇️⬇️
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [game.state]);
+
+
 
 
 

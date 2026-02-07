@@ -353,6 +353,7 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
+
 // ============================================
 // PLI — FIN EN 2 TEMPS
 // ============================================
@@ -360,11 +361,20 @@ export function handleAnnonce(game, event) {
 export function handlePli(game, event) {
   if (!event) return game;
 
-  // 1) Jouer une carte
-  if (game.state === STATES.PLI_EN_COURS && event.type === "PLAY_CARD") {
-    const playerId = game.players[game.currentPlayerIndex];
-    const hand = game.hands[playerId];
-    if (!Array.isArray(hand)) return game;
+// 1) Jouer une carte
+if (game.state === STATES.PLI_EN_COURS && event.type === "PLAY_CARD") {
+  let winnerIndex = null;
+  let finDeManche = null;
+  let scoreManche = game.scoreManche ? { ...game.scoreManche } : { nous: 0, eux: 0 };
+
+ 
+
+  const playerId = game.players[game.currentPlayerIndex];
+  const hand = game.hands[playerId];
+  if (!Array.isArray(hand)) return game;
+
+
+
 
     // sécurité : un joueur ne joue pas 2 fois dans le même pli
     if (game.pli.some(p => p.playerId === playerId)) return game;
@@ -408,34 +418,30 @@ if (
 
     const newPli = [...game.pli, { playerId, card: playedCard }];
 
-    // pli pas terminé
-    if (newPli.length < game.players.length) {
-     return {
-  ...game,
-  hands: { ...game.hands, [playerId]: newHand },
-  pli: newPli,
-  couleurDemandee,
-  winnerIndex,
-  scoreManche,
-  finDeManche,
-  belote,
-  state: isLastPli ? STATES.FIN_DE_MANCHE : STATES.PLI_TERMINE
-};
+// pli pas terminé
+if (newPli.length < game.players.length) {
+  return {
+    ...game,
+    hands: { ...game.hands, [playerId]: newHand },
+    pli: newPli,
+    couleurDemandee,
+    belote, // ✅ on conserve la détection belote
+    currentPlayerIndex: (game.currentPlayerIndex + 1) % game.players.length
+  };
+}
 
-    }
 
 // pli terminé : gagnant + score
 const winnerId = getPliWinner(newPli, couleurDemandee, game.atout);
-const winnerIndex =
+winnerIndex =
   winnerId != null ? game.players.indexOf(winnerId) : game.currentPlayerIndex;
+
 
 // 🔹 points du pli
 const pliPoints = getPliPoints(newPli, game.atout);
 
 // 🔹 score de manche (copie sécurisée)
-const scoreManche = game.scoreManche
-  ? { ...game.scoreManche }
-  : { nous: 0, eux: 0 };
+
 
 // 🔹 attribution des points à l’équipe gagnante
 if (game.teams.nous.includes(winnerId)) {
@@ -464,7 +470,7 @@ if (isLastPli) {
 // FIN DE MANCHE + CHUTE
 // ============================================
 
-let finDeManche = null;
+
 
 if (isLastPli) {
   // 🔹 équipe du preneur
@@ -473,6 +479,16 @@ if (isLastPli) {
   const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
 
   const pointsPreneur = scoreManche[preneurEquipe];
+  // ============================================
+  // AJOUT DES 20 POINTS DE BELOTE (D1.2)
+  // ============================================
+  if (game.belote?.annoncee) {
+    const equipeBelote = game.teams.nous.includes(game.belote.joueur)
+      ? "nous"
+      : "eux";
+
+    scoreManche[equipeBelote] += 20;
+  }
 
   // 🔹 seuil : 82 si dix de der pris, sinon 92
   const totalManche = scoreManche.nous + scoreManche.eux;
