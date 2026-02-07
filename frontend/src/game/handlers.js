@@ -133,14 +133,13 @@ function getPliWinner(pli, couleurDemandee, atoutSuit) {
 export function handleTableIdle(game, event) {
   if (!event || event.type !== "TABLE_READY") return game;
 
-const dealerIndex =
-  typeof game.dealerIndex === "number" ? game.dealerIndex : 0;
+  const dealerIndex =
+    typeof game.dealerIndex === "number" ? game.dealerIndex : 0;
 
-const currentPlayerIndex =
-  typeof game.currentPlayerIndex === "number"
-    ? game.currentPlayerIndex
-    : (dealerIndex + 1) % game.players.length;
-
+  const currentPlayerIndex =
+    typeof game.currentPlayerIndex === "number"
+      ? game.currentPlayerIndex
+      : (dealerIndex + 1) % game.players.length;
 
   return {
     ...game,
@@ -153,17 +152,24 @@ const currentPlayerIndex =
     atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
+
+    belote: {
+      atout: null,
+      joueur: null,
+      annoncee: false
+    },
+
     pli: [],
     couleurDemandee: null,
     winnerIndex: null,
-
-    // 🔹 score temporaire de la manche
     scoreManche: {
       nous: 0,
       eux: 0
     }
   };
 }
+
+
 
 
 // ============================================
@@ -368,6 +374,34 @@ export function handlePli(game, event) {
 
     const newHand = [...hand];
     const [playedCard] = newHand.splice(idx, 1);
+// ============================================
+// DÉTECTION BELOTE / REBELOTE (D1.1)
+// ============================================
+let belote = game.belote;
+
+if (
+  !belote?.annoncee &&
+  game.atout &&
+  playedCard.suit === game.atout &&
+  (playedCard.value === "K" || playedCard.value === "Q")
+) {
+  const autreValeur = playedCard.value === "K" ? "Q" : "K";
+
+  // ⚠️ on regarde la main AVANT le coup
+  const avaitAutre = hand.some(
+    c =>
+      c.suit === game.atout &&
+      c.value === autreValeur
+  );
+
+  if (avaitAutre) {
+    belote = {
+      atout: game.atout,
+      joueur: playerId,
+      annoncee: true
+    };
+  }
+}
 
     const couleurDemandee =
       game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
@@ -376,13 +410,18 @@ export function handlePli(game, event) {
 
     // pli pas terminé
     if (newPli.length < game.players.length) {
-      return {
-        ...game,
-        hands: { ...game.hands, [playerId]: newHand },
-        pli: newPli,
-        couleurDemandee,
-        currentPlayerIndex: (game.currentPlayerIndex + 1) % game.players.length
-      };
+     return {
+  ...game,
+  hands: { ...game.hands, [playerId]: newHand },
+  pli: newPli,
+  couleurDemandee,
+  winnerIndex,
+  scoreManche,
+  finDeManche,
+  belote,
+  state: isLastPli ? STATES.FIN_DE_MANCHE : STATES.PLI_TERMINE
+};
+
     }
 
 // pli terminé : gagnant + score

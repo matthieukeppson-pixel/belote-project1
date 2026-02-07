@@ -72,6 +72,11 @@ export function createInitialGameState() {
     atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
+belote: {
+  atout: null,
+  joueur: null,
+  annoncee: false
+},
 
     currentPlayerIndex: 0,
     pli: [],
