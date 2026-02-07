@@ -176,26 +176,28 @@ useEffect(() => {
   // ============================================
   // BOT AUTO
   // ============================================
-  useEffect(() => {
-    if (game.state !== STATES.PLI_EN_COURS) return;
+/*
+useEffect(() => {
+  if (game.state !== STATES.PLI_EN_COURS) return;
 
-    const activePlayer =
-      game.players[game.currentPlayerIndex];
+  const activePlayer = game.players[game.currentPlayerIndex];
 
-    if (activePlayer !== "joueur1") {
-      const hand = game.hands[activePlayer];
-      if (!hand || hand.length === 0) return;
+  if (activePlayer !== "joueur1") {
+    const hand = game.hands[activePlayer];
+    if (!hand || hand.length === 0) return;
 
-      const card = hand[0];
-      const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+    const card = hand[0];
+    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
 
-      const timer = setTimeout(() => {
-        setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
-      }, 600);
+    const timer = setTimeout(() => {
+      setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
+    }, 600);
 
-      return () => clearTimeout(timer);
-    }
-  }, [game]);
+    return () => clearTimeout(timer);
+  }
+}, [game]);
+*/
+
 
   // ============================================
   // FIN DE PLI
