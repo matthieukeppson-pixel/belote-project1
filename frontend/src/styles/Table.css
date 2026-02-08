@@ -570,7 +570,7 @@
 
 /* Placement selon position */
 .atout-indicator.bottom {
-  right: -44px;   /* ⬅️ plus d’air */
+  right: -46px;   /* ⬅️ plus d’air */
   top: 50%;
   transform: translateY(-50%);
 }
@@ -578,7 +578,7 @@
 
 
 .atout-indicator.top {
-  left: -44px;
+  left: -46px;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -591,7 +591,7 @@
 
 .atout-indicator.left,
 .atout-indicator.right {
-  top: -46px;
+  top: -48px;
   left: 50%;
   transform: translateX(-50%);
 }
