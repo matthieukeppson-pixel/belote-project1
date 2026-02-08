@@ -236,15 +236,64 @@ useEffect(() => {
 
   const shouldShowPli =
     !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+// ============================================
+// BOUTON TEST — jouer pour le joueur actif
+// ============================================
+function playForActivePlayer() {
+  if (game.state !== STATES.PLI_EN_COURS) return;
 
-  // ============================================
-  // RENDER
-  // ============================================
-  return (
-    <div className="table-page">
-      <button className="table-back-btn" onClick={() => navigate("/salon")}>
-        ← Retour au salon
-      </button>
+  const active = game.players[game.currentPlayerIndex];
+  const hand = game.hands[active];
+  if (!hand || hand.length === 0) return;
+
+  // essaie chaque carte jusqu’à en trouver une valide
+  for (const card of hand) {
+    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+
+    const next = dispatch(game, { type: "PLAY_CARD", cardKey });
+
+    // si l’état change → le coup a été accepté
+    if (next !== game) {
+      setGame(next);
+      return;
+    }
+  }
+
+  console.warn("Aucune carte jouable pour", active);
+}
+
+
+// ============================================
+// RENDER
+// ============================================
+return (
+  <div className="table-page" style={{ position: "relative" }}>
+
+    {/* BOUTON TEST ULTRA SIMPLE */}
+    <button
+      onClick={playForActivePlayer}
+      style={{
+        position: "absolute",
+        top: 10,
+        left: 10,
+        padding: "10px 16px",
+        background: "red",
+        color: "white",
+        fontSize: "16px",
+        zIndex: 9999
+      }}
+    >
+      TEST JOUER
+    </button>
+
+    <button
+      className="table-back-btn"
+      onClick={() => navigate("/salon")}
+    >
+      ← Retour au salon
+    </button>
+
+
 
       <div className="table-layout">
         <div className="table-zone">
