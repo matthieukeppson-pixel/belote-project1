@@ -72,50 +72,45 @@ const finDeMancheRef = useRef(null);
     return g;
   });
 
-  // ============================================
-  // UI STATES
-  // ============================================
-  const [displayPli, setDisplayPli] = useState([]);
-  const [hideLastPli, setHideLastPli] = useState(false);
+// ============================================
+// UI STATES
+// ============================================
+
+const [displayPli, setDisplayPli] = useState([]);
+const [hideLastPli, setHideLastPli] = useState(false);
+
 // ✅ SCORE DE PARTIE (501)
 const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
-  // ============================================
-  // AFFICHAGE DU PLI
-  // ============================================
-  useEffect(() => {
-    if (game.pli.length > 0) {
-      const showTimer = setTimeout(() => {
-        setHideLastPli(false);
-        setDisplayPli(game.pli);
-      }, 0);
-      return () => clearTimeout(showTimer);
-    }
 
-    if (game.pli.length === 0 && displayPli.length > 0) {
-      const hideTimer = setTimeout(() => {
-        setDisplayPli([]);
-      }, 700);
-      return () => clearTimeout(hideTimer);
-    }
-  }, [game.pli, displayPli]);
+// ✅ FIN DE PARTIE
+const [partieTerminee, setPartieTerminee] = useState(false);
+// ============================================
+// AFFICHAGE DU PLI
+// ============================================
 
-// ============================================
-// FIN DE MANCHE — VISUEL (dernier pli)
-// ============================================
 useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
+  if (game.pli.length > 0) {
+    const showTimer = setTimeout(() => {
+      setHideLastPli(false);
+      setDisplayPli(game.pli);
+    }, 0);
 
-  const timer = setTimeout(() => {
-    setHideLastPli(true);
- }, 1500);
+    return () => clearTimeout(showTimer);
+  }
 
+  if (game.pli.length === 0 && displayPli.length > 0) {
+    const hideTimer = setTimeout(() => {
+      setDisplayPli([]);
+    }, 700);
 
-  return () => clearTimeout(timer);
-}, [game.state]);
+    return () => clearTimeout(hideTimer);
+  }
+}, [game.pli, displayPli]);
 
 // ============================================
-// FIN DE MANCHE — CALCUL PARTIE (UNE SEULE FOIS)
+// FIN DE MANCHE — CALCUL PARTIE
 // ============================================
+
 useEffect(() => {
   if (game.state !== STATES.FIN_DE_MANCHE) return;
   if (!partieRef.current) return;
@@ -133,8 +128,53 @@ useEffect(() => {
   if (next?.scorePartie) {
     setScorePartie(next.scorePartie);
   }
+
+  if (next?.partieTerminee) {
+    setPartieTerminee(true);
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [game.state]);
+function handleNouvellePartie() {
+  // reset arbitre
+  partieRef.current = new Partie({
+    players: game.players,
+    startingPlayerIndex: 0,
+  });
+
+  // reset UI
+  setScorePartie({ nous: 0, eux: 0 });
+  setPartieTerminee(false);
+
+  // reset moteur
+  let g = createInitialGameState();
+
+  g = {
+    ...g,
+    players: game.players,
+  };
+
+  g = dispatch(g, { type: "TABLE_READY" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+
+  setGame(g);
+}
+
+// ============================================
+// FIN DE MANCHE — VISUEL (dernier pli)
+// ============================================
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
+
+  const timer = setTimeout(() => {
+    setHideLastPli(true);
+ }, 1500);
+
+
+  return () => clearTimeout(timer);
+}, [game.state]);
+
+
 
 
 
@@ -323,6 +363,14 @@ return (
                 <span className="score-side">Eux</span>
               </div>
             )}
+{partieTerminee && (
+  <button
+    className="new-game-btn"
+    onClick={handleNouvellePartie}
+  >
+    Nouvelle partie
+  </button>
+)}
 
             {shouldShowPli &&
               displayPli.map((play, index) =>
