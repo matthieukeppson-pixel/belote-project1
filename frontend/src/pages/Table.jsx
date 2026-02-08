@@ -21,6 +21,18 @@ function suitLabel(suit) {
     default: return "";
   }
 }
+// ============================================
+// UI — SYMBOLE ATOUT
+// ============================================
+function atoutSymbol(atout) {
+  switch (atout) {
+    case "hearts": return "♥";
+    case "diamonds": return "♦";
+    case "clubs": return "♣";
+    case "spades": return "♠";
+    default: return "";
+  }
+}
 
 export default function Table() {
   const navigate = useNavigate();
@@ -321,23 +333,35 @@ return (
                 ) : null
               )}
 
-            {[
-              ["joueur2", "top"],
-              ["joueur4", "left"],
-              ["joueur3", "right"],
-              ["joueur1", "bottom"],
-            ].map(([player, position]) => (
-              <div
-                key={player}
-                className={`player-seat ${position} ${
-                  activePlayer === player ? "active" : ""
-                }`}
-              >
-                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-                {activePlayer === player && <div className="active-dot" />}
-                <div className="player-pseudo">{player}</div>
-              </div>
-            ))}
+      {[
+  ["joueur2", "top"],
+  ["joueur4", "left"],
+  ["joueur3", "right"],
+  ["joueur1", "bottom"],
+].map(([player, position]) => (
+  <div
+    key={player}
+    className={`player-seat ${position} ${
+      activePlayer === player ? "active" : ""
+    }`}
+  >
+    <img src="/avatar.png" alt="Avatar" className="player-avatar" />
+
+    {activePlayer === player && <div className="active-dot" />}
+
+    <div className="player-pseudo">{player}</div>
+
+    {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
+    {game.atout &&
+      game.players[game.preneur] === player && (
+        <div className={`atout-indicator ${position} ${game.atout}`}>
+          {atoutSymbol(game.atout)}
+        </div>
+      )}
+  </div>
+))}
+
+
 
             {game.hands["joueur1"] && (
               <div className="player-bottom">

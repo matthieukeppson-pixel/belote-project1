@@ -527,6 +527,76 @@
   margin: 0 6px;
   opacity: 0.75;
 }
+/* ============================================
+   ATOUT — INDICATEUR PRENEUR
+============================================ */
+
+.atout-indicator {
+  position: absolute;
+
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 5px 8px;
+
+  /* Halo lumineux rouge */
+  box-shadow:
+    0 0 6px rgba(231, 76, 60, 0.8),
+    0 0 12px rgba(231, 76, 60, 0.6),
+    0 0 18px rgba(231, 76, 60, 0.4);
+
+  pointer-events: none;
+}
+
+
+
+
+
+
+
+/* Couleurs */
+.atout-indicator.hearts,
+.atout-indicator.diamonds {
+  color: #c0392b;
+}
+
+.atout-indicator.spades,
+.atout-indicator.clubs {
+  color: #2c3e50;
+}
+
+/* Placement selon position */
+.atout-indicator.bottom {
+  right: -44px;   /* ⬅️ plus d’air */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
+
+.atout-indicator.top {
+  left: -44px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
+
+
+
+
+
+.atout-indicator.left,
+.atout-indicator.right {
+  top: -46px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+
 
 
 
