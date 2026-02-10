@@ -99,8 +99,14 @@ belote: {
 // ============================================
 
 export function dispatch(game, event) {
+  // 🔁 ÉTAT AUTOMATIQUE : tout le monde a passé
+  if (game.state === STATES.ANNOUNCE_ALL_PASSED) {
+    return handleAnnounceAllPassed(game);
+  }
+
   // 🔒 GATE GLOBAL — REFUS DES ACTIONS HORS CONTEXTE
   if (!event || !event.type) return game;
+
 
   const allowed = ALLOWED_EVENTS_BY_STATE[game.state];
 

@@ -281,9 +281,10 @@ export function handleAnnonce(game, event) {
   const startIndex = (game.dealerIndex + 1) % playersCount;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
+  // ============================================
   // PASS
+  // ============================================
   if (event.type === "PASS") {
-    // boucle complète
     if (nextIndex === startIndex) {
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
         return {
@@ -294,22 +295,30 @@ export function handleAnnonce(game, event) {
       }
 
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-        // tout le monde a passé au 2e tour d’annonce
-        // fait métier explicite : donne annulée
-        return {
+        const nextDealerIndex = (game.dealerIndex + 1) % playersCount;
+
+        let g = {
           ...game,
-          state: STATES.ANNOUNCE_ALL_PASSED
+          dealerIndex: nextDealerIndex,
+          currentPlayerIndex: (nextDealerIndex + 1) % playersCount
         };
+
+        g = handleTableIdle(g, { type: "TABLE_READY" });
+        g = handleDistribution(g, { type: "DISTRIBUTE_CARDS" }, 3);
+        g = handleDistribution(g, { type: "DISTRIBUTE_CARDS" }, 2);
+
+        return g;
       }
     }
 
-    // ✅ CE return DOIT ÊTRE ICI
     return { ...game, currentPlayerIndex: nextIndex };
   }
 
+  // ============================================
   // TAKE
+  // ============================================
   if (event.type === "TAKE_ATOUT") {
-    // Tour 1 : prendre la couleur de la carte retournée
+    // Tour 1
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
       if (!game.atoutPropose) return game;
 
@@ -320,10 +329,11 @@ export function handleAnnonce(game, event) {
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
       };
+
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
 
-    // Tour 2 : event.suit obligatoire, différente de la carte retournée
+    // Tour 2
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
       if (!event.suit) return game;
       if (game.atoutPropose && event.suit === game.atoutPropose.suit) return game;
@@ -335,12 +345,18 @@ export function handleAnnonce(game, event) {
         preneur: game.currentPlayerIndex,
         state: STATES.DISTRIBUTION_3_FINAL
       };
+
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
   }
 
   return game;
 }
+
+
+
+
+
 
 export function handlePli(game, event) {
   if (!event) return game;
