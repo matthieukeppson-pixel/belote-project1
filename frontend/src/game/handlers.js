@@ -34,6 +34,7 @@ function shuffle(deck) {
   }
   return shuffled;
 }
+
 // ============================================
 // POINTS DES CARTES — BELOTE CLASSIQUE
 // ============================================
@@ -72,6 +73,7 @@ export function getCardPoints(card, atoutSuit) {
 
   return NORMAL_POINTS[value] ?? 0;
 }
+
 // ============================================
 // POINTS D’UN PLI — SOMME DES CARTES
 // ============================================
@@ -101,15 +103,14 @@ function getPliWinner(pli, couleurDemandee, atoutSuit) {
   const valid = Array.isArray(pli) ? pli.filter(p => p && p.card) : [];
   if (valid.length === 0) return null;
 
-  const atouts = atoutSuit
-    ? valid.filter(p => p.card.suit === atoutSuit)
-    : [];
+  const atouts = atoutSuit ? valid.filter(p => p.card.suit === atoutSuit) : [];
 
-  const pool = atouts.length > 0
-    ? atouts.map(p => ({ ...p, _isAtout: true }))
-    : valid
-        .filter(p => p.card.suit === couleurDemandee)
-        .map(p => ({ ...p, _isAtout: false }));
+  const pool =
+    atouts.length > 0
+      ? atouts.map(p => ({ ...p, _isAtout: true }))
+      : valid
+          .filter(p => p.card.suit === couleurDemandee)
+          .map(p => ({ ...p, _isAtout: false }));
 
   if (pool.length === 0) {
     // fallback si couleurDemandee incohérente
@@ -169,9 +170,6 @@ export function handleTableIdle(game, event) {
   };
 }
 
-
-
-
 // ============================================
 // DISTRIBUTION
 // ============================================
@@ -181,9 +179,7 @@ export function handleDistribution(game, event, count) {
 
   // init deck si nécessaire
   let deck =
-    game.deck && game.deck.length > 0
-      ? [...game.deck]
-      : shuffle(createDeck());
+    game.deck && game.deck.length > 0 ? [...game.deck] : shuffle(createDeck());
 
   const hands = { ...game.hands };
   for (const player of game.players) {
@@ -251,26 +247,25 @@ export function handleDistribution(game, event, count) {
     return { ...game, state: STATES.DISTRIBUTION_2, deck, hands };
   }
 
-if (game.state === STATES.DISTRIBUTION_2) {
-  const atoutPropose = deck.shift();
+  if (game.state === STATES.DISTRIBUTION_2) {
+    const atoutPropose = deck.shift();
 
-  console.log(
-    "[ANNONCES] dealerIndex =",
-    game.dealerIndex,
-    "premier à parler =",
-    game.players[(game.dealerIndex + 1) % game.players.length]
-  );
+    console.log(
+      "[ANNONCES] dealerIndex =",
+      game.dealerIndex,
+      "premier à parler =",
+      game.players[(game.dealerIndex + 1) % game.players.length]
+    );
 
-  return {
-    ...game,
-    state: STATES.ANNOUNCE_ATOUT_TOUR_1,
-    deck,
-    hands,
-    atoutPropose,
-    currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
-  };
-}
-
+    return {
+      ...game,
+      state: STATES.ANNOUNCE_ATOUT_TOUR_1,
+      deck,
+      hands,
+      atoutPropose,
+      currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
+    };
+  }
 
   return { ...game, deck, hands };
 }
@@ -299,22 +294,16 @@ export function handleAnnonce(game, event) {
       }
 
       if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) {
-        // tout le monde a passé au 2e tour => on relance une donne
+        // tout le monde a passé au 2e tour d’annonce
+        // fait métier explicite : donne annulée
         return {
           ...game,
-          state: STATES.DISTRIBUTION_3,
-          deck: [],
-          hands: {},
-          atout: null,
-          atoutPropose: null,
-          preneur: null,
-          atoutChoisi: false,
-          pli: [],
-          couleurDemandee: null,
-          winnerIndex: null
+          state: STATES.ANNOUNCE_ALL_PASSED
         };
       }
     }
+
+    // ✅ CE return DOIT ÊTRE ICI
     return { ...game, currentPlayerIndex: nextIndex };
   }
 
@@ -352,6 +341,7 @@ export function handleAnnonce(game, event) {
 
   return game;
 }
+
 export function handlePli(game, event) {
   if (!event) return game;
 
@@ -361,7 +351,9 @@ export function handlePli(game, event) {
   if (game.state === STATES.PLI_EN_COURS && event.type === "PLAY_CARD") {
     let winnerIndex = null;
     let finDeManche = null;
-    const scoreManche = game.scoreManche ? { ...game.scoreManche } : { nous: 0, eux: 0 };
+    const scoreManche = game.scoreManche
+      ? { ...game.scoreManche }
+      : { nous: 0, eux: 0 };
 
     const playerId = game.players[game.currentPlayerIndex];
     const hand = game.hands[playerId];
@@ -406,27 +398,39 @@ export function handlePli(game, event) {
 
     // 3) Monter à l’atout si adversaire maître
     if (playedCard.suit === game.atout && game.pli.length > 0) {
-      const winnerIdActuel = getPliWinner(game.pli, game.couleurDemandee, game.atout);
+      const winnerIdActuel = getPliWinner(
+        game.pli,
+        game.couleurDemandee,
+        game.atout
+      );
 
       const partenaireEstMaitre =
         winnerIdActuel &&
-        (game.teams.nous.includes(winnerIdActuel) === game.teams.nous.includes(playerId));
+        game.teams.nous.includes(winnerIdActuel) ===
+          game.teams.nous.includes(playerId);
 
       if (!partenaireEstMaitre) {
-        const atoutsDansPli = game.pli.filter(p => p.card && p.card.suit === game.atout);
+        const atoutsDansPli = game.pli.filter(
+          p => p.card && p.card.suit === game.atout
+        );
 
         if (atoutsDansPli.length > 0) {
           const meilleurAtout = atoutsDansPli.reduce((best, p) =>
-            rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
+            rankValue(p.card.value, true) < rankValue(best.card.value, true)
+              ? p
+              : best
           );
 
-          const peutMonter = hand.some(c =>
-            c.suit === game.atout &&
-            rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
+          const peutMonter = hand.some(
+            c =>
+              c.suit === game.atout &&
+              rankValue(c.value, true) <
+                rankValue(meilleurAtout.card.value, true)
           );
 
           const monteAssez =
-            rankValue(playedCard.value, true) < rankValue(meilleurAtout.card.value, true);
+            rankValue(playedCard.value, true) <
+            rankValue(meilleurAtout.card.value, true);
 
           if (peutMonter && !monteAssez) return game;
         }
@@ -448,7 +452,9 @@ export function handlePli(game, event) {
       (playedCard.value === "K" || playedCard.value === "Q")
     ) {
       const autreValeur = playedCard.value === "K" ? "Q" : "K";
-      const avaitAutre = hand.some(c => c.suit === game.atout && c.value === autreValeur);
+      const avaitAutre = hand.some(
+        c => c.suit === game.atout && c.value === autreValeur
+      );
 
       if (avaitAutre) {
         belote = { atout: game.atout, joueur: playerId, annoncee: true };
@@ -468,7 +474,8 @@ export function handlePli(game, event) {
         pli: newPli,
         couleurDemandee,
         belote,
-        currentPlayerIndex: (game.currentPlayerIndex + 1) % game.players.length
+        currentPlayerIndex:
+          (game.currentPlayerIndex + 1) % game.players.length
       };
     }
 
@@ -486,8 +493,9 @@ export function handlePli(game, event) {
 
     // dernier pli ?
     const handsAfterPlay = { ...game.hands, [playerId]: newHand };
-    const isLastPli = Object.values(handsAfterPlay)
-      .every(h => Array.isArray(h) && h.length === 0);
+    const isLastPli = Object.values(handsAfterPlay).every(
+      h => Array.isArray(h) && h.length === 0
+    );
 
     if (isLastPli) {
       // dix de der
@@ -501,7 +509,9 @@ export function handlePli(game, event) {
 
       // belote +20
       if (belote?.annoncee) {
-        const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+        const equipeBelote = game.teams.nous.includes(belote.joueur)
+          ? "nous"
+          : "eux";
         scoreManche[equipeBelote] += 20;
       }
 
@@ -555,7 +565,6 @@ export function handlePli(game, event) {
   return game;
 }
 
-
 // ============================================
 // FIN DE MANCHE
 // ============================================
@@ -575,5 +584,17 @@ export function handleFinDeManche(game) {
     winnerIndex: null
   };
 }
+// ============================================
+// ANNONCE — TOUS PASSÉS
+// ============================================
 
+export function handleAnnounceAllPassed(game) {
+  const nextDealerIndex =
+    (game.dealerIndex + 1) % game.players.length;
 
+  return {
+    ...game,
+    state: STATES.TABLE_IDLE,
+    dealerIndex: nextDealerIndex
+  };
+}

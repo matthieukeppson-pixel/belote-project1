@@ -7,8 +7,10 @@ import {
   handleDistribution,
   handleAnnonce,
   handlePli,
-  handleFinDeManche
+  handleFinDeManche,
+  handleAnnounceAllPassed   // 👈 AJOUT ICI
 } from "./handlers";
+
 
 // ============================================
 // ÉTATS DU JEU
@@ -43,7 +45,7 @@ const ALLOWED_EVENTS_BY_STATE = {
 
   [STATES.ANNOUNCE_ATOUT_TOUR_1]: ["TAKE_ATOUT", "PASS"],
   [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS"],
-
+  [STATES.ANNOUNCE_ALL_PASSED]: ["AUTO"], // 👈 AJOUT ICI
   [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
 
   [STATES.PLI_TERMINE]: ["NEXT_PLI"],  // 🆕 NETTOYAGE DU PLI
@@ -119,13 +121,17 @@ export function dispatch(game, event) {
     case STATES.DISTRIBUTION_3_FINAL:
       return handleDistribution(game, event, 3);
 
-    case STATES.ANNOUNCE_ATOUT_TOUR_1:
-    case STATES.ANNOUNCE_ATOUT_TOUR_2:
-      return handleAnnonce(game, event);
+ case STATES.ANNOUNCE_ATOUT_TOUR_1:
+case STATES.ANNOUNCE_ATOUT_TOUR_2:
+  return handleAnnonce(game, event);
 
-    case STATES.PLI_EN_COURS:
-    case STATES.PLI_TERMINE:   // 🆕 même handler
-      return handlePli(game, event);
+case STATES.ANNOUNCE_ALL_PASSED:          // 👈 AJOUT ICI
+  return handleAnnounceAllPassed(game);  // 👈 AJOUT ICI
+
+case STATES.PLI_EN_COURS:
+case STATES.PLI_TERMINE:
+  return handlePli(game, event);
+
 
     case STATES.FIN_DE_MANCHE:
       return handleFinDeManche(game, event);
