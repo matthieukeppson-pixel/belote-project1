@@ -401,6 +401,36 @@ return (
     }`}
   >
     <img src="/avatar.png" alt="Avatar" className="player-avatar" />
+{/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
+{player !== "joueur1" && (
+  <div className={`back-cards back-cards-${position}`}>
+    {(() => {
+      const n = game.hands[player]?.length ?? 0;
+      const visible = Math.min(3, n);
+
+      return (
+        <>
+          <div className="back-stack">
+            {Array.from({ length: visible }).map((_, i) => (
+              <img
+                key={i}
+                src="/card_back.png"
+                alt="Dos"
+                className="card-back"
+                style={{ transform: `translateX(${i * 10}px) rotate(${i * 2}deg)` }}
+
+                draggable={false}
+              />
+            ))}
+          </div>
+
+       
+        </>
+      );
+    })()}
+  </div>
+)}
+
 
     {activePlayer === player && <div className="active-dot" />}
 

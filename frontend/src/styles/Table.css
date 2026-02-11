@@ -630,7 +630,47 @@
 .new-game-btn:hover {
   background: rgba(255, 255, 255, 0.18);
 }
+/* =========================
+   DOS DE CARTES (autres joueurs)
+   ========================= */
 
+.card-back {
+  width: 44px;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.back-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* Ajuste selon tes positions (optionnel) */
+.back-cards-top { margin-top: 8px; }
+.back-cards-left { margin-top: 8px; }
+.back-cards-right { margin-top: 8px; }
+
+.back-stack {
+  position: relative;
+  width: 64px;          /* doit couvrir le décalage */
+  height: 64px;         /* hauteur suffisante pour 44px de large */
+}
+
+.back-stack .card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.back-count {
+  margin-left: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  opacity: 0.9;
+}
 
 
 
