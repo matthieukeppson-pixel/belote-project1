@@ -135,6 +135,12 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [game.state]);
 function handleNouvellePartie() {
+  // ✅ reset affichage du pli (empêche le flash des 4 cartes)
+  setDisplayPli([]);
+  setHideLastPli(false);
+ // ✅ IMPORTANT : réarmer les verrous de fin de manche
+  finDeMancheCompteeRef.current = false;
+  finDeMancheRef.current = null;
   // reset arbitre
   partieRef.current = new Partie({
     players: game.players,
@@ -159,6 +165,7 @@ function handleNouvellePartie() {
 
   setGame(g);
 }
+
 
 // ============================================
 // FIN DE MANCHE — VISUEL (dernier pli)
