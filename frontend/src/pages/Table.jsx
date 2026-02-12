@@ -378,7 +378,8 @@ export default function Table() {
                   <div className={`back-cards back-cards-${position}`}>
                     {(() => {
                       const n = game.hands[player]?.length ?? 0;
-                      const visible = Math.min(3, n);
+                      const visible = Math.min(2, n);
+
 
                       return (
                         <>

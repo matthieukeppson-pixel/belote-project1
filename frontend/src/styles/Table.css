@@ -580,7 +580,7 @@
 
 .atout-indicator.top {
   left: -46px;
-  top: 50%;
+     top: 28%;
   transform: translateY(-50%);
 }
 
@@ -636,7 +636,7 @@
    ========================= */
 
 .card-back {
-  width: 44px;
+  width: 60px;
   height: auto;
   user-select: none;
   pointer-events: none;
