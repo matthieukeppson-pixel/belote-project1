@@ -14,28 +14,40 @@ const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
 
 function suitLabel(suit) {
   switch (suit) {
-    case "hearts": return "♥";
-    case "diamonds": return "♦";
-    case "clubs": return "♣";
-    case "spades": return "♠";
-    default: return "";
+    case "hearts":
+      return "♥";
+    case "diamonds":
+      return "♦";
+    case "clubs":
+      return "♣";
+    case "spades":
+      return "♠";
+    default:
+      return "";
   }
 }
+
 // ============================================
 // UI — SYMBOLE ATOUT
 // ============================================
 function atoutSymbol(atout) {
   switch (atout) {
-    case "hearts": return "♥";
-    case "diamonds": return "♦";
-    case "clubs": return "♣";
-    case "spades": return "♠";
-    default: return "";
+    case "hearts":
+      return "♥";
+    case "diamonds":
+      return "♦";
+    case "clubs":
+      return "♣";
+    case "spades":
+      return "♠";
+    default:
+      return "";
   }
 }
+
 function cardImgSrc(card) {
   if (!card) return "";
-  const suit = String(card.suit);                 // hearts/diamonds/clubs/spades
+  const suit = String(card.suit); // hearts/diamonds/clubs/spades
   const value = String(card.value).toUpperCase(); // 7..10,J,Q,K,A
   return `/cards/${suit}/${value}.png`;
 }
@@ -47,9 +59,10 @@ export default function Table() {
   // PARTIE (présente mais non pilotante)
   // ============================================
   const partieRef = useRef(null);
+
   // 🔒 CADENAS : empêche de compter deux fois une fin de manche
   const finDeMancheCompteeRef = useRef(false);
-const finDeMancheRef = useRef(null);
+  const finDeMancheRef = useRef(null);
 
   useEffect(() => {
     if (partieRef.current === null) {
@@ -78,146 +91,92 @@ const finDeMancheRef = useRef(null);
     return g;
   });
 
-// ============================================
-// UI STATES
-// ============================================
+  // ============================================
+  // UI STATES
+  // ============================================
+  const [displayPli, setDisplayPli] = useState([]);
+  const [hideLastPli, setHideLastPli] = useState(false);
 
-const [displayPli, setDisplayPli] = useState([]);
-const [hideLastPli, setHideLastPli] = useState(false);
+  // ✅ SCORE DE PARTIE (501)
+  const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 
-// ✅ SCORE DE PARTIE (501)
-const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
+  // ✅ FIN DE PARTIE
+  const [partieTerminee, setPartieTerminee] = useState(false);
 
-// ✅ FIN DE PARTIE
-const [partieTerminee, setPartieTerminee] = useState(false);
-// ============================================
-// AFFICHAGE DU PLI
-// ============================================
+  // ============================================
+  // AFFICHAGE DU PLI
+  // ============================================
+  useEffect(() => {
+    if (game.pli.length > 0) {
+      const showTimer = setTimeout(() => {
+        setHideLastPli(false);
+        setDisplayPli(game.pli);
+      }, 0);
 
-useEffect(() => {
-  if (game.pli.length > 0) {
-    const showTimer = setTimeout(() => {
-      setHideLastPli(false);
-      setDisplayPli(game.pli);
-    }, 0);
+      return () => clearTimeout(showTimer);
+    }
 
-    return () => clearTimeout(showTimer);
-  }
+    if (game.pli.length === 0 && displayPli.length > 0) {
+      const hideTimer = setTimeout(() => {
+        setDisplayPli([]);
+      }, 700);
 
-  if (game.pli.length === 0 && displayPli.length > 0) {
-    const hideTimer = setTimeout(() => {
-      setDisplayPli([]);
-    }, 700);
+      return () => clearTimeout(hideTimer);
+    }
+  }, [game.pli, displayPli]);
 
-    return () => clearTimeout(hideTimer);
-  }
-}, [game.pli, displayPli]);
+  // ============================================
+  // FIN DE MANCHE — CALCUL PARTIE
+  // ============================================
+  useEffect(() => {
+    if (game.state !== STATES.FIN_DE_MANCHE) return;
+    if (!partieRef.current) return;
 
-// ============================================
-// FIN DE MANCHE — CALCUL PARTIE
-// ============================================
+    if (finDeMancheCompteeRef.current) return;
+    finDeMancheCompteeRef.current = true;
 
-useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
-  if (!partieRef.current) return;
+    const next = partieRef.current.onFinDeManche({
+      dealerIndex: game.dealerIndex,
+      finDeManche: game.finDeManche,
+    });
 
-  if (finDeMancheCompteeRef.current) return;
-  finDeMancheCompteeRef.current = true;
+    finDeMancheRef.current = next;
 
-  const next = partieRef.current.onFinDeManche({
-    dealerIndex: game.dealerIndex,
-    finDeManche: game.finDeManche,
-  });
+    if (next?.scorePartie) {
+      setScorePartie(next.scorePartie);
+    }
 
-  finDeMancheRef.current = next;
+    if (next?.partieTerminee) {
+      setPartieTerminee(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.state]);
 
-  if (next?.scorePartie) {
-    setScorePartie(next.scorePartie);
-  }
-
-  if (next?.partieTerminee) {
-    setPartieTerminee(true);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [game.state]);
-function handleNouvellePartie() {
-  // ✅ reset affichage du pli (empêche le flash des 4 cartes)
-  setDisplayPli([]);
-  setHideLastPli(false);
- // ✅ IMPORTANT : réarmer les verrous de fin de manche
-  finDeMancheCompteeRef.current = false;
-  finDeMancheRef.current = null;
-  // reset arbitre
-  partieRef.current = new Partie({
-    players: game.players,
-    startingPlayerIndex: 0,
-  });
-
-  // reset UI
-  setScorePartie({ nous: 0, eux: 0 });
-  setPartieTerminee(false);
-
-  // reset moteur
-  let g = createInitialGameState();
-
-  g = {
-    ...g,
-    players: game.players,
-  };
-
-  g = dispatch(g, { type: "TABLE_READY" });
-  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-
-  setGame(g);
-}
-
-
-// ============================================
-// FIN DE MANCHE — VISUEL (dernier pli)
-// ============================================
-useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
-
-  const timer = setTimeout(() => {
-    setHideLastPli(true);
- }, 1500);
-
-
-  return () => clearTimeout(timer);
-}, [game.state]);
-
-
-
-
-
-
-
-
-// ============================================
-// RELANCE DE MANCHE (APRÈS VISUEL)
-// ============================================
-useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
-
-  const timer = setTimeout(() => {
-    const next = finDeMancheRef.current;
-    if (!next || next.partieTerminee) return;
-
+  function handleNouvellePartie() {
+    // ✅ reset affichage du pli (empêche le flash des 4 cartes)
     setDisplayPli([]);
     setHideLastPli(false);
 
-    // 🔑 RÉARMEMENT DU VERROU POUR LA PROCHAINE MANCHE
+    // ✅ IMPORTANT : réarmer les verrous de fin de manche
     finDeMancheCompteeRef.current = false;
-    finDeMancheRef.current = null; // optionnel mais propre
+    finDeMancheRef.current = null;
 
+    // reset arbitre
+    partieRef.current = new Partie({
+      players: game.players,
+      startingPlayerIndex: 0,
+    });
+
+    // reset UI
+    setScorePartie({ nous: 0, eux: 0 });
+    setPartieTerminee(false);
+
+    // reset moteur
     let g = createInitialGameState();
 
     g = {
       ...g,
       players: game.players,
-      dealerIndex: next.dealerIndex,
-      currentPlayerIndex: next.startingPlayerIndex,
     };
 
     g = dispatch(g, { type: "TABLE_READY" });
@@ -225,44 +184,57 @@ useEffect(() => {
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
 
     setGame(g);
-  }, 1600);
-
-  return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [game.state]);
-
-
-
-
-
-
-
+  }
 
   // ============================================
-  // BOT AUTO
+  // FIN DE MANCHE — VISUEL (dernier pli)
   // ============================================
-/*
-useEffect(() => {
-  if (game.state !== STATES.PLI_EN_COURS) return;
-
-  const activePlayer = game.players[game.currentPlayerIndex];
-
-  if (activePlayer !== "joueur1") {
-    const hand = game.hands[activePlayer];
-    if (!hand || hand.length === 0) return;
-
-    const card = hand[0];
-    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+  useEffect(() => {
+    if (game.state !== STATES.FIN_DE_MANCHE) return;
 
     const timer = setTimeout(() => {
-      setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
-    }, 600);
+      setHideLastPli(true);
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }
-}, [game]);
-*/
+  }, [game.state]);
 
+  // ============================================
+  // RELANCE DE MANCHE (APRÈS VISUEL)
+  // ============================================
+  useEffect(() => {
+    if (game.state !== STATES.FIN_DE_MANCHE) return;
+
+    const timer = setTimeout(() => {
+      const next = finDeMancheRef.current;
+      if (!next || next.partieTerminee) return;
+
+      setDisplayPli([]);
+      setHideLastPli(false);
+
+      // 🔑 RÉARMEMENT DU VERROU POUR LA PROCHAINE MANCHE
+      finDeMancheCompteeRef.current = false;
+      finDeMancheRef.current = null; // optionnel mais propre
+
+      let g = createInitialGameState();
+
+      g = {
+        ...g,
+        players: game.players,
+        dealerIndex: next.dealerIndex,
+        currentPlayerIndex: next.startingPlayerIndex,
+      };
+
+      g = dispatch(g, { type: "TABLE_READY" });
+      g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+      g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+
+      setGame(g);
+    }, 1600);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.state]);
 
   // ============================================
   // FIN DE PLI
@@ -271,7 +243,7 @@ useEffect(() => {
     if (game.state !== STATES.PLI_TERMINE) return;
 
     const timer = setTimeout(() => {
-      setGame(g => dispatch(g, { type: "NEXT_PLI" }));
+      setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
     }, 800);
 
     return () => clearTimeout(timer);
@@ -281,84 +253,73 @@ useEffect(() => {
   // ACTIONS
   // ============================================
   function handleTakeAtout() {
-    setGame(g => dispatch(g, { type: "TAKE_ATOUT" }));
+    setGame((g) => dispatch(g, { type: "TAKE_ATOUT" }));
   }
 
   function handlePass() {
-    setGame(g => dispatch(g, { type: "PASS" }));
+    setGame((g) => dispatch(g, { type: "PASS" }));
   }
 
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-    setGame(g => dispatch(g, { type: "PLAY_CARD", cardKey }));
+    setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
 
-  const activePlayer =
-    game.players[game.currentPlayerIndex];
+  const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
 
- const scoreUI = scorePartie;
+  const scoreUI = scorePartie;
 
-  const shouldShowPli =
-    !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
-// ============================================
-// BOUTON TEST — jouer pour le joueur actif
-// ============================================
-function playForActivePlayer() {
-  if (game.state !== STATES.PLI_EN_COURS) return;
+  const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
 
-  const active = game.players[game.currentPlayerIndex];
-  const hand = game.hands[active];
-  if (!hand || hand.length === 0) return;
+  // ============================================
+  // BOUTON TEST — jouer pour le joueur actif
+  // ============================================
+  function playForActivePlayer() {
+    if (game.state !== STATES.PLI_EN_COURS) return;
 
-  // essaie chaque carte jusqu’à en trouver une valide
-  for (const card of hand) {
-    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+    const active = game.players[game.currentPlayerIndex];
+    const hand = game.hands[active];
+    if (!hand || hand.length === 0) return;
 
-    const next = dispatch(game, { type: "PLAY_CARD", cardKey });
+    for (const card of hand) {
+      const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+      const next = dispatch(game, { type: "PLAY_CARD", cardKey });
 
-    // si l’état change → le coup a été accepté
-    if (next !== game) {
-      setGame(next);
-      return;
+      if (next !== game) {
+        setGame(next);
+        return;
+      }
     }
+
+    console.warn("Aucune carte jouable pour", active);
   }
 
-  console.warn("Aucune carte jouable pour", active);
-}
+  // ============================================
+  // RENDER
+  // ============================================
+  return (
+    <div className="table-page" style={{ position: "relative" }}>
+      {/* BOUTON TEST ULTRA SIMPLE */}
+      <button
+        onClick={playForActivePlayer}
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          padding: "10px 16px",
+          background: "red",
+          color: "white",
+          fontSize: "16px",
+          zIndex: 9999,
+        }}
+      >
+        TEST JOUER
+      </button>
 
-
-// ============================================
-// RENDER
-// ============================================
-return (
-  <div className="table-page" style={{ position: "relative" }}>
-
-    {/* BOUTON TEST ULTRA SIMPLE */}
-    <button
-      onClick={playForActivePlayer}
-      style={{
-        position: "absolute",
-        top: 10,
-        left: 10,
-        padding: "10px 16px",
-        background: "red",
-        color: "white",
-        fontSize: "16px",
-        zIndex: 9999
-      }}
-    >
-      TEST JOUER
-    </button>
-
-    <button
-      className="table-back-btn"
-      onClick={() => navigate("/salon")}
-    >
-      ← Retour au salon
-    </button>
-
-
+      <button className="table-back-btn" onClick={() => navigate("/salon")}>
+        ← Retour au salon
+      </button>
 
       <div className="table-layout">
         <div className="table-zone">
@@ -376,83 +337,85 @@ return (
                 <span className="score-side">Eux</span>
               </div>
             )}
-{partieTerminee && (
-  <button
-    className="new-game-btn"
-    onClick={handleNouvellePartie}
-  >
-    Nouvelle partie
-  </button>
-)}
+
+            {partieTerminee && (
+              <button className="new-game-btn" onClick={handleNouvellePartie}>
+                Nouvelle partie
+              </button>
+            )}
 
             {shouldShowPli &&
               displayPli.map((play, index) =>
                 play?.card ? (
-                  <div key={index} className={`pli-card pli-${play.playerId}`}>
-                    {play.card.value} {play.card.suit}
-                  </div>
+                 <div key={index} className={`pli-card pli-${play.playerId}`}>
+  <img
+    src={cardImgSrc(play.card)}
+    alt={`${play.card.value} ${play.card.suit}`}
+    className="card-img"
+    draggable={false}
+  />
+</div>
+
                 ) : null
               )}
 
-      {[
-  ["joueur2", "top"],
-  ["joueur4", "left"],
-  ["joueur3", "right"],
-  ["joueur1", "bottom"],
-].map(([player, position]) => (
-  <div
-    key={player}
-    className={`player-seat ${position} ${
-      activePlayer === player ? "active" : ""
-    }`}
-  >
-    <img src="/avatar.png" alt="Avatar" className="player-avatar" />
-{/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
-{player !== "joueur1" && (
-  <div className={`back-cards back-cards-${position}`}>
-    {(() => {
-      const n = game.hands[player]?.length ?? 0;
-      const visible = Math.min(3, n);
+            {[
+              ["joueur2", "top"],
+              ["joueur4", "left"],
+              ["joueur3", "right"],
+              ["joueur1", "bottom"],
+            ].map(([player, position]) => (
+              <div
+                key={player}
+                className={`player-seat ${position} ${
+                  activePlayer === player ? "active" : ""
+                }`}
+              >
+                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
 
-      return (
-        <>
-          <div className="back-stack">
-            {Array.from({ length: visible }).map((_, i) => (
-              <img
-                key={i}
-                src="/card_back.png"
-                alt="Dos"
-                className="card-back"
-                style={{ transform: `translateX(${i * 10}px) rotate(${i * 2}deg)` }}
+                {/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
+                {player !== "joueur1" && (
+                  <div className={`back-cards back-cards-${position}`}>
+                    {(() => {
+                      const n = game.hands[player]?.length ?? 0;
+                      const visible = Math.min(3, n);
 
-                draggable={false}
-              />
+                      return (
+                        <>
+                          <div className="back-stack">
+                            {Array.from({ length: visible }).map((_, i) => (
+                              <img
+                                key={i}
+                                src="/card_back.png"
+                                alt="Dos"
+                                className="card-back"
+                                style={{
+                                  transform: `translateX(${i * 10}px) rotate(${
+                                    i * 2
+                                  }deg)`,
+                                }}
+                                draggable={false}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {activePlayer === player && <div className="active-dot" />}
+
+                <div className="player-pseudo">{player}</div>
+
+                {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
+                {game.atout && game.players[game.preneur] === player && (
+                  <div className={`atout-indicator ${position} ${game.atout}`}>
+                    {atoutSymbol(game.atout)}
+                  </div>
+                )}
+              </div>
             ))}
-          </div>
-
-       
-        </>
-      );
-    })()}
-  </div>
-)}
-
-
-    {activePlayer === player && <div className="active-dot" />}
-
-    <div className="player-pseudo">{player}</div>
-
-    {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
-    {game.atout &&
-      game.players[game.preneur] === player && (
-        <div className={`atout-indicator ${position} ${game.atout}`}>
-          {atoutSymbol(game.atout)}
-        </div>
-      )}
-  </div>
-))}
-
-
 
             {game.hands["joueur1"] && (
               <div className="player-bottom">
@@ -476,13 +439,12 @@ return (
                         zIndex: 100 + index,
                       }}
                     >
-                   <img
-  src={cardImgSrc(card)}
-  alt={`${card.value} ${card.suit}`}
-  className="card-img"
-  draggable={false}
-/>
-
+                      <img
+                        src={cardImgSrc(card)}
+                        alt={`${card.value} ${card.suit}`}
+                        className="card-img"
+                        draggable={false}
+                      />
                     </div>
                   );
                 })}
@@ -503,14 +465,18 @@ return (
               </div>
             )}
 
+            {/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) — VRAIE CARTE */}
             {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
               game.atoutPropose && (
                 <div className="atout-card">
                   <div className="label">Atout</div>
-                  <div className="symbol">
-                    {game.atoutPropose.value} {game.atoutPropose.suit}
-                  </div>
+                  <img
+                    src={cardImgSrc(game.atoutPropose)}
+                    alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
+                    className="card-img"
+                    draggable={false}
+                  />
                 </div>
               )}
 
@@ -520,15 +486,13 @@ return (
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
                     {ALL_SUITS.filter(
-                      suit => suit !== game.atoutPropose.suit
-                    ).map(suit => (
+                      (suit) => suit !== game.atoutPropose.suit
+                    ).map((suit) => (
                       <button
                         key={suit}
                         className="atout-btn take atout-suit-btn"
                         onClick={() =>
-                          setGame(g =>
-                            dispatch(g, { type: "TAKE_ATOUT", suit })
-                          )
+                          setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))
                         }
                       >
                         <span className={`atout-suit-symbol ${suit}`}>
@@ -555,6 +519,7 @@ return (
     </div>
   );
 }
+
 
 
 
