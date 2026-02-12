@@ -33,6 +33,12 @@ function atoutSymbol(atout) {
     default: return "";
   }
 }
+function cardImgSrc(card) {
+  if (!card) return "";
+  const suit = String(card.suit);                 // hearts/diamonds/clubs/spades
+  const value = String(card.value).toUpperCase(); // 7..10,J,Q,K,A
+  return `/cards/${suit}/${value}.png`;
+}
 
 export default function Table() {
   const navigate = useNavigate();
@@ -470,7 +476,13 @@ return (
                         zIndex: 100 + index,
                       }}
                     >
-                      {card.value} {card.suit}
+                   <img
+  src={cardImgSrc(card)}
+  alt={`${card.value} ${card.suit}`}
+  className="card-img"
+  draggable={false}
+/>
+
                     </div>
                   );
                 })}

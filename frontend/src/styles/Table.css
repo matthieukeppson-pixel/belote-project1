@@ -671,6 +671,13 @@
   font-size: 12px;
   opacity: 0.9;
 }
+.card-img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none; /* pour que le clic reste sur .card */
+  user-select: none;
+}
 
 
 
