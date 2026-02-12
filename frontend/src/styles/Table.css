@@ -190,6 +190,13 @@
 
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
 }
+.card-img {
+  transition: transform 120ms ease;
+}
+
+.card:hover .card-img {
+  transform: translateY(-14px);
+}
 
 
 /* ============================================
@@ -341,7 +348,7 @@
 
 /* Joueur du haut */
 .pli-joueur2 {
-  top: 22%;
+  top: 26%;
   left: 50%;
   transform: translateX(-50%);
 }

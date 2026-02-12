@@ -428,7 +428,8 @@ export default function Table() {
                   return (
                     <div
                       key={`${card.suit}-${card.value}`}
-                      className={`card ${!isMyTurn ? "disabled" : ""}`}
+                      className={`card ${isMyTurn ? "clickable" : "disabled"}`}
+
                       onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
                       style={{
                         transform: `
