@@ -313,28 +313,33 @@ export default function Table() {
 
     console.warn("Aucune carte jouable pour", active);
   }
+console.log("MODE =", import.meta.env.MODE, "DEV =", import.meta.env.DEV);
+// ============================================
+// RENDER
+// ============================================
+return (
+  <div className="table-page" style={{ position: "relative" }}>
 
-  // ============================================
-  // RENDER
-  // ============================================
-  return (
-    <div className="table-page" style={{ position: "relative" }}>
-      {/* BOUTON TEST ULTRA SIMPLE */}
-      <button
-        onClick={playForActivePlayer}
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          padding: "10px 16px",
-          background: "red",
-          color: "white",
-          fontSize: "16px",
-          zIndex: 9999,
-        }}
-      >
-        TEST JOUER
-      </button>
+{/* BOUTON TEST ULTRA SIMPLE */}
+{import.meta.env.DEV ? (
+  <button
+    onClick={playForActivePlayer}
+    style={{
+      position: "absolute",
+      top: 10,
+      left: 10,
+      padding: "10px 16px",
+      background: "red",
+      color: "white",
+      fontSize: "16px",
+      zIndex: 9999,
+    }}
+  >
+    TEST JOUER
+  </button>
+) : null}
+
+
 
       <button className="table-back-btn" onClick={() => navigate("/salon")}>
         ← Retour au salon
