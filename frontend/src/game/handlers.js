@@ -521,25 +521,23 @@ if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitr
       const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
       const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
 
-      // belote +20
-      if (belote?.annoncee) {
-        const equipeBelote = game.teams.nous.includes(belote.joueur)
-          ? "nous"
-          : "eux";
-        scoreManche[equipeBelote] += 20;
-      }
+// belote +20
+if (belote?.annoncee) {
+  const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+  scoreManche[equipeBelote] += 20;
+}
 
-      const totalManche = scoreManche.nous + scoreManche.eux;
-      const aPrisDixDeDer = totalManche === 172;
-      const seuil = aPrisDixDeDer ? 82 : 92;
+const totalManche = scoreManche.nous + scoreManche.eux;
+const seuil = 82;
 
-      const pointsPreneur = scoreManche[preneurEquipe];
-      const chute = pointsPreneur < seuil;
+const pointsPreneur = scoreManche[preneurEquipe];
+const chute = pointsPreneur < seuil;
 
-      if (chute) {
-        scoreManche[preneurEquipe] = 0;
-        scoreManche[autreEquipe] = totalManche;
-      }
+if (chute) {
+  scoreManche[preneurEquipe] = 0;
+  scoreManche[autreEquipe] = totalManche;
+}
+
 
       finDeManche = {
         chute,
