@@ -215,7 +215,8 @@ export function handleDistribution(game, event, count) {
     }
 
     // 1er pli : joueur à gauche du preneur
-    const firstTrickIndex = (preneurIndex + 1) % 4;
+    const firstTrickIndex = (game.dealerIndex + 1) % game.players.length;
+
 
     return {
       ...game,
