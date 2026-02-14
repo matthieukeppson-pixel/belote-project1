@@ -384,75 +384,72 @@ export function handlePli(game, event) {
 
     const playedCard = hand[idx];
 
-    // ============================================
-    // OBLIGATIONS DE JEU (règle choisie : pas d’obligation si partenaire maître)
-    // ============================================
-    const couleurDemandeeActuelle =
-      game.pli.length === 0 ? null : game.couleurDemandee;
+// ============================================
+// OBLIGATIONS DE JEU
+// Règle choisie : si partenaire maître -> on peut pisser (pas obligé de couper)
+// ============================================
+const couleurDemandeeActuelle =
+  game.pli.length === 0 ? null : game.couleurDemandee;
 
-    const hasSuit = (h, suit) => h.some(c => c.suit === suit);
-    const hasAtout = (h, atout) => h.some(c => c.suit === atout);
+const hasSuit = (h, suit) => h.some(c => c.suit === suit);
+const hasAtout = (h, atout) => h.some(c => c.suit === atout);
 
-    // 1) Fournir
-    if (
-      couleurDemandeeActuelle &&
-      playedCard.suit !== couleurDemandeeActuelle &&
-      hasSuit(hand, couleurDemandeeActuelle)
-    ) {
-      return game;
-    }
+// ✅ Gagnant actuel du pli (pendant le pli)
+const winnerIdActuel =
+  game.pli.length > 0
+    ? getPliWinner(game.pli, game.couleurDemandee, game.atout)
+    : null;
 
-    // 2) Couper si pas de couleur
-    if (
-      couleurDemandeeActuelle &&
-      playedCard.suit !== couleurDemandeeActuelle &&
-      !hasSuit(hand, couleurDemandeeActuelle) &&
-      playedCard.suit !== game.atout &&
-      hasAtout(hand, game.atout)
-    ) {
-      return game;
-    }
+// ✅ partenaire maître ?
+const partenaireEstMaitre =
+  !!winnerIdActuel &&
+  (game.teams.nous.includes(winnerIdActuel) ===
+    game.teams.nous.includes(playerId));
 
-    // 3) Monter à l’atout si adversaire maître
-    if (playedCard.suit === game.atout && game.pli.length > 0) {
-      const winnerIdActuel = getPliWinner(
-        game.pli,
-        game.couleurDemandee,
-        game.atout
-      );
+// 1) Fournir si on a la couleur
+if (
+  couleurDemandeeActuelle &&
+  playedCard.suit !== couleurDemandeeActuelle &&
+  hasSuit(hand, couleurDemandeeActuelle)
+) {
+  return game;
+}
 
-      const partenaireEstMaitre =
-        winnerIdActuel &&
-        game.teams.nous.includes(winnerIdActuel) ===
-          game.teams.nous.includes(playerId);
+// 2) Couper si pas de couleur (SAUF si partenaire maître)
+if (
+  couleurDemandeeActuelle &&
+  playedCard.suit !== couleurDemandeeActuelle &&
+  !hasSuit(hand, couleurDemandeeActuelle) &&
+  playedCard.suit !== game.atout &&
+  hasAtout(hand, game.atout) &&
+  !partenaireEstMaitre
+) {
+  return game;
+}
 
-      if (!partenaireEstMaitre) {
-        const atoutsDansPli = game.pli.filter(
-          p => p.card && p.card.suit === game.atout
-        );
+// 3) Monter à l’atout si adversaire maître
+if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitre) {
+  const atoutsDansPli = game.pli.filter(p => p.card && p.card.suit === game.atout);
 
-        if (atoutsDansPli.length > 0) {
-          const meilleurAtout = atoutsDansPli.reduce((best, p) =>
-            rankValue(p.card.value, true) < rankValue(best.card.value, true)
-              ? p
-              : best
-          );
+  if (atoutsDansPli.length > 0) {
+    const meilleurAtout = atoutsDansPli.reduce((best, p) =>
+      rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
+    );
 
-          const peutMonter = hand.some(
-            c =>
-              c.suit === game.atout &&
-              rankValue(c.value, true) <
-                rankValue(meilleurAtout.card.value, true)
-          );
+    const peutMonter = hand.some(
+      c =>
+        c.suit === game.atout &&
+        rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
+    );
 
-          const monteAssez =
-            rankValue(playedCard.value, true) <
-            rankValue(meilleurAtout.card.value, true);
+    const monteAssez =
+      rankValue(playedCard.value, true) <
+      rankValue(meilleurAtout.card.value, true);
 
-          if (peutMonter && !monteAssez) return game;
-        }
-      }
-    }
+    if (peutMonter && !monteAssez) return game;
+  }
+}
+
 
     // ============================================
     // Coup légal → on modifie l’état
