@@ -52,6 +52,24 @@ function cardImgSrc(card) {
   return `/cards/${suit}/${value}.png`;
 }
 
+const SUIT_RANK = { hearts: 0, diamonds: 1, clubs: 2, spades: 3 };
+const VALUE_RANK = { "7": 0, "8": 1, "9": 2, J: 3, Q: 4, K: 5, "10": 6, A: 7 };
+
+function compareCards(a, b) {
+  const sa = SUIT_RANK[a.suit] ?? 99;
+  const sb = SUIT_RANK[b.suit] ?? 99;
+  if (sa !== sb) return sa - sb;
+
+  const va = VALUE_RANK[String(a.value).toUpperCase()] ?? 99;
+  const vb = VALUE_RANK[String(b.value).toUpperCase()] ?? 99;
+  return va - vb;
+}
+
+
+
+
+
+
 export default function Table() {
   const navigate = useNavigate();
 
@@ -420,7 +438,9 @@ export default function Table() {
 
             {game.hands["joueur1"] && (
               <div className="player-bottom">
-                {game.hands["joueur1"].map((card, index) => {
+              {[...game.hands["joueur1"]].sort(compareCards).map((card, index) => {
+
+
                   const total = game.hands["joueur1"].length;
                   const center = (total - 1) / 2;
                   const offset = index - center;
