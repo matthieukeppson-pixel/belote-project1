@@ -52,7 +52,8 @@ function cardImgSrc(card) {
   return `/cards/${suit}/${value}.png`;
 }
 
-const SUIT_RANK = { hearts: 0, diamonds: 1, clubs: 2, spades: 3 };
+const SUIT_RANK = { clubs: 0, diamonds: 1, spades: 2, hearts: 3 };
+
 const VALUE_RANK = { "7": 0, "8": 1, "9": 2, J: 3, Q: 4, K: 5, "10": 6, A: 7 };
 
 function compareCards(a, b) {
