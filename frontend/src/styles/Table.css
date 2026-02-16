@@ -698,6 +698,62 @@
   width: 100px;
   height: 145px;
 }
+/* =========================
+   CONTRÉE — PANEL
+========================= */
+/* Contrée : panneau au milieu après choix atout */
+.contree-panel {
+  position: absolute;
+  left: 50%;
+  top: 310px;               /* ✅ réglage fin */
+  transform: translateX(-50%);
+
+  padding: 10px 12px;
+  border-radius: 14px;
+
+  background: rgba(0, 20, 55, 0.45);
+  border: 1px solid rgba(120, 180, 255, 0.18);
+  box-shadow: 0 0 14px rgba(0, 150, 255, 0.18);
+
+  color: rgba(234, 246, 255, 0.92);
+  min-width: 240px;
+  z-index: 70;
+  backdrop-filter: blur(4px);
+}
+
+
+.contree-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.contree-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.contree-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.contree-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 180, 255, 0.25);
+  background: rgba(0, 35, 110, 0.85);
+  color: #eaf6ff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.contree-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 
 

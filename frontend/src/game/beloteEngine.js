@@ -43,8 +43,9 @@ const ALLOWED_EVENTS_BY_STATE = {
   [STATES.DISTRIBUTION_2]: ["DISTRIBUTE_CARDS"],
   [STATES.DISTRIBUTION_3_FINAL]: ["DISTRIBUTE_CARDS"],
 
-  [STATES.ANNOUNCE_ATOUT_TOUR_1]: ["TAKE_ATOUT", "PASS"],
-  [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS"],
+  [STATES.ANNOUNCE_ATOUT_TOUR_1]: ["TAKE_ATOUT", "PASS", "CONTRE", "SURCONTRE"],
+  [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS", "CONTRE", "SURCONTRE"],
+
   [STATES.ANNOUNCE_ALL_PASSED]: ["AUTO"], // 👈 AJOUT ICI
   [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
 
@@ -70,7 +71,10 @@ export function createInitialGameState() {
       nous: ["joueur1", "joueur2"],
       eux: ["joueur3", "joueur4"]
     },
-
+    // 🔹 MODE DE JEU
+    ruleset: "classic",          // classic | contree | coinche
+    contratMultiplicateur: 1,    // 1 (classic), 2 (contré), 4 (surcontré)
+ contratValeur: null,         // ✅ 80..160 ou 260 (capot) — pour la contrée
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
@@ -127,9 +131,10 @@ export function dispatch(game, event) {
     case STATES.DISTRIBUTION_3_FINAL:
       return handleDistribution(game, event, 3);
 
- case STATES.ANNOUNCE_ATOUT_TOUR_1:
+case STATES.ANNOUNCE_ATOUT_TOUR_1:
 case STATES.ANNOUNCE_ATOUT_TOUR_2:
   return handleAnnonce(game, event);
+
 
 case STATES.ANNOUNCE_ALL_PASSED:          // 👈 AJOUT ICI
   return handleAnnounceAllPassed(game);  // 👈 AJOUT ICI

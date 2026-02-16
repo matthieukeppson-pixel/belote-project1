@@ -103,10 +103,14 @@ const mode = location.state?.mode || "classic";
   const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
-    g = {
-      ...g,
-      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
-    };
+   g = {
+  ...g,
+  ruleset: mode,               // ✅ classic | contree | coinche
+  contratMultiplicateur: 1,    // ✅ reset
+  contratValeur: null,         // ✅ (ajoute ce champ dans createInitialGameState)
+  players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+};
+
 
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -159,10 +163,12 @@ const mode = location.state?.mode || "classic";
     if (finDeMancheCompteeRef.current) return;
     finDeMancheCompteeRef.current = true;
 
-    const next = partieRef.current.onFinDeManche({
-      dealerIndex: game.dealerIndex,
-      finDeManche: game.finDeManche,
-    });
+   const next = partieRef.current.onFinDeManche({
+  dealerIndex: game.dealerIndex,
+  finDeManche: game.finDeManche,
+  contratMultiplicateur: game.contratMultiplicateur || 1,
+});
+
 
     finDeMancheRef.current = next;
 
@@ -198,10 +204,14 @@ const mode = location.state?.mode || "classic";
     // reset moteur
     let g = createInitialGameState();
 
-    g = {
-      ...g,
-      players: game.players,
-    };
+   g = {
+  ...g,
+  ruleset: mode,               // ✅ garder le même mode
+  contratMultiplicateur: 1,    // ✅ reset
+  contratValeur: null,         // ✅ reset
+  players: game.players,
+};
+
 
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -283,6 +293,13 @@ const mode = location.state?.mode || "classic";
   function handlePass() {
     setGame((g) => dispatch(g, { type: "PASS" }));
   }
+function handleContre() {
+  setGame((g) => dispatch(g, { type: "CONTRE" }));
+}
+
+function handleSurContre() {
+  setGame((g) => dispatch(g, { type: "SURCONTRE" }));
+}
 
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
@@ -359,6 +376,40 @@ return (
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+
+{mode === "contree" && game.atoutChoisi && (
+
+  <div className="contree-panel">
+    <div className="contree-title">Contrat</div>
+
+    <div className="contree-row">
+      <span className="contree-label">Multiplicateur :</span>
+      <span className="contree-value">x{game.contratMultiplicateur || 1}</span>
+    </div>
+
+    <div className="contree-actions">
+      <button
+        className="contree-btn"
+        onClick={handleContre}
+        disabled={
+          typeof game.preneur !== "number" || (game.contratMultiplicateur || 1) !== 1
+        }
+      >
+        Contrer
+      </button>
+
+      <button
+        className="contree-btn"
+        onClick={handleSurContre}
+        disabled={
+          typeof game.preneur !== "number" || (game.contratMultiplicateur || 1) !== 2
+        }
+      >
+        Surcontrer
+      </button>
+    </div>
+  </div>
+)}
 
             {scoreUI && (
               <div className="score-overlay score-pill">

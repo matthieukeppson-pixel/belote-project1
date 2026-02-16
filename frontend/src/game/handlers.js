@@ -281,6 +281,22 @@ export function handleAnnonce(game, event) {
   const playersCount = game.players.length;
   const startIndex = (game.dealerIndex + 1) % playersCount;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
+  // ============================================
+  // CONTRÉE — CONTRE / SURCONTRE (V1)
+  // ============================================
+  if (event.type === "CONTRE") {
+    if (game.ruleset !== "contree") return game;
+    if (typeof game.preneur !== "number") return game; // il faut un preneur
+    if ((game.contratMultiplicateur || 1) !== 1) return game; // déjà contré/surcontré
+    return { ...game, contratMultiplicateur: 2 };
+  }
+
+  if (event.type === "SURCONTRE") {
+    if (game.ruleset !== "contree") return game;
+    if (typeof game.preneur !== "number") return game;
+    if ((game.contratMultiplicateur || 1) !== 2) return game; // surcontrer si contré
+    return { ...game, contratMultiplicateur: 4 };
+  }
 
   // ============================================
   // PASS
@@ -323,13 +339,15 @@ export function handleAnnonce(game, event) {
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
       if (!game.atoutPropose) return game;
 
-      const ng = {
-        ...game,
-        atout: game.atoutPropose.suit,
-        atoutChoisi: true,
-        preneur: game.currentPlayerIndex,
-        state: STATES.DISTRIBUTION_3_FINAL
-      };
+     const ng = {
+  ...game,
+  atout: game.atoutPropose.suit,
+  atoutChoisi: true,
+  preneur: game.currentPlayerIndex,
+  contratMultiplicateur: 1,   // 
+  state: STATES.DISTRIBUTION_3_FINAL
+};
+
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
@@ -339,13 +357,15 @@ export function handleAnnonce(game, event) {
       if (!event.suit) return game;
       if (game.atoutPropose && event.suit === game.atoutPropose.suit) return game;
 
-      const ng = {
-        ...game,
-        atout: event.suit,
-        atoutChoisi: true,
-        preneur: game.currentPlayerIndex,
-        state: STATES.DISTRIBUTION_3_FINAL
-      };
+   const ng = {
+  ...game,
+  atout: event.suit,
+  atoutChoisi: true,
+  preneur: game.currentPlayerIndex,
+  contratMultiplicateur: 1,   // 
+  state: STATES.DISTRIBUTION_3_FINAL
+};
+
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
@@ -511,41 +531,69 @@ if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitr
       h => Array.isArray(h) && h.length === 0
     );
 
-    if (isLastPli) {
-      // dix de der
-      if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
-      else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
+if (isLastPli) {
+  // dix de der
+  if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
+  else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
 
-      // équipe preneur
-      const preneurId = game.players[game.preneur];
-      const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
-      const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
+  // équipe preneur
+  const preneurId = game.players[game.preneur];
+  const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
 
-// belote +20
-if (belote?.annoncee) {
-  const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
-  scoreManche[equipeBelote] += 20;
-}
+  // total des plis (162 avec dix de der)
+  const totalPlis = scoreManche.nous + scoreManche.eux;
 
-const totalManche = scoreManche.nous + scoreManche.eux;
-const seuil = 82;
+  // ✅ belote +20 (imprenable, même en chute)
+  if (belote?.annoncee) {
+    const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+    scoreManche[equipeBelote] += 20;
+  }
 
-const pointsPreneur = scoreManche[preneurEquipe];
-const chute = pointsPreneur < seuil;
+  // =====================================================
+  // ✅ CONTRAT : Classic vs Contrée
+  // =====================================================
+  const seuil =
+    game.ruleset === "contree"
+      ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
+      : 82;
 
-if (chute) {
-  scoreManche[preneurEquipe] = 0;
-  scoreManche[autreEquipe] = totalManche;
-}
+  const pointsPreneur = scoreManche[preneurEquipe];
+  const chute = pointsPreneur < seuil;
 
+  if (game.ruleset === "contree") {
+    // ✅ CONTRÉE VÉRO :
+    // - si chute : preneur perd ses plis (mais garde belote déjà ajoutée)
+    // - défense prend tous les plis (162) + sa belote éventuelle
+    if (chute) {
+      // on remet les plis : preneur 0, défense = 162
+      scoreManche[preneurEquipe] = 0;
+      scoreManche[autreEquipe] = totalPlis; // 162
 
-      finDeManche = {
-        chute,
-        preneurEquipe,
-        seuil,
-        scoreFinal: { ...scoreManche }
-      };
+      // belote reste déjà incluse dans scoreManche (si preneur ou défense)
+      // donc pas besoin de la réajouter ici
     }
+
+    // ✅ multiplicateur FINAL (contre/surcontre) sur le résultat final
+    const mult = game.contratMultiplicateur || 1;
+    scoreManche.nous *= mult;
+    scoreManche.eux *= mult;
+  } else {
+    // ✅ CLASSIC (ton comportement actuel)
+    if (chute) {
+      scoreManche[preneurEquipe] = 0;
+      scoreManche[autreEquipe] = totalPlis;
+    }
+  }
+
+  finDeManche = {
+    chute,
+    preneurEquipe,
+    seuil,
+    scoreFinal: { ...scoreManche }
+  };
+}
+
 
     return {
       ...game,
