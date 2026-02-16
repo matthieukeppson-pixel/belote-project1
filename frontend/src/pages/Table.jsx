@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 import Partie from "../game/Partie";
+
+
 
 // ============================================
 // HELPERS ATTOUT — UI TABLE UNIQUEMENT
@@ -73,6 +76,8 @@ function compareCards(a, b) {
 
 export default function Table() {
   const navigate = useNavigate();
+const location = useLocation();
+const mode = location.state?.mode || "classic";
 
   // ============================================
   // PARTIE (présente mais non pilotante)
@@ -344,6 +349,11 @@ return (
       <button className="table-back-btn" onClick={() => navigate("/salon")}>
         ← Retour au salon
       </button>
+{import.meta.env.DEV && (
+  <div style={{ position: "absolute", top: 60, left: 20, zIndex: 9999, color: "#fff", fontWeight: 800 }}>
+    Mode: {mode}
+  </div>
+)}
 
       <div className="table-layout">
         <div className="table-zone">
