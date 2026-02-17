@@ -248,34 +248,52 @@ export function handleDistribution(game, event, count) {
     return { ...game, state: STATES.DISTRIBUTION_2, deck, hands };
   }
 
-  if (game.state === STATES.DISTRIBUTION_2) {
-    const atoutPropose = deck.shift();
-
-    console.log(
-      "[ANNONCES] dealerIndex =",
-      game.dealerIndex,
-      "premier à parler =",
-      game.players[(game.dealerIndex + 1) % game.players.length]
-    );
-
+if (game.state === STATES.DISTRIBUTION_2) {
+  // ✅ CONTRÉE : pas de carte retournée -> ENCHERES
+  if (game.ruleset === "contree") {
     return {
       ...game,
-      state: STATES.ANNOUNCE_ATOUT_TOUR_1,
+      state: STATES.ENCHERES,
       deck,
       hands,
-      atoutPropose,
+      atoutPropose: null,
+      atout: null,
+      atoutChoisi: false,
+      preneur: null,
+      contratValeur: null,
+      contratMultiplicateur: 1,
       currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
     };
   }
 
-  return { ...game, deck, hands };
+  // ✅ CLASSIQUE : comportement inchangé
+  const atoutPropose = deck.shift();
+
+  console.log(
+    "[ANNONCES] dealerIndex =",
+    game.dealerIndex,
+    "premier à parler =",
+    game.players[(game.dealerIndex + 1) % game.players.length]
+  );
+
+  return {
+    ...game,
+    state: STATES.ANNOUNCE_ATOUT_TOUR_1,
+    deck,
+    hands,
+    atoutPropose,
+    currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
+  };
+}
+
+return { ...game, deck, hands };
 }
 
 // ============================================
 // ANNONCE ATTOUT
 // ============================================
-
 export function handleAnnonce(game, event) {
+
   if (!event) return game;
 
   const playersCount = game.players.length;

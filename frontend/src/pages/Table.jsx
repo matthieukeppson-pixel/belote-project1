@@ -371,13 +371,43 @@ return (
     Mode: {mode}
   </div>
 )}
+{import.meta.env.DEV && (
+  <div
+    style={{
+      position: "absolute",
+      top: 10,
+      left: 120, // pour ne pas gêner le bouton TEST
+      zIndex: 9999,
+      padding: "4px 8px",
+      borderRadius: 8,
+      background: "rgba(0,0,0,0.45)",
+      color: "#fff",
+      fontWeight: 800,
+      fontSize: 12,
+    }}
+  >
+    {mode} | {game.state}
+  </div>
+)}
 
       <div className="table-layout">
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+{mode === "contree" && game.state === STATES.ENCHERES && (
+  <div className="atout-panel">
+    <div className="atout-title">Enchères (Contrée)</div>
 
-{mode === "contree" && game.atoutChoisi && (
+    <div className="atout-actions">
+      <button className="atout-btn pass" onClick={handlePass}>
+        Passer
+      </button>
+    </div>
+  </div>
+)}
+
+{mode === "contree" && typeof game.preneur === "number" && game.atout && (
+
 
   <div className="contree-panel">
     <div className="contree-title">Contrat</div>
