@@ -658,3 +658,7 @@ export function handleAnnounceAllPassed(game) {
     dealerIndex: nextDealerIndex
   };
 }
+export function handleBidding(game) {
+  return game;
+}
+

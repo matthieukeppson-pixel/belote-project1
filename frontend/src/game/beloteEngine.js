@@ -8,9 +8,9 @@ import {
   handleAnnonce,
   handlePli,
   handleFinDeManche,
-  handleAnnounceAllPassed   // 👈 AJOUT ICI
+  handleAnnounceAllPassed,
+  handleBidding
 } from "./handlers";
-
 
 // ============================================
 // ÉTATS DU JEU
@@ -25,10 +25,12 @@ export const STATES = {
 
   ANNOUNCE_ATOUT_TOUR_1: "ANNOUNCE_ATOUT_TOUR_1",
   ANNOUNCE_ATOUT_TOUR_2: "ANNOUNCE_ATOUT_TOUR_2",
-ANNOUNCE_ALL_PASSED: "ANNOUNCE_ALL_PASSED",
+  ANNOUNCE_ALL_PASSED: "ANNOUNCE_ALL_PASSED",
+
+  ENCHERES: "ENCHERES",
 
   PLI_EN_COURS: "PLI_EN_COURS",
-  PLI_TERMINE: "PLI_TERMINE",   // 🆕 NOUVEL ÉTAT
+  PLI_TERMINE: "PLI_TERMINE",
   FIN_DE_MANCHE: "FIN_DE_MANCHE"
 };
 
@@ -46,10 +48,12 @@ const ALLOWED_EVENTS_BY_STATE = {
   [STATES.ANNOUNCE_ATOUT_TOUR_1]: ["TAKE_ATOUT", "PASS", "CONTRE", "SURCONTRE"],
   [STATES.ANNOUNCE_ATOUT_TOUR_2]: ["TAKE_ATOUT", "PASS", "CONTRE", "SURCONTRE"],
 
-  [STATES.ANNOUNCE_ALL_PASSED]: ["AUTO"], // 👈 AJOUT ICI
-  [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
+  [STATES.ANNOUNCE_ALL_PASSED]: ["AUTO"],
 
-  [STATES.PLI_TERMINE]: ["NEXT_PLI"],  // 🆕 NETTOYAGE DU PLI
+  [STATES.ENCHERES]: ["BID", "PASS", "CONTRE", "SURCONTRE"],
+
+  [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
+  [STATES.PLI_TERMINE]: ["NEXT_PLI"],
 
   [STATES.FIN_DE_MANCHE]: []
 };
@@ -66,37 +70,37 @@ export function createInitialGameState() {
     hands: {},
     deck: [],
 
-    // 🔹 ÉQUIPES (RÈGLE FIGÉE)
     teams: {
       nous: ["joueur1", "joueur2"],
       eux: ["joueur3", "joueur4"]
     },
+
     // 🔹 MODE DE JEU
-    ruleset: "classic",          // classic | contree | coinche
-    contratMultiplicateur: 1,    // 1 (classic), 2 (contré), 4 (surcontré)
- contratValeur: null,         // ✅ 80..160 ou 260 (capot) — pour la contrée
+    ruleset: "classic", // classic | contree | coinche
+    contratMultiplicateur: 1, // 1 (classic), 2 (contré), 4 (surcontré)
+    contratValeur: null, // 80..160 ou 260 (capot) — pour la contrée
+
     atout: null,
     atoutPropose: null,
     atoutChoisi: false,
     preneur: null,
-belote: {
-  atout: null,
-  joueur: null,
-  annoncee: false
-},
+
+    belote: {
+      atout: null,
+      joueur: null,
+      annoncee: false
+    },
 
     currentPlayerIndex: 0,
     pli: [],
     winnerIndex: null,
 
-    // 🔹 SCORE GLOBAL (sera utilisé plus tard)
     score: {
       nous: 0,
       eux: 0
     }
   };
 }
-
 
 // ============================================
 // DISPATCH
@@ -111,12 +115,8 @@ export function dispatch(game, event) {
   // 🔒 GATE GLOBAL — REFUS DES ACTIONS HORS CONTEXTE
   if (!event || !event.type) return game;
 
-
   const allowed = ALLOWED_EVENTS_BY_STATE[game.state];
-
-  if (!allowed || !allowed.includes(event.type)) {
-    return game;
-  }
+  if (!allowed || !allowed.includes(event.type)) return game;
 
   switch (game.state) {
     case STATES.TABLE_IDLE:
@@ -131,18 +131,19 @@ export function dispatch(game, event) {
     case STATES.DISTRIBUTION_3_FINAL:
       return handleDistribution(game, event, 3);
 
-case STATES.ANNOUNCE_ATOUT_TOUR_1:
-case STATES.ANNOUNCE_ATOUT_TOUR_2:
-  return handleAnnonce(game, event);
+    case STATES.ANNOUNCE_ATOUT_TOUR_1:
+    case STATES.ANNOUNCE_ATOUT_TOUR_2:
+      return handleAnnonce(game, event);
 
+    case STATES.ANNOUNCE_ALL_PASSED:
+      return handleAnnounceAllPassed(game);
 
-case STATES.ANNOUNCE_ALL_PASSED:          // 👈 AJOUT ICI
-  return handleAnnounceAllPassed(game);  // 👈 AJOUT ICI
+    case STATES.ENCHERES:
+      return handleBidding(game, event);
 
-case STATES.PLI_EN_COURS:
-case STATES.PLI_TERMINE:
-  return handlePli(game, event);
-
+    case STATES.PLI_EN_COURS:
+    case STATES.PLI_TERMINE:
+      return handlePli(game, event);
 
     case STATES.FIN_DE_MANCHE:
       return handleFinDeManche(game, event);
@@ -151,7 +152,3 @@ case STATES.PLI_TERMINE:
       return game;
   }
 }
-
-
-
-
