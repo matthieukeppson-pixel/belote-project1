@@ -709,8 +709,27 @@ export function handleBidding(game, event) {
     return { ...game, passes, currentPlayerIndex: nextIndex };
   }
 
-  // (BID / CONTRE / SURCONTRE au palier suivant)
-  return game;
+// BID (enchère minimale)
+if (event.type === "BID") {
+  if (!event.suit || typeof event.value !== "number") return game;
+
+  const ng = {
+    ...game,
+    atout: event.suit,
+    atoutChoisi: true,
+    preneur: game.currentPlayerIndex,
+    contratValeur: event.value,
+    contratMultiplicateur: 1,
+    passes: 0,
+    state: STATES.DISTRIBUTION_3_FINAL
+  };
+
+  return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
 }
+
+// (CONTRE / SURCONTRE au palier suivant)
+return game;
+}
+
 
 

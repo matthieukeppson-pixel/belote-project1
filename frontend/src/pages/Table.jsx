@@ -399,12 +399,27 @@ return (
     <div className="atout-title">Enchères (Contrée)</div>
 
     <div className="atout-actions">
+      {ALL_SUITS.map((suit) => (
+        <button
+          key={suit}
+          className="atout-btn take atout-suit-btn"
+          onClick={() =>
+            setGame((g) => dispatch(g, { type: "BID", value: 80, suit }))
+          }
+        >
+          <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
+        </button>
+      ))}
+    </div>
+
+    <div className="atout-actions" style={{ marginTop: 10 }}>
       <button className="atout-btn pass" onClick={handlePass}>
         Passer
       </button>
     </div>
   </div>
 )}
+
 
 {mode === "contree" && typeof game.preneur === "number" && game.atout && (
 
@@ -570,64 +585,68 @@ return (
               </div>
             )}
 
-            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-              <div className="atout-panel">
-                <div className="atout-title">Choisir l’atout</div>
-                <div className="atout-actions">
-                  <button className="atout-btn take" onClick={handleTakeAtout}>
-                    Prendre
-                  </button>
-                  <button className="atout-btn pass" onClick={handlePass}>
-                    Passer
-                  </button>
-                </div>
-              </div>
-            )}
+         {mode === "classic" && game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+  <div className="atout-panel">
+    <div className="atout-title">Choisir l’atout</div>
+    <div className="atout-actions">
+      <button className="atout-btn take" onClick={handleTakeAtout}>
+        Prendre
+      </button>
+      <button className="atout-btn pass" onClick={handlePass}>
+        Passer
+      </button>
+    </div>
+  </div>
+)}
 
-            {/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) — VRAIE CARTE */}
-            {(game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
-              game.atoutPropose && (
-                <div className="atout-card">
-                  <div className="label">Atout</div>
-                  <img
-                    src={cardImgSrc(game.atoutPropose)}
-                    alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
-                    className="card-img"
-                    draggable={false}
-                  />
-                </div>
-              )}
+{/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) — VRAIE CARTE */}
+{mode === "classic" &&
+  (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+    game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
+  game.atoutPropose && (
+    <div className="atout-card">
+      <div className="label">Atout</div>
+      <img
+        src={cardImgSrc(game.atoutPropose)}
+        alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
+        className="card-img"
+        draggable={false}
+      />
+    </div>
+  )}
 
-            {game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
-              game.atoutPropose && (
-                <div className="atout-panel">
-                  <div className="atout-title">Choisir l’atout</div>
-                  <div className="atout-actions">
-                    {ALL_SUITS.filter(
-                      (suit) => suit !== game.atoutPropose.suit
-                    ).map((suit) => (
-                      <button
-                        key={suit}
-                        className="atout-btn take atout-suit-btn"
-                        onClick={() =>
-                          setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))
-                        }
-                      >
-                        <span className={`atout-suit-symbol ${suit}`}>
-                          {suitLabel(suit)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
 
-                  <div className="atout-actions" style={{ marginTop: 10 }}>
-                    <button className="atout-btn pass" onClick={handlePass}>
-                      Passer
-                    </button>
-                  </div>
-                </div>
-              )}
+{mode === "classic" &&
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+  game.atoutPropose && (
+    <div className="atout-panel">
+      <div className="atout-title">Choisir l’atout</div>
+      <div className="atout-actions">
+        {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map(
+          (suit) => (
+            <button
+              key={suit}
+              className="atout-btn take atout-suit-btn"
+              onClick={() =>
+                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))
+              }
+            >
+              <span className={`atout-suit-symbol ${suit}`}>
+                {suitLabel(suit)}
+              </span>
+            </button>
+          )
+        )}
+      </div>
+
+      <div className="atout-actions" style={{ marginTop: 10 }}>
+        <button className="atout-btn pass" onClick={handlePass}>
+          Passer
+        </button>
+      </div>
+    </div>
+  )}
+
           </div>
         </div>
 
