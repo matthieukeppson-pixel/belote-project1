@@ -256,6 +256,9 @@ if (game.state === STATES.DISTRIBUTION_2) {
       state: STATES.ENCHERES,
       deck,
       hands,
+      bids: [],
+passes: 0,
+
       atoutPropose: null,
       atout: null,
       atoutChoisi: false,
@@ -676,7 +679,38 @@ export function handleAnnounceAllPassed(game) {
     dealerIndex: nextDealerIndex
   };
 }
-export function handleBidding(game) {
+export function handleBidding(game, event) {
+  if (!event) return game;
+
+  const playersCount = game.players.length;
+  const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
+
+  // PASS
+  if (event.type === "PASS") {
+    const passes = (game.passes || 0) + 1;
+
+    // ✅ 4 passes => redistribution (donneur +1)
+    if (passes >= playersCount) {
+      const nextDealerIndex = (game.dealerIndex + 1) % playersCount;
+
+      let g = {
+        ...game,
+        dealerIndex: nextDealerIndex,
+        currentPlayerIndex: (nextDealerIndex + 1) % playersCount
+      };
+
+      g = handleTableIdle(g, { type: "TABLE_READY" });
+      g = handleDistribution(g, { type: "DISTRIBUTE_CARDS" }, 3);
+      g = handleDistribution(g, { type: "DISTRIBUTE_CARDS" }, 2);
+
+      return g;
+    }
+
+    return { ...game, passes, currentPlayerIndex: nextIndex };
+  }
+
+  // (BID / CONTRE / SURCONTRE au palier suivant)
   return game;
 }
+
 
