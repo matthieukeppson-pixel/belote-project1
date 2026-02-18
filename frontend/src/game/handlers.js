@@ -248,49 +248,53 @@ export function handleDistribution(game, event, count) {
     return { ...game, state: STATES.DISTRIBUTION_2, deck, hands };
   }
 
-if (game.state === STATES.DISTRIBUTION_2) {
-  // ✅ CONTRÉE : pas de carte retournée -> ENCHERES
-  if (game.ruleset === "contree") {
+  if (game.state === STATES.DISTRIBUTION_2) {
+    if (game.ruleset === "contree") {
+      return {
+        ...game,
+        state: STATES.ENCHERES,
+        deck,
+        hands,
+        bids: [],
+        currentBid: null,
+        passes: 0,
+        passesAfterBid: 0,
+        atoutPropose: null,
+        atout: null,
+        atoutChoisi: false,
+        preneur: null,
+        contratValeur: null,
+        contratMultiplicateur: 1,
+        currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
+      };
+    }
+
+    const atoutPropose = deck.shift();
+
     return {
       ...game,
-      state: STATES.ENCHERES,
+      state: STATES.ANNOUNCE_ATOUT_TOUR_1,
       deck,
       hands,
-      bids: [],
-passes: 0,
-
-      atoutPropose: null,
-      atout: null,
-      atoutChoisi: false,
-      preneur: null,
-      contratValeur: null,
-      contratMultiplicateur: 1,
+      atoutPropose,
       currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
     };
   }
 
-  // ✅ CLASSIQUE : comportement inchangé
-  const atoutPropose = deck.shift();
-
-  console.log(
-    "[ANNONCES] dealerIndex =",
-    game.dealerIndex,
-    "premier à parler =",
-    game.players[(game.dealerIndex + 1) % game.players.length]
-  );
-
-  return {
-    ...game,
-    state: STATES.ANNOUNCE_ATOUT_TOUR_1,
-    deck,
-    hands,
-    atoutPropose,
-    currentPlayerIndex: (game.dealerIndex + 1) % game.players.length
-  };
+  return { ...game, deck, hands };
 }
 
-return { ...game, deck, hands };
-}
+
+
+
+
+
+// ============================================
+// ANNONCE ATTOUT
+// ============================================
+
+
+
 
 // ============================================
 // ANNONCE ATTOUT
@@ -685,18 +689,61 @@ export function handleBidding(game, event) {
   const playersCount = game.players.length;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
 
-  // PASS
-  if (event.type === "PASS") {
-    const passes = (game.passes || 0) + 1;
+  const currentBid = game.currentBid || null;          // { value, suit, playerIndex }
+  const passes = game.passes || 0;                      // passes AVANT toute annonce
+  const passesAfterBid = game.passesAfterBid || 0;      // passes APRÈS une annonce
 
-    // ✅ 4 passes => redistribution (donneur +1)
-    if (passes >= playersCount) {
+  // ============================================
+  // PASS
+  // ============================================
+  if (event.type === "PASS") {
+    // ✅ S'il y a déjà une annonce : 3 passes consécutifs => fin des enchères
+    if (currentBid) {
+      const newPassesAfterBid = passesAfterBid + 1;
+
+      if (newPassesAfterBid >= 3) {
+        // Fin des enchères : on applique la meilleure annonce
+        const ng = {
+          ...game,
+          atout: currentBid.suit,
+          atoutChoisi: true,
+          preneur: currentBid.playerIndex,
+          contratValeur: currentBid.value,
+          contratMultiplicateur: 1,
+
+          // nettoyage enchères
+          passes: 0,
+          passesAfterBid: 0,
+          currentBid: null,
+
+          state: STATES.DISTRIBUTION_3_FINAL
+        };
+
+        return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
+      }
+
+      return {
+        ...game,
+        passesAfterBid: newPassesAfterBid,
+        currentPlayerIndex: nextIndex
+      };
+    }
+
+    // ✅ Sinon : aucune annonce encore → 4 passes => redistribution (donneur +1)
+    const newPasses = passes + 1;
+
+    if (newPasses >= playersCount) {
       const nextDealerIndex = (game.dealerIndex + 1) % playersCount;
 
       let g = {
         ...game,
         dealerIndex: nextDealerIndex,
-        currentPlayerIndex: (nextDealerIndex + 1) % playersCount
+        currentPlayerIndex: (nextDealerIndex + 1) % playersCount,
+
+        // nettoyage enchères
+        passes: 0,
+        passesAfterBid: 0,
+        currentBid: null
       };
 
       g = handleTableIdle(g, { type: "TABLE_READY" });
@@ -706,30 +753,41 @@ export function handleBidding(game, event) {
       return g;
     }
 
-    return { ...game, passes, currentPlayerIndex: nextIndex };
+    return { ...game, passes: newPasses, currentPlayerIndex: nextIndex };
   }
 
-// BID (enchère minimale)
-if (event.type === "BID") {
-  if (!event.suit || typeof event.value !== "number") return game;
+  // ============================================
+  // BID
+  // ============================================
+  if (event.type === "BID") {
+    if (!event.suit || typeof event.value !== "number") return game;
 
-  const ng = {
-    ...game,
-    atout: event.suit,
-    atoutChoisi: true,
-    preneur: game.currentPlayerIndex,
-    contratValeur: event.value,
-    contratMultiplicateur: 1,
-    passes: 0,
-    state: STATES.DISTRIBUTION_3_FINAL
-  };
+    // ✅ surenchère obligatoire si une annonce existe déjà
+    if (currentBid && event.value <= currentBid.value) return game;
 
-  return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
+    return {
+      ...game,
+      currentBid: {
+        value: event.value,
+        suit: event.suit,
+        playerIndex: game.currentPlayerIndex
+      },
+      // une annonce existe => on ne compte plus "passes" (avant annonce)
+      passes: 0,
+      // reset des passes après annonce
+      passesAfterBid: 0,
+      // tour suivant
+      currentPlayerIndex: nextIndex
+    };
+  }
+
+  // (CONTRE / SURCONTRE au palier suivant)
+  return game;
 }
 
-// (CONTRE / SURCONTRE au palier suivant)
-return game;
-}
+
+
+
 
 
 
