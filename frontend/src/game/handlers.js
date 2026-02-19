@@ -721,7 +721,8 @@ export function handleBidding(game, event) {
           atoutChoisi: true,
           preneur: currentBid.playerIndex,
           contratValeur: currentBid.value,
-          contratMultiplicateur: 1,
+         contratMultiplicateur: game.contratMultiplicateur || 1,
+
 
           // nettoyage enchères
           passes: 0,
@@ -766,6 +767,31 @@ export function handleBidding(game, event) {
     }
 
     return { ...game, passes: newPasses, currentPlayerIndex: nextIndex };
+  }
+  // ============================================
+  // CONTRÉE — CONTRE / SURCONTRE (pendant / après enchères)
+  // ============================================
+  if (event.type === "CONTRE") {
+    if (game.ruleset !== "contree") return game;
+
+    // Il faut une annonce (preneur pas encore fixé, mais currentBid existe)
+    if (!currentBid) return game;
+
+    const mult = game.contratMultiplicateur || 1;
+    if (mult !== 1) return game; // déjà contré/surcontré
+
+    return { ...game, contratMultiplicateur: 2 };
+  }
+
+  if (event.type === "SURCONTRE") {
+    if (game.ruleset !== "contree") return game;
+
+    if (!currentBid) return game;
+
+    const mult = game.contratMultiplicateur || 1;
+    if (mult !== 2) return game; // surcontrer seulement si déjà contré
+
+    return { ...game, contratMultiplicateur: 4 };
   }
 
   // ============================================
