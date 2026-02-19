@@ -109,8 +109,8 @@ function getPliWinner(pli, couleurDemandee, atoutSuit) {
     atouts.length > 0
       ? atouts.map(p => ({ ...p, _isAtout: true }))
       : valid
-          .filter(p => p.card.suit === couleurDemandee)
-          .map(p => ({ ...p, _isAtout: false }));
+        .filter(p => p.card.suit === couleurDemandee)
+        .map(p => ({ ...p, _isAtout: false }));
 
   if (pool.length === 0) {
     // fallback si couleurDemandee incohérente
@@ -196,8 +196,35 @@ export function handleDistribution(game, event, count) {
 
     if (!preneurId) return game;
 
-    const turned = game.atoutPropose; // carte retournée
     let index = (game.dealerIndex + 1) % 4;
+
+    // ✅ CONTRÉE : tout le monde prend 3 (5->8)
+    if (game.ruleset === "contree") {
+      for (let i = 0; i < game.players.length; i++) {
+        const playerId = game.players[index];
+        for (let k = 0; k < 3; k++) {
+          hands[playerId] = [...hands[playerId], deck.shift()];
+        }
+        index = (index + 1) % 4;
+      }
+
+      const firstTrickIndex = (game.dealerIndex + 1) % game.players.length;
+
+      return {
+        ...game,
+        state: STATES.PLI_EN_COURS,
+        deck,
+        hands,
+        pli: [],
+        couleurDemandee: null,
+        winnerIndex: null,
+        atoutPropose: null,
+        currentPlayerIndex: firstTrickIndex
+      };
+    }
+
+    // ✅ CLASSIC : inchangé (2/3 + carte retournée)
+    const turned = game.atoutPropose;
 
     for (let i = 0; i < game.players.length; i++) {
       const playerId = game.players[index];
@@ -209,14 +236,11 @@ export function handleDistribution(game, event, count) {
       index = (index + 1) % 4;
     }
 
-    // le preneur prend la carte retournée
     if (turned) {
       hands[preneurId] = [...hands[preneurId], turned];
     }
 
-    // 1er pli : joueur à gauche du preneur
     const firstTrickIndex = (game.dealerIndex + 1) % game.players.length;
-
 
     return {
       ...game,
@@ -283,18 +307,6 @@ export function handleDistribution(game, event, count) {
 
   return { ...game, deck, hands };
 }
-
-
-
-
-
-
-// ============================================
-// ANNONCE ATTOUT
-// ============================================
-
-
-
 
 // ============================================
 // ANNONCE ATTOUT
@@ -364,14 +376,14 @@ export function handleAnnonce(game, event) {
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
       if (!game.atoutPropose) return game;
 
-     const ng = {
-  ...game,
-  atout: game.atoutPropose.suit,
-  atoutChoisi: true,
-  preneur: game.currentPlayerIndex,
-  contratMultiplicateur: 1,   // 
-  state: STATES.DISTRIBUTION_3_FINAL
-};
+      const ng = {
+        ...game,
+        atout: game.atoutPropose.suit,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        contratMultiplicateur: 1,   // 
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
 
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
@@ -382,14 +394,14 @@ export function handleAnnonce(game, event) {
       if (!event.suit) return game;
       if (game.atoutPropose && event.suit === game.atoutPropose.suit) return game;
 
-   const ng = {
-  ...game,
-  atout: event.suit,
-  atoutChoisi: true,
-  preneur: game.currentPlayerIndex,
-  contratMultiplicateur: 1,   // 
-  state: STATES.DISTRIBUTION_3_FINAL
-};
+      const ng = {
+        ...game,
+        atout: event.suit,
+        atoutChoisi: true,
+        preneur: game.currentPlayerIndex,
+        contratMultiplicateur: 1,   // 
+        state: STATES.DISTRIBUTION_3_FINAL
+      };
 
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
@@ -429,71 +441,71 @@ export function handlePli(game, event) {
 
     const playedCard = hand[idx];
 
-// ============================================
-// OBLIGATIONS DE JEU
-// Règle choisie : si partenaire maître -> on peut pisser (pas obligé de couper)
-// ============================================
-const couleurDemandeeActuelle =
-  game.pli.length === 0 ? null : game.couleurDemandee;
+    // ============================================
+    // OBLIGATIONS DE JEU
+    // Règle choisie : si partenaire maître -> on peut pisser (pas obligé de couper)
+    // ============================================
+    const couleurDemandeeActuelle =
+      game.pli.length === 0 ? null : game.couleurDemandee;
 
-const hasSuit = (h, suit) => h.some(c => c.suit === suit);
-const hasAtout = (h, atout) => h.some(c => c.suit === atout);
+    const hasSuit = (h, suit) => h.some(c => c.suit === suit);
+    const hasAtout = (h, atout) => h.some(c => c.suit === atout);
 
-// ✅ Gagnant actuel du pli (pendant le pli)
-const winnerIdActuel =
-  game.pli.length > 0
-    ? getPliWinner(game.pli, game.couleurDemandee, game.atout)
-    : null;
+    // ✅ Gagnant actuel du pli (pendant le pli)
+    const winnerIdActuel =
+      game.pli.length > 0
+        ? getPliWinner(game.pli, game.couleurDemandee, game.atout)
+        : null;
 
-// ✅ partenaire maître ?
-const partenaireEstMaitre =
-  !!winnerIdActuel &&
-  (game.teams.nous.includes(winnerIdActuel) ===
-    game.teams.nous.includes(playerId));
+    // ✅ partenaire maître ?
+    const partenaireEstMaitre =
+      !!winnerIdActuel &&
+      (game.teams.nous.includes(winnerIdActuel) ===
+        game.teams.nous.includes(playerId));
 
-// 1) Fournir si on a la couleur
-if (
-  couleurDemandeeActuelle &&
-  playedCard.suit !== couleurDemandeeActuelle &&
-  hasSuit(hand, couleurDemandeeActuelle)
-) {
-  return game;
-}
+    // 1) Fournir si on a la couleur
+    if (
+      couleurDemandeeActuelle &&
+      playedCard.suit !== couleurDemandeeActuelle &&
+      hasSuit(hand, couleurDemandeeActuelle)
+    ) {
+      return game;
+    }
 
-// 2) Couper si pas de couleur (SAUF si partenaire maître)
-if (
-  couleurDemandeeActuelle &&
-  playedCard.suit !== couleurDemandeeActuelle &&
-  !hasSuit(hand, couleurDemandeeActuelle) &&
-  playedCard.suit !== game.atout &&
-  hasAtout(hand, game.atout) &&
-  !partenaireEstMaitre
-) {
-  return game;
-}
+    // 2) Couper si pas de couleur (SAUF si partenaire maître)
+    if (
+      couleurDemandeeActuelle &&
+      playedCard.suit !== couleurDemandeeActuelle &&
+      !hasSuit(hand, couleurDemandeeActuelle) &&
+      playedCard.suit !== game.atout &&
+      hasAtout(hand, game.atout) &&
+      !partenaireEstMaitre
+    ) {
+      return game;
+    }
 
-// 3) Monter à l’atout si adversaire maître
-if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitre) {
-  const atoutsDansPli = game.pli.filter(p => p.card && p.card.suit === game.atout);
+    // 3) Monter à l’atout si adversaire maître
+    if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitre) {
+      const atoutsDansPli = game.pli.filter(p => p.card && p.card.suit === game.atout);
 
-  if (atoutsDansPli.length > 0) {
-    const meilleurAtout = atoutsDansPli.reduce((best, p) =>
-      rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
-    );
+      if (atoutsDansPli.length > 0) {
+        const meilleurAtout = atoutsDansPli.reduce((best, p) =>
+          rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
+        );
 
-    const peutMonter = hand.some(
-      c =>
-        c.suit === game.atout &&
-        rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
-    );
+        const peutMonter = hand.some(
+          c =>
+            c.suit === game.atout &&
+            rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
+        );
 
-    const monteAssez =
-      rankValue(playedCard.value, true) <
-      rankValue(meilleurAtout.card.value, true);
+        const monteAssez =
+          rankValue(playedCard.value, true) <
+          rankValue(meilleurAtout.card.value, true);
 
-    if (peutMonter && !monteAssez) return game;
-  }
-}
+        if (peutMonter && !monteAssez) return game;
+      }
+    }
 
 
     // ============================================
@@ -556,68 +568,68 @@ if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitr
       h => Array.isArray(h) && h.length === 0
     );
 
-if (isLastPli) {
-  // dix de der
-  if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
-  else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
+    if (isLastPli) {
+      // dix de der
+      if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
+      else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
 
-  // équipe preneur
-  const preneurId = game.players[game.preneur];
-  const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
-  const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
+      // équipe preneur
+      const preneurId = game.players[game.preneur];
+      const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+      const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
 
-  // total des plis (162 avec dix de der)
-  const totalPlis = scoreManche.nous + scoreManche.eux;
+      // total des plis (162 avec dix de der)
+      const totalPlis = scoreManche.nous + scoreManche.eux;
 
-  // ✅ belote +20 (imprenable, même en chute)
-  if (belote?.annoncee) {
-    const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
-    scoreManche[equipeBelote] += 20;
-  }
+      // ✅ belote +20 (imprenable, même en chute)
+      if (belote?.annoncee) {
+        const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+        scoreManche[equipeBelote] += 20;
+      }
 
-  // =====================================================
-  // ✅ CONTRAT : Classic vs Contrée
-  // =====================================================
-  const seuil =
-    game.ruleset === "contree"
-      ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
-      : 82;
+      // =====================================================
+      // ✅ CONTRAT : Classic vs Contrée
+      // =====================================================
+      const seuil =
+        game.ruleset === "contree"
+          ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
+          : 82;
 
-  const pointsPreneur = scoreManche[preneurEquipe];
-  const chute = pointsPreneur < seuil;
+      const pointsPreneur = scoreManche[preneurEquipe];
+      const chute = pointsPreneur < seuil;
 
-  if (game.ruleset === "contree") {
-    // ✅ CONTRÉE VÉRO :
-    // - si chute : preneur perd ses plis (mais garde belote déjà ajoutée)
-    // - défense prend tous les plis (162) + sa belote éventuelle
-    if (chute) {
-      // on remet les plis : preneur 0, défense = 162
-      scoreManche[preneurEquipe] = 0;
-      scoreManche[autreEquipe] = totalPlis; // 162
+      if (game.ruleset === "contree") {
+        // ✅ CONTRÉE VÉRO :
+        // - si chute : preneur perd ses plis (mais garde belote déjà ajoutée)
+        // - défense prend tous les plis (162) + sa belote éventuelle
+        if (chute) {
+          // on remet les plis : preneur 0, défense = 162
+          scoreManche[preneurEquipe] = 0;
+          scoreManche[autreEquipe] = totalPlis; // 162
 
-      // belote reste déjà incluse dans scoreManche (si preneur ou défense)
-      // donc pas besoin de la réajouter ici
+          // belote reste déjà incluse dans scoreManche (si preneur ou défense)
+          // donc pas besoin de la réajouter ici
+        }
+
+        // ✅ multiplicateur FINAL (contre/surcontre) sur le résultat final
+        const mult = game.contratMultiplicateur || 1;
+        scoreManche.nous *= mult;
+        scoreManche.eux *= mult;
+      } else {
+        // ✅ CLASSIC (ton comportement actuel)
+        if (chute) {
+          scoreManche[preneurEquipe] = 0;
+          scoreManche[autreEquipe] = totalPlis;
+        }
+      }
+
+      finDeManche = {
+        chute,
+        preneurEquipe,
+        seuil,
+        scoreFinal: { ...scoreManche }
+      };
     }
-
-    // ✅ multiplicateur FINAL (contre/surcontre) sur le résultat final
-    const mult = game.contratMultiplicateur || 1;
-    scoreManche.nous *= mult;
-    scoreManche.eux *= mult;
-  } else {
-    // ✅ CLASSIC (ton comportement actuel)
-    if (chute) {
-      scoreManche[preneurEquipe] = 0;
-      scoreManche[autreEquipe] = totalPlis;
-    }
-  }
-
-  finDeManche = {
-    chute,
-    preneurEquipe,
-    seuil,
-    scoreFinal: { ...scoreManche }
-  };
-}
 
 
     return {
