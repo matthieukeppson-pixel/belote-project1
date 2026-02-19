@@ -403,9 +403,13 @@ return (
         <button
           key={suit}
           className="atout-btn take atout-suit-btn"
-          onClick={() =>
-            setGame((g) => dispatch(g, { type: "BID", value: 80, suit }))
-          }
+         onClick={() =>
+  setGame((g) => {
+    const nextValue = g.currentBid ? g.currentBid.value + 10 : 80;
+    return dispatch(g, { type: "BID", value: nextValue, suit });
+  })
+}
+
         >
           <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
         </button>
