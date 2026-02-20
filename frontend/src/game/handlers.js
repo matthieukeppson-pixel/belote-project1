@@ -768,31 +768,56 @@ export function handleBidding(game, event) {
 
     return { ...game, passes: newPasses, currentPlayerIndex: nextIndex };
   }
-  // ============================================
-  // CONTRÉE — CONTRE / SURCONTRE (pendant / après enchères)
-  // ============================================
-  if (event.type === "CONTRE") {
-    if (game.ruleset !== "contree") return game;
+// ============================================
+// CONTRÉE — CONTRE / SURCONTRE (avec équipes)
+// ============================================
+if (event.type === "CONTRE") {
+  if (game.ruleset !== "contree") return game;
+  if (!currentBid) return game;
 
-    // Il faut une annonce (preneur pas encore fixé, mais currentBid existe)
-    if (!currentBid) return game;
+  const mult = game.contratMultiplicateur || 1;
+  if (mult !== 1) return game;
 
-    const mult = game.contratMultiplicateur || 1;
-    if (mult !== 1) return game; // déjà contré/surcontré
+  const preneurId = game.players[currentBid.playerIndex];
+  const actorId = game.players[game.currentPlayerIndex];
 
-    return { ...game, contratMultiplicateur: 2 };
-  }
+  const preneurTeam = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
 
-  if (event.type === "SURCONTRE") {
-    if (game.ruleset !== "contree") return game;
+  // ✅ Seule la défense peut contrer
+  if (actorTeam === preneurTeam) return game;
 
-    if (!currentBid) return game;
+  return {
+    ...game,
+    contratMultiplicateur: 2,
+    passesAfterBid: 0,
+    currentPlayerIndex: nextIndex
+  };
+}
 
-    const mult = game.contratMultiplicateur || 1;
-    if (mult !== 2) return game; // surcontrer seulement si déjà contré
+if (event.type === "SURCONTRE") {
+  if (game.ruleset !== "contree") return game;
+  if (!currentBid) return game;
 
-    return { ...game, contratMultiplicateur: 4 };
-  }
+  const mult = game.contratMultiplicateur || 1;
+  if (mult !== 2) return game;
+
+  const preneurId = game.players[currentBid.playerIndex];
+  const actorId = game.players[game.currentPlayerIndex];
+
+  const preneurTeam = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
+
+  // ✅ Seule l'équipe du preneur peut surcontrer
+  if (actorTeam !== preneurTeam) return game;
+
+  return {
+    ...game,
+    contratMultiplicateur: 4,
+    passesAfterBid: 0,
+    currentPlayerIndex: nextIndex
+  };
+}
 
   // ============================================
   // BID
