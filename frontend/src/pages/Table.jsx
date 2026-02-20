@@ -312,7 +312,14 @@ function handleSurContre() {
   const scoreUI = scorePartie;
 
   const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+const actorId = game.players[game.currentPlayerIndex];
+const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
+const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
+const preneurTeam =
+  preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
+
+const mult = game.contratMultiplicateur || 1;
   // ============================================
   // BOUTON TEST — jouer pour le joueur actif
   // ============================================
@@ -398,42 +405,41 @@ return (
   <div className="atout-panel contree-encheres-panel">
     <div className="atout-title">Enchères (Contrée)</div>
 
-    {/* Affichage de l'enchère actuelle */}
     <div style={{ fontWeight: 800, marginBottom: 8 }}>
       Enchère actuelle :{" "}
       {game.currentBid
         ? `${game.currentBid.value} ${atoutSymbol(game.currentBid.suit)}`
         : "Aucune"}
     </div>
-{/* Contrat (Contrée) */}
-{game.currentBid ? (
-  <div className="contree-panel-inline">
-    <div className="contree-title">Contrat</div>
 
-    <div className="contree-row">
-      <span>Multiplicateur :</span>
-      <span>x{game.contratMultiplicateur || 1}</span>
-    </div>
+    {game.currentBid ? (
+      <div className="contree-panel-inline">
+        <div className="contree-title">Contrat</div>
 
-    <div className="contree-actions">
-      <button
-        className="contree-btn"
-        onClick={handleContre}
-        disabled={(game.contratMultiplicateur || 1) !== 1}
-      >
-        Contrer
-      </button>
+        <div className="contree-row">
+          <span>Multiplicateur :</span>
+          <span>x{game.contratMultiplicateur || 1}</span>
+        </div>
 
-      <button
-        className="contree-btn"
-        onClick={handleSurContre}
-        disabled={(game.contratMultiplicateur || 1) !== 2}
-      >
-        Surcontrer
-      </button>
-    </div>
-  </div>
-) : null}
+        <div className="contree-actions">
+          <button
+            className="contree-btn"
+            onClick={handleContre}
+            disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
+          >
+            Contrer
+          </button>
+
+          <button
+            className="contree-btn"
+            onClick={handleSurContre}
+            disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
+          >
+            Surcontrer
+          </button>
+        </div>
+      </div>
+    ) : null}
 
     {/* PALIERS 80..160 */}
     <div className="atout-actions" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -449,7 +455,8 @@ return (
             disabled={disabled}
             style={{
               opacity: disabled ? 0.45 : 1,
-              border: bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined
+              border:
+                bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined
             }}
           >
             {v}
@@ -458,7 +465,7 @@ return (
       })}
     </div>
 
-    {/* COULEURS (envoie BID avec bidValue) */}
+    {/* COULEURS */}
     <div className="atout-actions" style={{ marginTop: 10 }}>
       {ALL_SUITS.map((suit) => (
         <button
@@ -480,10 +487,6 @@ return (
     </div>
   </div>
 )}
-
-
-
-
 
             {scoreUI && (
               <div className="score-overlay score-pill">
