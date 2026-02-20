@@ -559,12 +559,6 @@
   pointer-events: none;
 }
 
-
-
-
-
-
-
 /* Couleurs */
 .atout-indicator.hearts,
 .atout-indicator.diamonds {
@@ -590,11 +584,6 @@
      top: 28%;
   transform: translateY(-50%);
 }
-
-
-
-
-
 
 
 .atout-indicator.left,
@@ -754,6 +743,75 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* Contrée — panneau enchères transparent (force) */
+.atout-panel.contree-encheres-panel {
+  background: rgba(0, 0, 0, 0.18) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+   top: 320px !important; /* 👈 remonte le panneau */
+   color: rgba(255,255,255,0.92) !important;
+     width: 520px !important;     /* ajuste: 480 / 520 / 560 */
+  max-width: 90vw !important;
+  padding: 14px 18px !important;
+ 
+
+}
+
+/* Contrée — enchères : si un overlay interne fonce, on le neutralise */
+.atout-panel.contree-encheres-panel::before,
+.atout-panel.contree-encheres-panel::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Contrée — enchères : enlever tout fond sombre posé par des enfants */
+.atout-panel.contree-encheres-panel .atout-title,
+.atout-panel.contree-encheres-panel .atout-actions {
+  background: transparent !important;
+}
+/* Contrée — bouton Passer rouge identique à "Prendre" (classic) */
+.atout-panel.contree-encheres-panel .atout-btn.pass {
+  background: #7a1f1f !important;
+  color: white !important;
+}
+/* Contrée — Contrat intégré dans le panneau enchères */
+.contree-panel-inline {
+  margin: 10px auto 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  width: 92%;
+}
+/* Contrée — boutons Contrer / Surcontrer dans le même style que le reste */
+.contree-panel-inline .contree-btn {
+  background: #7a1f1f !important;   /* même rouge que .atout-btn.take */
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
+}
+
+/* Hover */
+.contree-panel-inline .contree-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* Désactivé : discret comme tes autres boutons */
+.contree-panel-inline .contree-btn:disabled {
+  background: rgba(0, 0, 0, 0.25) !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  opacity: 1 !important; /* on contrôle nous-mêmes */
+}
+
+
 
 
 
