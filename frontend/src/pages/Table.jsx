@@ -113,7 +113,15 @@ const [bidValue, setBidValue] = useState(80);
 
     return g;
   });
+useEffect(() => {
+  // Contrée : reset de la valeur UI au début des enchères (début de manche / redistribution)
+  if (mode !== "contree") return;
+  if (game.state !== STATES.ENCHERES) return;
+  if (game.currentBid) return;
 
+  setBidValue(80);
+ 
+}, [mode, game.state, game.currentBid]);
   // ============================================
   // UI STATES
   // ============================================
