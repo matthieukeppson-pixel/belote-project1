@@ -811,9 +811,32 @@
   opacity: 1 !important; /* on contrôle nous-mêmes */
 }
 
+/* ============================================
+   CLASSIC — Panel annonce atout en "glass"
+   (uniquement mode classic)
+============================================ */
+/* CLASSIC — panel annonce atout en glass (force) */
+.table-page[data-mode="classic"] .atout-panel {
+  background: rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
 
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
 
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 8px 18px rgba(0, 0, 0, 0.40) !important;
 
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+/* Classic — Tour 2 : remonter la carte retournée */
+.table-page[data-mode="classic"][data-state="ANNOUNCE_ATOUT_TOUR_2"] .atout-card {
+  top: 34%;
+}
+/* Classic — Tour 1 : remonter un peu la carte retournée */
+.table-page[data-mode="classic"][data-state="ANNOUNCE_ATOUT_TOUR_1"] .atout-card {
+  top: 36%;
+}
 
 
 

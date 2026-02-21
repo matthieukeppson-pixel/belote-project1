@@ -69,11 +69,6 @@ function compareCards(a, b) {
   return va - vb;
 }
 
-
-
-
-
-
 export default function Table() {
   const navigate = useNavigate();
 const location = useLocation();
@@ -347,7 +342,12 @@ console.log("MODE =", import.meta.env.MODE, "DEV =", import.meta.env.DEV);
 // RENDER
 // ============================================
 return (
-  <div className="table-page" style={{ position: "relative" }}>
+  <div
+    className="table-page"
+    data-mode={mode}
+    data-state={game.state}
+    style={{ position: "relative" }}
+  >
 
 {/* BOUTON TEST ULTRA SIMPLE */}
 {import.meta.env.DEV ? (
@@ -456,7 +456,7 @@ return (
             style={{
               opacity: disabled ? 0.45 : 1,
               border:
-                bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined
+                bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
             }}
           >
             {v}
@@ -480,6 +480,7 @@ return (
       ))}
     </div>
 
+    {/* PASS */}
     <div className="atout-actions" style={{ marginTop: 10 }}>
       <button className="atout-btn pass" onClick={handlePass}>
         Passer
@@ -487,7 +488,6 @@ return (
     </div>
   </div>
 )}
-
             {scoreUI && (
               <div className="score-overlay score-pill">
                 <span className="score-side">Nous</span>
@@ -580,42 +580,39 @@ return (
               </div>
             ))}
 
-            {game.hands["joueur1"] && (
-              <div className="player-bottom">
-              {[...game.hands["joueur1"]].sort(compareCards).map((card, index) => {
+         {game.hands["joueur1"] && (
+  <div className="player-bottom">
+    {[...game.hands["joueur1"]].sort(compareCards).map((card, index) => {
+      const total = game.hands["joueur1"].length;
+      const center = (total - 1) / 2;
+      const offset = index - center;
 
-
-                  const total = game.hands["joueur1"].length;
-                  const center = (total - 1) / 2;
-                  const offset = index - center;
-
-                  return (
-                    <div
-                      key={`${card.suit}-${card.value}`}
-                      className={`card ${isMyTurn ? "clickable" : "disabled"}`}
-
-                      onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
-                      style={{
-                        transform: `
-                          translateX(${offset * -28}px)
-                          translateY(${-8 + Math.abs(offset) * 2}px)
-                          rotate(${offset * 4}deg)
-                        `,
-                        transformOrigin: "bottom center",
-                        zIndex: 100 + index,
-                      }}
-                    >
-                      <img
-                        src={cardImgSrc(card)}
-                        alt={`${card.value} ${card.suit}`}
-                        className="card-img"
-                        draggable={false}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      return (
+        <div
+          key={`${card.suit}-${card.value}`}
+          className={`card ${isMyTurn ? "clickable" : "disabled"}`}
+          onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+          style={{
+            transform: `
+              translateX(${offset * -28}px)
+              translateY(${-8 + Math.abs(offset) * 2}px)
+              rotate(${offset * 4}deg)
+            `,
+            transformOrigin: "bottom center",
+            zIndex: 100 + index,
+          }}
+        >
+          <img
+            src={cardImgSrc(card)}
+            alt={`${card.value} ${card.suit}`}
+            className="card-img"
+            draggable={false}
+          />
+        </div>
+      );
+    })}
+  </div>
+)}
 
          {mode === "classic" && game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
   <div className="atout-panel">
@@ -630,8 +627,7 @@ return (
     </div>
   </div>
 )}
-
-{/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) — VRAIE CARTE */}
+{/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) */}
 {mode === "classic" &&
   (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
     game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
@@ -646,14 +642,14 @@ return (
       />
     </div>
   )}
-
-
+{/* CLASSIC — Tour 2 : choisir l’atout */}
 {mode === "classic" &&
   game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
   game.atoutPropose && (
-    <div className="atout-panel">
+    <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
       <div className="atout-title">Choisir l’atout</div>
-      <div className="atout-actions">
+
+      <div className="atout-actions atout-actions--tour2">
         {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map(
           (suit) => (
             <button
@@ -669,10 +665,11 @@ return (
             </button>
           )
         )}
-      </div>
 
-      <div className="atout-actions" style={{ marginTop: 10 }}>
-        <button className="atout-btn pass" onClick={handlePass}>
+        <button
+          className="atout-btn pass atout-pass-inline"
+          onClick={handlePass}
+        >
           Passer
         </button>
       </div>
@@ -689,6 +686,9 @@ return (
     </div>
   );
 }
+  
+
+
 
 
 
