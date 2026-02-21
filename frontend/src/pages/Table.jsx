@@ -247,12 +247,15 @@ const [bidValue, setBidValue] = useState(80);
 
       let g = createInitialGameState();
 
-      g = {
-        ...g,
-        players: game.players,
-        dealerIndex: next.dealerIndex,
-        currentPlayerIndex: next.startingPlayerIndex,
-      };
+     g = {
+  ...g,
+  ruleset: mode,               // ✅ garde contree / classic selon la table
+  contratMultiplicateur: 1,    // ✅ reset
+  contratValeur: null,         // ✅ reset
+  players: game.players,
+  dealerIndex: next.dealerIndex,
+  currentPlayerIndex: next.startingPlayerIndex,
+};
 
       g = dispatch(g, { type: "TABLE_READY" });
       g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
