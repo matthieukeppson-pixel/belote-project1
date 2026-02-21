@@ -568,68 +568,70 @@ export function handlePli(game, event) {
       h => Array.isArray(h) && h.length === 0
     );
 
-    if (isLastPli) {
-      // dix de der
-      if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
-      else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
+if (isLastPli) {
+  // ✅ dix de der
+  if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
+  else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
 
-      // équipe preneur
-      const preneurId = game.players[game.preneur];
-      const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
-      const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
+  // ✅ équipe preneur / défense
+  const preneurId = game.players[game.preneur];
+  const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
 
-      // total des plis (162 avec dix de der)
-      const totalPlis = scoreManche.nous + scoreManche.eux;
+  // ✅ total des plis (162 avec dix de der) — SANS belote
+  const totalPlis = scoreManche.nous + scoreManche.eux;
 
-      // ✅ belote +20 (imprenable, même en chute)
-      if (belote?.annoncee) {
-        const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
-        scoreManche[equipeBelote] += 20;
-      }
+  // ✅ contrat / seuil
+  const contrat =
+    game.ruleset === "contree"
+      ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
+      : 82;
 
-      // =====================================================
-      // ✅ CONTRAT : Classic vs Contrée
-      // =====================================================
-      const seuil =
-        game.ruleset === "contree"
-          ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
-          : 82;
+  const mult =
+    game.ruleset === "contree" ? (game.contratMultiplicateur || 1) : 1;
 
-      const pointsPreneur = scoreManche[preneurEquipe];
-      const chute = pointsPreneur < seuil;
+  const pointsPreneur = scoreManche[preneurEquipe];
+  const chute = pointsPreneur < contrat;
 
-      if (game.ruleset === "contree") {
-        // ✅ CONTRÉE VÉRO :
-        // - si chute : preneur perd ses plis (mais garde belote déjà ajoutée)
-        // - défense prend tous les plis (162) + sa belote éventuelle
-        if (chute) {
-          // on remet les plis : preneur 0, défense = 162
-          scoreManche[preneurEquipe] = 0;
-          scoreManche[autreEquipe] = totalPlis; // 162
+  // ✅ score final
+  let final = { nous: scoreManche.nous, eux: scoreManche.eux };
 
-          // belote reste déjà incluse dans scoreManche (si preneur ou défense)
-          // donc pas besoin de la réajouter ici
-        }
-
-        // ✅ multiplicateur FINAL (contre/surcontre) sur le résultat final
-        const mult = game.contratMultiplicateur || 1;
-        scoreManche.nous *= mult;
-        scoreManche.eux *= mult;
-      } else {
-        // ✅ CLASSIC (ton comportement actuel)
-        if (chute) {
-          scoreManche[preneurEquipe] = 0;
-          scoreManche[autreEquipe] = totalPlis;
-        }
-      }
-
-      finDeManche = {
-        chute,
-        preneurEquipe,
-        seuil,
-        scoreFinal: { ...scoreManche }
-      };
+  if (game.ruleset === "contree") {
+    if (!chute) {
+      // Réussite : plis + contrat (x mult) pour le preneur
+      final[preneurEquipe] = scoreManche[preneurEquipe] + contrat * mult;
+      final[autreEquipe] = scoreManche[autreEquipe];
+    } else {
+      // Chute : défense = 162 + contrat (x mult), preneur = 0
+      final[preneurEquipe] = 0;
+      final[autreEquipe] = totalPlis + contrat * mult;
     }
+  } else {
+    // Classic : chute -> preneur 0, défense 162
+    if (chute) {
+      final[preneurEquipe] = 0;
+      final[autreEquipe] = totalPlis;
+    }
+  }
+
+  // ✅ belote +20 (imprenable) — ajoutée en dernier
+  if (belote?.annoncee) {
+    const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+    final[equipeBelote] += 20;
+  }
+
+  scoreManche.nous = final.nous;
+scoreManche.eux = final.eux;
+
+  finDeManche = {
+    chute,
+    preneurEquipe,
+    seuil: contrat,
+    contratValeur: game.ruleset === "contree" ? contrat : null,
+    contratMultiplicateur: mult,
+    scoreFinal: { ...final },
+  };
+}
 
 
     return {
