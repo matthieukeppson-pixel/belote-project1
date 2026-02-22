@@ -85,11 +85,11 @@ export function createInitialGameState() {
     atoutChoisi: false,
     preneur: null,
 
-    belote: {
-      atout: null,
-      joueur: null,
-      annoncee: false
-    },
+   belote: {
+  atout: null,
+  joueur: null,
+  state: "NONE",   // "NONE" | "BELOTE" | "REBELOTE"
+},
 
     currentPlayerIndex: 0,
     pli: [],

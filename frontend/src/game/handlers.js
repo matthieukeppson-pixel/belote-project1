@@ -154,11 +154,11 @@ export function handleTableIdle(game, event) {
     atoutChoisi: false,
     preneur: null,
 
-    belote: {
-      atout: null,
-      joueur: null,
-      annoncee: false
-    },
+   belote: {
+  atout: null,
+  joueur: null,
+  state: "NONE",
+},
 
     pli: [],
     couleurDemandee: null,
@@ -411,11 +411,6 @@ export function handleAnnonce(game, event) {
   return game;
 }
 
-
-
-
-
-
 export function handlePli(game, event) {
   if (!event) return game;
 
@@ -515,22 +510,35 @@ export function handlePli(game, event) {
     newHand.splice(idx, 1);
 
     // détection belote (main AVANT le coup = hand)
-    let belote = game.belote;
-    if (
-      !belote?.annoncee &&
-      game.atout &&
-      playedCard.suit === game.atout &&
-      (playedCard.value === "K" || playedCard.value === "Q")
-    ) {
-      const autreValeur = playedCard.value === "K" ? "Q" : "K";
-      const avaitAutre = hand.some(
-        c => c.suit === game.atout && c.value === autreValeur
-      );
+   let belote = game.belote || { atout: null, joueur: null, state: "NONE" };
 
-      if (avaitAutre) {
-        belote = { atout: game.atout, joueur: playerId, annoncee: true };
-      }
+const val = String(playedCard.value).toUpperCase();
+const isAtout = game.atout && playedCard.suit === game.atout;
+const isKQ = val === "K" || val === "Q";
+
+if (isAtout && isKQ) {
+  const other = val === "K" ? "Q" : "K";
+
+  // 1) Déclenchement "BELOTE" (première des deux)
+  if (belote.state === "NONE") {
+    const hadOtherBeforePlay = hand.some(
+      (c) => c.suit === game.atout && String(c.value).toUpperCase() === other
+    );
+
+    if (hadOtherBeforePlay) {
+      belote = { atout: game.atout, joueur: playerId, state: "BELOTE" };
     }
+  }
+
+  // 2) Déclenchement "REBELOTE" (deuxième carte, même joueur)
+  else if (
+    belote.state === "BELOTE" &&
+    belote.atout === game.atout &&
+    belote.joueur === playerId
+  ) {
+    belote = { ...belote, state: "REBELOTE" };
+  }
+}
 
     const couleurDemandee =
       game.pli.length === 0 ? playedCard.suit : game.couleurDemandee;
@@ -615,10 +623,10 @@ if (isLastPli) {
   }
 
   // ✅ belote +20 (imprenable) — ajoutée en dernier
-  if (belote?.annoncee) {
-    const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
-    final[equipeBelote] += 20;
-  }
+if (belote?.state && belote.state !== "NONE") {
+  const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
+  final[equipeBelote] += 20;
+}
 
   scoreManche.nous = final.nous;
 scoreManche.eux = final.eux;

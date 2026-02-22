@@ -127,13 +127,25 @@ useEffect(() => {
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
-
+const [beloteToast, setBeloteToast] = useState(null); // { text, ts } | null
   // ✅ SCORE DE PARTIE (501)
   const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 
   // ✅ FIN DE PARTIE
   const [partieTerminee, setPartieTerminee] = useState(false);
+useEffect(() => {
+  const s = game?.belote?.state;
+  if (!s || s === "NONE") return;
 
+  if (s === "BELOTE") {
+    setBeloteToast({ text: `Belote ! (${game.belote.joueur})`, ts: Date.now() });
+  } else if (s === "REBELOTE") {
+    setBeloteToast({ text: `Rebelote ! (${game.belote.joueur})`, ts: Date.now() });
+  }
+
+  const t = setTimeout(() => setBeloteToast(null), 1200);
+  return () => clearTimeout(t);
+}, [game?.belote?.state, game?.belote?.joueur]);
   // ============================================
   // AFFICHAGE DU PLI
   // ============================================
@@ -412,6 +424,26 @@ return (
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+{beloteToast && (
+  <div
+    style={{
+      position: "absolute",
+      top: 90,
+      right: 120,
+      zIndex: 9999,
+      padding: "8px 14px",
+      borderRadius: 999,
+      background: "rgba(255,255,255,0.12)",
+      backdropFilter: "blur(6px)",
+      border: "1px solid rgba(255,255,255,0.22)",
+      color: "#fff",
+      fontWeight: 800,
+    }}
+  >
+    {beloteToast.text}
+  </div>
+)}
+
 {mode === "contree" && game.state === STATES.ENCHERES && (
   <div className="atout-panel contree-encheres-panel">
     <div className="atout-title">Enchères (Contrée)</div>
