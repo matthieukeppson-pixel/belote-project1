@@ -85,7 +85,7 @@ const [bidValue, setBidValue] = useState(80);
 
 useEffect(() => {
   if (partieRef.current === null) {
-    const targetScore = mode === "contree" ? 1000 : 500;
+    const targetScore = mode === "contree" ? 1500 : 500; 
 
     partieRef.current = new Partie({
       players: ["joueur1", "joueur4", "joueur2", "joueur3"],
@@ -210,7 +210,7 @@ useEffect(() => {
     finDeMancheRef.current = null;
 
   // reset arbitre
-const targetScore = mode === "contree" ? 1000 : 500;
+const targetScore = mode === "contree" ? 1500 : 500;
 
 partieRef.current = new Partie({
   players: game.players,

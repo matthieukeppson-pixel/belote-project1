@@ -842,8 +842,39 @@
   background: #7a1f1f;
   color: white;
 }
+/* ===== Contrée: panneau Contrat (glass clair) ===== */
+.table-page[data-mode="contree"] .contree-panel-inline {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+}
 
+/* Texte "Multiplicateur" et "x1/x2/x4" */
+.table-page[data-mode="contree"] .contree-panel-inline,
+.table-page[data-mode="contree"] .contree-panel-inline span {
+  color: rgba(255, 255, 255, 0.92);
+}
 
+/* Boutons Contrer / Surcontrer plus clairs */
+.table-page[data-mode="contree"] .contree-btn {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+}
+
+/* Disabled: pas noir */
+.table-page[data-mode="contree"] .contree-btn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+}
+/* Empêche le surlignage bleu dans les panneaux de table */
+.atout-panel,
+.contree-encheres-panel {
+  user-select: none;
+}
 
 
 
