@@ -83,14 +83,17 @@ const [bidValue, setBidValue] = useState(80);
   const finDeMancheCompteeRef = useRef(false);
   const finDeMancheRef = useRef(null);
 
-  useEffect(() => {
-    if (partieRef.current === null) {
-      partieRef.current = new Partie({
-        players: ["joueur1", "joueur4", "joueur2", "joueur3"],
-        startingPlayerIndex: 0,
-      });
-    }
-  }, []);
+useEffect(() => {
+  if (partieRef.current === null) {
+    const targetScore = mode === "contree" ? 1000 : 500;
+
+    partieRef.current = new Partie({
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+      targetScore,
+    });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   // ============================================
   // GAME STATE
@@ -206,11 +209,13 @@ useEffect(() => {
     finDeMancheCompteeRef.current = false;
     finDeMancheRef.current = null;
 
-    // reset arbitre
-    partieRef.current = new Partie({
-      players: game.players,
-      startingPlayerIndex: 0,
-    });
+  // reset arbitre
+const targetScore = mode === "contree" ? 1000 : 500;
+
+partieRef.current = new Partie({
+  players: game.players,
+  targetScore,
+});
 
     // reset UI
     setScorePartie({ nous: 0, eux: 0 });

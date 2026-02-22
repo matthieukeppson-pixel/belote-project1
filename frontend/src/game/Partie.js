@@ -3,19 +3,17 @@
 /**
  * Partie = arbitre global de la belote
  * - cumule les scores de manche VALIDÉS
- * - décide de la fin de partie (501)
+ * - décide de la fin de partie (targetScore)
  * - calcule donneur et premier joueur
  * - ne touche PAS au moteur de manche
  */
 export default class Partie {
-  constructor({ players }) {
+  constructor({ players, targetScore = 500 }) {
     this.players = players;
+    this.targetScore = targetScore;
 
-    // 🔹 score cumulé de la partie
-    this.scorePartie = {
-      nous: 0,
-      eux: 0,
-    };
+    // score cumulé de la partie
+    this.scorePartie = { nous: 0, eux: 0 };
 
     this.partieTerminee = false;
     this.gagnant = null;
@@ -42,12 +40,12 @@ export default class Partie {
     this.scorePartie.eux += scoreFinal.eux || 0;
 
     // ===============================
-    // FIN DE PARTIE (501)
+    // FIN DE PARTIE (targetScore)
     // ===============================
-    if (this.scorePartie.nous >= 501) {
+    if (this.scorePartie.nous >= this.targetScore) {
       this.partieTerminee = true;
       this.gagnant = "nous";
-    } else if (this.scorePartie.eux >= 501) {
+    } else if (this.scorePartie.eux >= this.targetScore) {
       this.partieTerminee = true;
       this.gagnant = "eux";
     }
@@ -70,4 +68,5 @@ export default class Partie {
     };
   }
 }
+
 
