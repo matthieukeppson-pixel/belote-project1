@@ -837,7 +837,11 @@
 .table-page[data-mode="classic"][data-state="ANNOUNCE_ATOUT_TOUR_1"] .atout-card {
   top: 36%;
 }
-
+/* Classic uniquement : Passer = même style que Prendre */
+.table-page[data-mode="classic"] .atout-btn.pass {
+  background: #7a1f1f;
+  color: white;
+}
 
 
 
