@@ -570,24 +570,19 @@ if (isAtout && isKQ) {
     if (game.teams.nous.includes(winnerId)) scoreManche.nous += pliPoints;
     else if (game.teams.eux.includes(winnerId)) scoreManche.eux += pliPoints;
 
-    // dernier pli ?
-    const handsAfterPlay = { ...game.hands, [playerId]: newHand };
-    const isLastPli = Object.values(handsAfterPlay).every(
-      h => Array.isArray(h) && h.length === 0
-    );
+// dernier pli ?
+const handsAfterPlay = { ...game.hands, [playerId]: newHand };
+const isLastPli = Object.values(handsAfterPlay).every(
+  h => Array.isArray(h) && h.length === 0
+);
+
+let scoreFinal = scoreManche;
 
 if (isLastPli) {
-  // ✅ dix de der
-  if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
-  else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
-
   // ✅ équipe preneur / défense
   const preneurId = game.players[game.preneur];
   const preneurEquipe = game.teams.nous.includes(preneurId) ? "nous" : "eux";
   const autreEquipe = preneurEquipe === "nous" ? "eux" : "nous";
-
-  // ✅ total des plis (162 avec dix de der) — SANS belote
-  const totalPlis = scoreManche.nous + scoreManche.eux;
 
   // ✅ contrat / seuil
   const contrat =
@@ -595,82 +590,84 @@ if (isLastPli) {
       ? (typeof game.contratValeur === "number" ? game.contratValeur : 80)
       : 82;
 
+  const capotAnnonce = game.ruleset === "contree" && contrat === 500;
+  const capotReussi = scoreManche[autreEquipe] === 0;
+
+  // ✅ dix de der : ne pas ajouter si capot réussi
+  if (!capotReussi) {
+    if (game.teams.nous.includes(winnerId)) scoreManche.nous += 10;
+    else if (game.teams.eux.includes(winnerId)) scoreManche.eux += 10;
+  }
+
+  const totalPlis = scoreManche.nous + scoreManche.eux;
   const mult =
     game.ruleset === "contree" ? (game.contratMultiplicateur || 1) : 1;
 
   const pointsPreneur = scoreManche[preneurEquipe];
-  const chute = pointsPreneur < contrat;
+  let chute = pointsPreneur < contrat;
 
-  // ✅ score final
+  // base = plis
   let final = { nous: scoreManche.nous, eux: scoreManche.eux };
 
   if (game.ruleset === "contree") {
-    if (!chute) {
-      // Réussite : plis + contrat (x mult) pour le preneur
-      final[preneurEquipe] = scoreManche[preneurEquipe] + contrat * mult;
-      final[autreEquipe] = scoreManche[autreEquipe];
+    if (capotAnnonce) {
+      chute = !capotReussi;
+      if (!chute) {
+        final[preneurEquipe] = 500;
+        final[autreEquipe] = 0;
+      } else {
+        final[preneurEquipe] = 0;
+        final[autreEquipe] = 500;
+      }
     } else {
-      // Chute : défense = 162 + contrat (x mult), preneur = 0
-      final[preneurEquipe] = 0;
-      final[autreEquipe] = totalPlis + contrat * mult;
-    }
-  } else {
-    // Classic : chute -> preneur 0, défense 162
-    if (chute) {
-      final[preneurEquipe] = 0;
-      final[autreEquipe] = totalPlis;
+      if (!chute) {
+        final[preneurEquipe] = scoreManche[preneurEquipe] + contrat * mult;
+        final[autreEquipe] = scoreManche[autreEquipe];
+
+        const contratNormal = contrat >= 80 && contrat <= 160;
+        if (contratNormal && capotReussi) {
+          final[preneurEquipe] = 250 + contrat;
+          final[autreEquipe] = 0;
+        }
+      } else {
+        final[preneurEquipe] = 0;
+        final[autreEquipe] = totalPlis + contrat * mult;
+      }
     }
   }
 
-  // ✅ belote +20 (imprenable) — ajoutée en dernier
-if (belote?.state && belote.state !== "NONE") {
-  const equipeBelote = game.teams.nous.includes(belote.joueur) ? "nous" : "eux";
-  final[equipeBelote] += 20;
+  scoreFinal = final;
 }
 
-  scoreManche.nous = final.nous;
-scoreManche.eux = final.eux;
+return {
+  ...game,
+  hands: { ...game.hands, [playerId]: newHand },
+  pli: newPli,
+  couleurDemandee,
+  winnerIndex,
+  scoreManche: scoreFinal,
+  finDeManche,
+  belote,
+  state: isLastPli ? STATES.FIN_DE_MANCHE : STATES.PLI_TERMINE
+};
+} // ✅ ferme le if (game.state === STATES.PLI_EN_COURS && event.type === "PLAY_CARD")
 
-  finDeManche = {
-    chute,
-    preneurEquipe,
-    seuil: contrat,
-    contratValeur: game.ruleset === "contree" ? contrat : null,
-    contratMultiplicateur: mult,
-    scoreFinal: { ...final },
+// ============================================
+// 2) Nettoyer le pli après délai UI
+// ============================================
+if (game.state === STATES.PLI_TERMINE && event.type === "NEXT_PLI") {
+  return {
+    ...game,
+    pli: [],
+    couleurDemandee: null,
+    currentPlayerIndex: game.winnerIndex,
+    winnerIndex: null,
+    state: STATES.PLI_EN_COURS
   };
 }
 
-
-    return {
-      ...game,
-      hands: { ...game.hands, [playerId]: newHand },
-      pli: newPli,
-      couleurDemandee,
-      winnerIndex,
-      scoreManche,
-      finDeManche,
-      belote,
-      state: isLastPli ? STATES.FIN_DE_MANCHE : STATES.PLI_TERMINE
-    };
-  }
-
-  // ============================================
-  // 2) Nettoyer le pli après délai UI
-  // ============================================
-  if (game.state === STATES.PLI_TERMINE && event.type === "NEXT_PLI") {
-    return {
-      ...game,
-      pli: [],
-      couleurDemandee: null,
-      currentPlayerIndex: game.winnerIndex,
-      winnerIndex: null,
-      state: STATES.PLI_EN_COURS
-    };
-  }
-
-  return game;
-}
+return game;
+} // ✅ ferme handlePli
 
 // ============================================
 // FIN DE MANCHE
