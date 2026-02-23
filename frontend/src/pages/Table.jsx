@@ -14,7 +14,7 @@ import Partie from "../game/Partie";
 // ============================================
 
 const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
-const BID_VALUES = [80, 90, 100, 110, 120, 130, 140, 150, 160];
+const BID_VALUES = [80, 90, 100, 110, 120, 130, 140, 150, 160, 500];
 function suitLabel(suit) {
   switch (suit) {
     case "hearts":
