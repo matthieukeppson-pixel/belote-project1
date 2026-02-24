@@ -181,10 +181,23 @@ useEffect(() => {
     if (finDeMancheCompteeRef.current) return;
     finDeMancheCompteeRef.current = true;
 
-   const next = partieRef.current.onFinDeManche({
+const finDeMancheSafe =
+  game.finDeManche ?? {
+    scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
+
+    // ✅ indispensables pour contrée/coinche
+    contratValeur: game.contratValeur ?? game.currentBid?.value ?? null,
+    contratMultiplicateur: game.contratMultiplicateur || 1,
+
+    // ✅ utiles (si Partie en a besoin)
+    ruleset: game.ruleset ?? mode,
+    preneur: game.preneur ?? game.currentBid?.playerIndex ?? null,
+    atout: game.atout ?? null,
+  };
+
+const next = partieRef.current.onFinDeManche({
   dealerIndex: game.dealerIndex,
-  finDeManche: game.finDeManche,
-  contratMultiplicateur: game.contratMultiplicateur || 1,
+  finDeManche: finDeMancheSafe,
 });
 
 
