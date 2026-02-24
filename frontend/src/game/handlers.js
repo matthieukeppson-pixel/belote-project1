@@ -638,7 +638,26 @@ if (isLastPli) {
 
   scoreFinal = final;
 }
+// ✅ Belote/Rebelote : +20 une seule fois (quand REBELOTE est atteint)
+const beloteState = belote?.state ?? game.belote?.state;
+const beloteJoueur = belote?.joueur ?? game.belote?.joueur;
 
+if (isLastPli && beloteState === "REBELOTE" && beloteJoueur) {
+  const team = game.teams.nous.includes(beloteJoueur) ? "nous" : "eux";
+  scoreFinal = {
+    ...scoreFinal,
+    [team]: (scoreFinal?.[team] ?? 0) + 20,
+  };
+}
+if (isLastPli) {
+  finDeManche = {
+    scoreFinal, // <-- contient déjà ton 10 de der si tu l’as ajouté à scoreManche
+    contratValeur: game.contratValeur ?? null,
+    contratMultiplicateur: game.contratMultiplicateur || 1,
+    preneur: game.preneur ?? null,
+    atout: game.atout ?? null,
+  };
+}
 return {
   ...game,
   hands: { ...game.hands, [playerId]: newHand },
