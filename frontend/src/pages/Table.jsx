@@ -344,6 +344,7 @@ function handleSurContre() {
 
   const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
+  const dealerId = game.players[game.dealerIndex];
 
   const scoreUI = scorePartie;
 
@@ -582,64 +583,63 @@ return (
                 ) : null
               )}
 
-            {[
-              ["joueur2", "top"],
-              ["joueur4", "left"],
-              ["joueur3", "right"],
-              ["joueur1", "bottom"],
-            ].map(([player, position]) => (
-              <div
-                key={player}
-                className={`player-seat ${position} ${
-                  activePlayer === player ? "active" : ""
-                }`}
-              >
-                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
+          
+{[
+  ["joueur2", "top"],
+  ["joueur4", "left"],
+  ["joueur3", "right"],
+  ["joueur1", "bottom"],
+].map(([player, position]) => (
+  <div
+    key={player}
+    className={`player-seat ${position} ${
+      activePlayer === player ? "active" : ""
+    }`}
+  >
+    {/* ✅ Donneur */}
+    {player === dealerId && <div className="dealer-badge">D</div>}
 
-                {/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
-                {player !== "joueur1" && (
-                  <div className={`back-cards back-cards-${position}`}>
-                    {(() => {
-                      const n = game.hands[player]?.length ?? 0;
-                      const visible = Math.min(2, n);
+    <img src="/avatar.png" alt="Avatar" className="player-avatar" />
 
+    {/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
+    {player !== "joueur1" && (
+      <div className={`back-cards back-cards-${position}`}>
+        {(() => {
+          const n = game.hands[player]?.length ?? 0;
+          const visible = Math.min(2, n);
 
-                      return (
-                        <>
-                          <div className="back-stack">
-                            {Array.from({ length: visible }).map((_, i) => (
-                              <img
-                                key={i}
-                                src="/card_back.png"
-                                alt="Dos"
-                                className="card-back"
-                                style={{
-                                  transform: `translateX(${i * 10}px) rotate(${
-                                    i * 2
-                                  }deg)`,
-                                }}
-                                draggable={false}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
+          return (
+            <div className="back-stack">
+              {Array.from({ length: visible }).map((_, i) => (
+                <img
+                  key={i}
+                  src="/card_back.png"
+                  alt="Dos"
+                  className="card-back"
+                  style={{
+                    transform: `translateX(${i * 10}px) rotate(${i * 2}deg)`,
+                  }}
+                  draggable={false}
+                />
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+    )}
 
-                {activePlayer === player && <div className="active-dot" />}
+    {activePlayer === player && <div className="active-dot" />}
 
-                <div className="player-pseudo">{player}</div>
+    <div className="player-pseudo">{player}</div>
 
-                {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
-                {game.atout && game.players[game.preneur] === player && (
-                  <div className={`atout-indicator ${position} ${game.atout}`}>
-                    {atoutSymbol(game.atout)}
-                  </div>
-                )}
-              </div>
-            ))}
+    {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
+    {game.atout && game.players[game.preneur] === player && (
+      <div className={`atout-indicator ${position} ${game.atout}`}>
+        {atoutSymbol(game.atout)}
+      </div>
+    )}
+  </div>
+))}
 
          {game.hands["joueur1"] && (
   <div className="player-bottom">
