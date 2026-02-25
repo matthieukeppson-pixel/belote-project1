@@ -76,7 +76,7 @@ export function createInitialGameState() {
     },
 
     // 🔹 MODE DE JEU
-    ruleset: "classic", // classic | contree | coinche
+    ruleset: "classic", // classic | contree | moderne
     contratMultiplicateur: 1, // 1 (classic), 2 (contré), 4 (surcontré)
     contratValeur: null, // 80..160 ou 260 (capot) — pour la contrée
 

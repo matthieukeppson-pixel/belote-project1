@@ -103,7 +103,7 @@ useEffect(() => {
 
    g = {
   ...g,
-  ruleset: mode,               // ✅ classic | contree | coinche
+  ruleset: mode,               // ✅ classic | contree | moderne
   contratMultiplicateur: 1,    // ✅ reset
   contratValeur: null,         // ✅ (ajoute ce champ dans createInitialGameState)
   players: ["joueur1", "joueur4", "joueur2", "joueur3"],
@@ -185,7 +185,7 @@ const finDeMancheSafe =
   game.finDeManche ?? {
     scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
 
-    // ✅ indispensables pour contrée/coinche
+   // ✅ indispensables pour contrée/moderne
     contratValeur: game.contratValeur ?? game.currentBid?.value ?? null,
     contratMultiplicateur: game.contratMultiplicateur || 1,
 
