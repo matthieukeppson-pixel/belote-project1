@@ -30,18 +30,18 @@ export default function SalonJeu({ user }) {
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 160 });
   const triggerRefs = useRef({}); // refs des boutons "Belote ▾" par table
 
-  const modeText = (mode) => {
-    switch (mode) {
-      case "classic":
-        return "Classique";
-      case "contree":
-        return "Contrée";
-      case "coinche":
-        return "Coinche";
-      default:
-        return "Classique";
-    }
-  };
+const modeText = (mode) => {
+  switch (mode) {
+    case "classic":
+      return "Classique";
+    case "contree":
+      return "Contrée";
+    case "moderne":
+      return "Moderne";
+    default:
+      return "Classique";
+  }
+};
 
   function setTableMode(tableId, newMode) {
     setTables((prev) =>
@@ -326,9 +326,9 @@ useEffect(() => {
             <button type="button" onClick={() => setTableMode(openMenu, "contree")}>
               Contrée
             </button>
-            <button type="button" onClick={() => setTableMode(openMenu, "coinche")}>
-              Coinche
-            </button>
+            <button onClick={() => navigate("/table", { state: { mode: "moderne" } })}>
+  Moderne
+</button>
           </div>,
           document.body
         )}
