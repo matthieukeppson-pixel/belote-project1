@@ -675,21 +675,47 @@ return (
   </div>
 )}
 
-         {mode === "classic" && game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-  <div className="atout-panel">
-    <div className="atout-title">Choisir l’atout</div>
-    <div className="atout-actions">
-      <button className="atout-btn take" onClick={handleTakeAtout}>
-        Prendre
-      </button>
-      <button className="atout-btn pass" onClick={handlePass}>
-        Passer
-      </button>
+{(mode === "classic" || mode === "moderne") &&
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+    <div className="atout-panel">
+      <div className="atout-title">Choisir l’atout</div>
+      <div className="atout-actions">
+        <button className="atout-btn take" onClick={handleTakeAtout}>
+          Prendre
+        </button>
+
+        {mode === "moderne" && (
+          <>
+            <button
+              className="atout-btn take"
+              onClick={() =>
+                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
+              }
+              title="Sans Atout"
+            >
+              SA
+            </button>
+            <button
+              className="atout-btn take"
+              onClick={() =>
+                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
+              }
+              title="Tout Atout"
+            >
+              TA
+            </button>
+          </>
+        )}
+
+        <button className="atout-btn pass" onClick={handlePass}>
+          Passer
+        </button>
+      </div>
     </div>
-  </div>
-)}
+  )}
+
 {/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) */}
-{mode === "classic" &&
+{(mode === "classic" || mode === "moderne") &&
   (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
     game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
   game.atoutPropose && (
@@ -704,7 +730,7 @@ return (
     </div>
   )}
 {/* CLASSIC — Tour 2 : choisir l’atout */}
-{mode === "classic" &&
+{(mode === "classic" || mode === "moderne") &&
   game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
   game.atoutPropose && (
     <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
@@ -727,10 +753,30 @@ return (
           )
         )}
 
-        <button
-          className="atout-btn pass atout-pass-inline"
-          onClick={handlePass}
-        >
+        {mode === "moderne" && (
+          <>
+            <button
+              className="atout-btn take"
+              onClick={() =>
+                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
+              }
+              title="Sans Atout"
+            >
+              SA
+            </button>
+            <button
+              className="atout-btn take"
+              onClick={() =>
+                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
+              }
+              title="Tout Atout"
+            >
+              TA
+            </button>
+          </>
+        )}
+
+        <button className="atout-btn pass atout-pass-inline" onClick={handlePass}>
           Passer
         </button>
       </div>
