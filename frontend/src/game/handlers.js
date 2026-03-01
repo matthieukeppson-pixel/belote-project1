@@ -60,18 +60,33 @@ const NORMAL_POINTS = {
   8: 0,
   7: 0
 };
-
+const SA_POINTS = {
+  A: 19,
+  "10": 10,
+  K: 4,
+  Q: 3,
+  J: 2,
+  9: 0,
+  8: 0,
+  7: 0
+};
 export function getCardPoints(card, atoutSuit) {
   if (!card || !card.value || !card.suit) return 0;
 
   const value = String(card.value).toUpperCase();
-  const isAtout = card.suit === atoutSuit;
 
-  if (isAtout) {
+  // ✅ SA standard (total 152 + 10 de der = 162)
+  if (atoutSuit === "SA") {
+    return SA_POINTS[value] ?? 0;
+  }
+
+  // (optionnel mais propre) TA = tout atout
+  if (atoutSuit === "TA") {
     return ATOUT_POINTS[value] ?? 0;
   }
 
-  return NORMAL_POINTS[value] ?? 0;
+  const isAtout = atoutSuit && card.suit === atoutSuit;
+  return (isAtout ? ATOUT_POINTS[value] : NORMAL_POINTS[value]) ?? 0;
 }
 
 // ============================================
@@ -99,9 +114,20 @@ function rankValue(value, isAtout) {
 }
 
 function getPliWinner(pli, couleurDemandee, atoutSuit) {
-  // sécurités
   const valid = Array.isArray(pli) ? pli.filter(p => p && p.card) : [];
   if (valid.length === 0) return null;
+
+  // ✅ TA : tout atout => gagnant DANS la couleur demandée, avec ordre atout
+  if (atoutSuit === "TA") {
+    const pool = valid.filter(p => p.card.suit === couleurDemandee);
+    if (pool.length === 0) return valid[0].playerId;
+
+    let best = pool[0];
+    for (const p of pool.slice(1)) {
+      if (rankValue(p.card.value, true) < rankValue(best.card.value, true)) best = p;
+    }
+    return best.playerId;
+  }
 
   const atouts = atoutSuit ? valid.filter(p => p.card.suit === atoutSuit) : [];
 
@@ -109,19 +135,15 @@ function getPliWinner(pli, couleurDemandee, atoutSuit) {
     atouts.length > 0
       ? atouts.map(p => ({ ...p, _isAtout: true }))
       : valid
-        .filter(p => p.card.suit === couleurDemandee)
-        .map(p => ({ ...p, _isAtout: false }));
+          .filter(p => p.card.suit === couleurDemandee)
+          .map(p => ({ ...p, _isAtout: false }));
 
-  if (pool.length === 0) {
-    // fallback si couleurDemandee incohérente
-    return valid[0].playerId;
-  }
+  if (pool.length === 0) return valid[0].playerId;
 
   let best = pool[0];
   for (const p of pool.slice(1)) {
     const pr = rankValue(p.card.value, p._isAtout);
     const br = rankValue(best.card.value, best._isAtout);
-    // plus petit index = plus fort
     if (pr !== -1 && br !== -1 && pr < br) best = p;
   }
   return best.playerId;
@@ -186,61 +208,31 @@ export function handleDistribution(game, event, count) {
     if (!hands[player]) hands[player] = [];
   }
 
-  // ----------------------------
-  // DISTRIBUTION FINALE (après preneur)
-  // ----------------------------
-  if (game.state === STATES.DISTRIBUTION_3_FINAL) {
-    const preneurIndex = game.preneur;
-    const preneurId =
-      typeof preneurIndex === "number" ? game.players[preneurIndex] : null;
+// ----------------------------
+// DISTRIBUTION FINALE (après preneur)
+// ----------------------------
+if (game.state === STATES.DISTRIBUTION_3_FINAL) {
+  const playersCount = game.players.length;
 
-    if (!preneurId) return game;
+  const preneurIndex = game.preneur;
+  const preneurId =
+    typeof preneurIndex === "number" ? game.players[preneurIndex] : null;
 
-    let index = (game.dealerIndex + 1) % 4;
+  if (!preneurId) return game;
 
-    // ✅ CONTRÉE : tout le monde prend 3 (5->8)
-    if (game.ruleset === "contree") {
-      for (let i = 0; i < game.players.length; i++) {
-        const playerId = game.players[index];
-        for (let k = 0; k < 3; k++) {
-          hands[playerId] = [...hands[playerId], deck.shift()];
-        }
-        index = (index + 1) % 4;
-      }
+  let index = (game.dealerIndex + 1) % playersCount;
 
-      const firstTrickIndex = (game.dealerIndex + 1) % game.players.length;
-
-      return {
-        ...game,
-        state: STATES.PLI_EN_COURS,
-        deck,
-        hands,
-        pli: [],
-        couleurDemandee: null,
-        winnerIndex: null,
-        atoutPropose: null,
-        currentPlayerIndex: firstTrickIndex
-      };
-    }
-
-    // ✅ CLASSIC : inchangé (2/3 + carte retournée)
-    const turned = game.atoutPropose;
-
-    for (let i = 0; i < game.players.length; i++) {
+  // ✅ CONTRÉE : tout le monde prend 3 (5->8)
+  if (game.ruleset === "contree") {
+    for (let i = 0; i < playersCount; i++) {
       const playerId = game.players[index];
-      const giveCount = playerId === preneurId ? 2 : 3;
-
-      for (let k = 0; k < giveCount; k++) {
+      for (let k = 0; k < 3; k++) {
         hands[playerId] = [...hands[playerId], deck.shift()];
       }
-      index = (index + 1) % 4;
+      index = (index + 1) % playersCount;
     }
 
-    if (turned) {
-      hands[preneurId] = [...hands[preneurId], turned];
-    }
-
-    const firstTrickIndex = (game.dealerIndex + 1) % game.players.length;
+    const firstTrickIndex = (game.dealerIndex + 1) % playersCount;
 
     return {
       ...game,
@@ -254,6 +246,67 @@ export function handleDistribution(game, event, count) {
       currentPlayerIndex: firstTrickIndex
     };
   }
+
+  // ✅ MODERNE SA/TA : on remet la carte retournée dans le deck, et tout le monde prend 3
+  if (game.ruleset === "moderne" && (game.atout === "SA" || game.atout === "TA")) {
+    if (game.atoutPropose) {
+      deck.unshift(game.atoutPropose);
+    }
+
+    for (let i = 0; i < playersCount; i++) {
+      const playerId = game.players[index];
+      for (let k = 0; k < 3; k++) {
+        hands[playerId] = [...hands[playerId], deck.shift()];
+      }
+      index = (index + 1) % playersCount;
+    }
+
+    const firstTrickIndex = (game.dealerIndex + 1) % playersCount;
+
+    return {
+      ...game,
+      state: STATES.PLI_EN_COURS,
+      deck,
+      hands,
+      pli: [],
+      couleurDemandee: null,
+      winnerIndex: null,
+      atoutPropose: null,
+      currentPlayerIndex: firstTrickIndex
+    };
+  }
+
+  // ✅ CLASSIC : 2/3 + carte retournée au preneur (NE PAS remettre dans le deck)
+  const turned = game.atoutPropose;
+
+  for (let i = 0; i < playersCount; i++) {
+    const playerId = game.players[index];
+    const giveCount = playerId === preneurId ? 2 : 3;
+
+    for (let k = 0; k < giveCount; k++) {
+      hands[playerId] = [...hands[playerId], deck.shift()];
+    }
+    index = (index + 1) % playersCount;
+  }
+
+  if (turned) {
+    hands[preneurId] = [...hands[preneurId], turned];
+  }
+
+  const firstTrickIndex = (game.dealerIndex + 1) % playersCount;
+
+  return {
+    ...game,
+    state: STATES.PLI_EN_COURS,
+    deck,
+    hands,
+    pli: [],
+    couleurDemandee: null,
+    winnerIndex: null,
+    atoutPropose: null,
+    currentPlayerIndex: firstTrickIndex
+  };
+}
 
   // ----------------------------
   // DISTRIBUTIONS NORMALES (3 puis 2)
@@ -312,26 +365,26 @@ export function handleDistribution(game, event, count) {
 // ANNONCE ATTOUT
 // ============================================
 export function handleAnnonce(game, event) {
-
   if (!event) return game;
 
   const playersCount = game.players.length;
   const startIndex = (game.dealerIndex + 1) % playersCount;
   const nextIndex = (game.currentPlayerIndex + 1) % playersCount;
+
   // ============================================
   // CONTRÉE — CONTRE / SURCONTRE (V1)
   // ============================================
   if (event.type === "CONTRE") {
     if (game.ruleset !== "contree") return game;
-    if (typeof game.preneur !== "number") return game; // il faut un preneur
-    if ((game.contratMultiplicateur || 1) !== 1) return game; // déjà contré/surcontré
+    if (typeof game.preneur !== "number") return game;
+    if ((game.contratMultiplicateur || 1) !== 1) return game;
     return { ...game, contratMultiplicateur: 2 };
   }
 
   if (event.type === "SURCONTRE") {
     if (game.ruleset !== "contree") return game;
     if (typeof game.preneur !== "number") return game;
-    if ((game.contratMultiplicateur || 1) !== 2) return game; // surcontrer si contré
+    if ((game.contratMultiplicateur || 1) !== 2) return game;
     return { ...game, contratMultiplicateur: 4 };
   }
 
@@ -376,15 +429,21 @@ export function handleAnnonce(game, event) {
     if (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1) {
       if (!game.atoutPropose) return game;
 
+      // ✅ Moderne : SA / TA possible dès le Tour 1
+      const chosen =
+        game.ruleset === "moderne" && (event.suit === "SA" || event.suit === "TA")
+          ? event.suit
+          : game.atoutPropose.suit;
+
       const ng = {
         ...game,
-        atout: game.atoutPropose.suit,
+        atout: chosen,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
-        contratMultiplicateur: 1,   // 
+        contratMultiplicateur: 1,
+        belote: { atout: null, joueur: null, state: "NONE" },
         state: STATES.DISTRIBUTION_3_FINAL
       };
-
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
@@ -399,10 +458,10 @@ export function handleAnnonce(game, event) {
         atout: event.suit,
         atoutChoisi: true,
         preneur: game.currentPlayerIndex,
-        contratMultiplicateur: 1,   // 
+        contratMultiplicateur: 1,
+        belote: { atout: null, joueur: null, state: "NONE" },
         state: STATES.DISTRIBUTION_3_FINAL
       };
-
 
       return handleDistribution(ng, { type: "DISTRIBUTE_CARDS" }, 3);
     }
@@ -410,6 +469,7 @@ export function handleAnnonce(game, event) {
 
   return game;
 }
+
 
 export function handlePli(game, event) {
   if (!event) return game;
@@ -439,9 +499,12 @@ export function handlePli(game, event) {
     // ============================================
     // OBLIGATIONS DE JEU
     // Règle choisie : si partenaire maître -> on peut pisser (pas obligé de couper)
+    // SA/TA : pas de coupe / pas de montée (mais obligation de fournir reste)
     // ============================================
     const couleurDemandeeActuelle =
       game.pli.length === 0 ? null : game.couleurDemandee;
+
+    const isSAorTA = game.atout === "SA" || game.atout === "TA";
 
     const hasSuit = (h, suit) => h.some(c => c.suit === suit);
     const hasAtout = (h, atout) => h.some(c => c.suit === atout);
@@ -467,8 +530,9 @@ export function handlePli(game, event) {
       return game;
     }
 
-    // 2) Couper si pas de couleur (SAUF si partenaire maître)
+    // 2) Couper si pas de couleur (désactivé en SA/TA)
     if (
+      !isSAorTA &&
       couleurDemandeeActuelle &&
       playedCard.suit !== couleurDemandeeActuelle &&
       !hasSuit(hand, couleurDemandeeActuelle) &&
@@ -478,6 +542,49 @@ export function handlePli(game, event) {
     ) {
       return game;
     }
+
+    // 3) Monter à l’atout si adversaire maître (désactivé en SA/TA)
+    if (
+      !isSAorTA &&
+      playedCard.suit === game.atout &&
+      game.pli.length > 0 &&
+      !partenaireEstMaitre
+    ) {
+      const atoutsDansPli = game.pli.filter(
+        p => p.card && p.card.suit === game.atout
+      );
+
+      if (atoutsDansPli.length > 0) {
+        const meilleurAtout = atoutsDansPli.reduce((best, p) =>
+          rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
+        );
+
+        const peutMonter = hand.some(
+          c =>
+            c.suit === game.atout &&
+            rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
+        );
+
+        const monteAssez =
+          rankValue(playedCard.value, true) <
+          rankValue(meilleurAtout.card.value, true);
+
+        if (peutMonter && !monteAssez) return game;
+      }
+    }
+
+    // 2) Couper si pas de couleur (SAUF si partenaire maître)
+   if (
+  !isSAorTA &&
+  couleurDemandeeActuelle &&
+  playedCard.suit !== couleurDemandeeActuelle &&
+  !hasSuit(hand, couleurDemandeeActuelle) &&
+  playedCard.suit !== game.atout &&
+  hasAtout(hand, game.atout) &&
+  !partenaireEstMaitre
+) {
+  return game;
+}
 
     // 3) Monter à l’atout si adversaire maître
     if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitre) {
@@ -610,16 +717,21 @@ if (isLastPli) {
   let final = { nous: scoreManche.nous, eux: scoreManche.eux };
 
   if (game.ruleset === "contree") {
-    if (capotAnnonce) {
-      chute = !capotReussi;
-      if (!chute) {
-        final[preneurEquipe] = 500;
-        final[autreEquipe] = 0;
-      } else {
-        final[preneurEquipe] = 0;
-        final[autreEquipe] = 500;
-      }
-    } else {
+   if (capotAnnonce) {
+  chute = !capotReussi;
+
+  const capotScore = contrat * mult; // ✅ 500 * (1/2/4)
+
+  if (!chute) {
+    // ✅ Capot réussi : on ajoute le 10 de der ici (car ton code actuel ne le donne pas en capot réussi)
+    final[preneurEquipe] = capotScore + 10;
+    final[autreEquipe] = 0;
+  } else {
+    // ✅ Capot chuté : la défense prend les plis (incluant déjà le 10 de der) + contrat*mult
+    final[preneurEquipe] = 0;
+    final[autreEquipe] = totalPlis + capotScore;
+  }
+}
       if (!chute) {
         final[preneurEquipe] = scoreManche[preneurEquipe] + contrat * mult;
         final[autreEquipe] = scoreManche[autreEquipe];
@@ -634,7 +746,7 @@ if (isLastPli) {
         final[autreEquipe] = totalPlis + contrat * mult;
       }
     }
-  }
+ 
 
   scoreFinal = final;
 }
@@ -686,7 +798,7 @@ if (game.state === STATES.PLI_TERMINE && event.type === "NEXT_PLI") {
 }
 
 return game;
-} // ✅ ferme handlePli
+} // ✅ fin de handlePli
 
 // ============================================
 // FIN DE MANCHE
