@@ -43,6 +43,10 @@ function atoutSymbol(atout) {
       return "♣";
     case "spades":
       return "♠";
+    case "SA":
+      return "SA";
+    case "TA":
+      return "TA";
     default:
       return "";
   }
@@ -94,7 +98,37 @@ useEffect(() => {
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
+function handleNouvellePartie() {
+  setDisplayPli([]);
+  setHideLastPli(false);
 
+  finDeMancheCompteeRef.current = false;
+  finDeMancheRef.current = null;
+
+  const targetScore = mode === "contree" ? 1500 : 500;
+  partieRef.current = new Partie({
+    players: game.players,
+    targetScore,
+  });
+
+  setScorePartie({ nous: 0, eux: 0 });
+  setPartieTerminee(false);
+
+  let g = createInitialGameState();
+  g = {
+    ...g,
+    ruleset: mode,
+    contratMultiplicateur: 1,
+    contratValeur: null,
+    players: game.players,
+  };
+
+  g = dispatch(g, { type: "TABLE_READY" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+
+  setGame(g);
+}
   // ============================================
   // GAME STATE
   // ============================================
@@ -174,84 +208,43 @@ useEffect(() => {
   // ============================================
   // FIN DE MANCHE — CALCUL PARTIE
   // ============================================
-  useEffect(() => {
-    if (game.state !== STATES.FIN_DE_MANCHE) return;
-    if (!partieRef.current) return;
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
+  if (!partieRef.current) return;
 
-    if (finDeMancheCompteeRef.current) return;
-    finDeMancheCompteeRef.current = true;
+  if (finDeMancheCompteeRef.current) return;
+  finDeMancheCompteeRef.current = true;
 
-const finDeMancheSafe =
-  game.finDeManche ?? {
+  // ✅ En FIN_DE_MANCHE, on exige un vrai payload
+  if (!game.finDeManche) {
+    console.warn("FIN_DE_MANCHE sans game.finDeManche -> abort (évite score faux)");
+    return;
+  }
+
+  // ✅ Defaults puis payload réel par-dessus (le réel gagne)
+  const finDeMancheSafe = {
     scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
-
-   // ✅ indispensables pour contrée/moderne
-    contratValeur: game.contratValeur ?? game.currentBid?.value ?? null,
+    contratValeur: game.contratValeur ?? null,
     contratMultiplicateur: game.contratMultiplicateur || 1,
-
-    // ✅ utiles (si Partie en a besoin)
     ruleset: game.ruleset ?? mode,
-    preneur: game.preneur ?? game.currentBid?.playerIndex ?? null,
+    preneur: game.preneur ?? null,
     atout: game.atout ?? null,
+    ...game.finDeManche, // <- IMPORTANT : écrase les defaults avec la vérité du moteur
   };
 
-const next = partieRef.current.onFinDeManche({
-  dealerIndex: game.dealerIndex,
-  finDeManche: finDeMancheSafe,
-});
+  console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
 
+  const next = partieRef.current.onFinDeManche({
+    dealerIndex: game.dealerIndex,
+    finDeManche: finDeMancheSafe,
+  });
 
-    finDeMancheRef.current = next;
+  finDeMancheRef.current = next;
 
-    if (next?.scorePartie) {
-      setScorePartie(next.scorePartie);
-    }
-
-    if (next?.partieTerminee) {
-      setPartieTerminee(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.state]);
-
-  function handleNouvellePartie() {
-    // ✅ reset affichage du pli (empêche le flash des 4 cartes)
-    setDisplayPli([]);
-    setHideLastPli(false);
-
-    // ✅ IMPORTANT : réarmer les verrous de fin de manche
-    finDeMancheCompteeRef.current = false;
-    finDeMancheRef.current = null;
-
-  // reset arbitre
-const targetScore = mode === "contree" ? 1500 : 500;
-
-partieRef.current = new Partie({
-  players: game.players,
-  targetScore,
-});
-
-    // reset UI
-    setScorePartie({ nous: 0, eux: 0 });
-    setPartieTerminee(false);
-
-    // reset moteur
-    let g = createInitialGameState();
-
-   g = {
-  ...g,
-  ruleset: mode,               // ✅ garder le même mode
-  contratMultiplicateur: 1,    // ✅ reset
-  contratValeur: null,         // ✅ reset
-  players: game.players,
-};
-
-
-    g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-
-    setGame(g);
-  }
+  if (next?.scorePartie) setScorePartie(next.scorePartie);
+  if (next?.partieTerminee) setPartieTerminee(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [game.state]);
 
   // ============================================
   // FIN DE MANCHE — VISUEL (dernier pli)
@@ -309,16 +302,20 @@ partieRef.current = new Partie({
   // ============================================
   // FIN DE PLI
   // ============================================
-  useEffect(() => {
-    if (game.state !== STATES.PLI_TERMINE) return;
+useEffect(() => {
+  if (game.state !== STATES.PLI_TERMINE) return;
 
-    const timer = setTimeout(() => {
-      setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
-    }, 800);
+  const timer = setTimeout(() => {
+    // ✅ force le nettoyage visuel du pli précédent
+    setDisplayPli([]);
+    setHideLastPli(false);
 
-    return () => clearTimeout(timer);
-  }, [game.state]);
+    // ✅ passe au pli suivant côté moteur
+    setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
+  }, 800);
 
+  return () => clearTimeout(timer);
+}, [game.state]);
   // ============================================
   // ACTIONS
   // ============================================
@@ -379,7 +376,7 @@ const mult = game.contratMultiplicateur || 1;
 
     console.warn("Aucune carte jouable pour", active);
   }
-console.log("MODE =", import.meta.env.MODE, "DEV =", import.meta.env.DEV);
+
 // ============================================
 // RENDER
 // ============================================
@@ -641,37 +638,40 @@ return (
   </div>
 ))}
 
-         {game.hands["joueur1"] && (
+{game.hands["joueur1"] && (
   <div className="player-bottom">
-    {[...game.hands["joueur1"]].sort(compareCards).map((card, index) => {
-      const total = game.hands["joueur1"].length;
-      const center = (total - 1) / 2;
-      const offset = index - center;
+    {[...(game.hands["joueur1"] || [])]
+      .filter(Boolean)
+      .sort(compareCards)
+      .map((card, index) => {
+        const total = game.hands["joueur1"].length;
+        const center = (total - 1) / 2;
+        const offset = index - center;
 
-      return (
-        <div
-          key={`${card.suit}-${card.value}`}
-          className={`card ${isMyTurn ? "clickable" : "disabled"}`}
-          onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
-          style={{
-            transform: `
-              translateX(${offset * -28}px)
-              translateY(${-8 + Math.abs(offset) * 2}px)
-              rotate(${offset * 4}deg)
-            `,
-            transformOrigin: "bottom center",
-            zIndex: 100 + index,
-          }}
-        >
-          <img
-            src={cardImgSrc(card)}
-            alt={`${card.value} ${card.suit}`}
-            className="card-img"
-            draggable={false}
-          />
-        </div>
-      );
-    })}
+        return (
+          <div
+            key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+            className={`card ${isMyTurn ? "clickable" : "disabled"}`}
+            onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+            style={{
+              transform: `
+                translateX(${offset * -28}px)
+                translateY(${-8 + Math.abs(offset) * 2}px)
+                rotate(${offset * 4}deg)
+              `,
+              transformOrigin: "bottom center",
+              zIndex: 100 + index,
+            }}
+          >
+            <img
+              src={cardImgSrc(card)}
+              alt={`${card.value} ${card.suit}`}
+              className="card-img"
+              draggable={false}
+            />
+          </div>
+        );
+      })}
   </div>
 )}
 
@@ -793,7 +793,7 @@ return (
     </div>
   );
 }
-  
+
 
 
 
