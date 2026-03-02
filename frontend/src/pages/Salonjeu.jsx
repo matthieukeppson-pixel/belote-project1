@@ -94,59 +94,80 @@ useEffect(() => {
 }, []);
 
 
-  /* ===============================
-     WEBSOCKET SALON
-  ================================ */
-  useEffect(() => {
-    const ws = new WebSocket("ws://localhost:4000");
-    wsRef.current = ws;
+/* ===============================
+   WEBSOCKET SALON (micro-fix safe)
+================================ */
+useEffect(() => {
+  // évite double connexion (dev/refresh)
+  if (wsRef.current) return;
 
-    ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          type: "join_salon",
-          pseudo: currentName,
-          avatar:
-            localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
-        })
+  let cancelled = false;
+
+  const ws = new WebSocket("ws://localhost:4000");
+  wsRef.current = ws;
+
+  ws.onopen = () => {
+    // si le composant a été démonté avant l'ouverture
+    if (cancelled) {
+      ws.close(1000, "cleanup");
+      return;
+    }
+
+    ws.send(
+      JSON.stringify({
+        type: "join_salon",
+        pseudo: currentName,
+        avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+      })
+    );
+
+    ws.send(JSON.stringify({ type: "get_players" }));
+  };
+
+  ws.onmessage = (event) => {
+    let data;
+    try {
+      data = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+
+    if (data.type === "players") {
+      setPlayers(
+        (data.players || []).map((p) => ({
+          name: p.name,
+          avatar: p.avatar || "/avatar_blue.png",
+        }))
       );
+      return;
+    }
 
-      ws.send(JSON.stringify({ type: "get_players" }));
-    };
+    if (data.type === "message") {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          user: data.user,
+          text: data.text,
+        },
+      ]);
+    }
+  };
 
-    ws.onmessage = (event) => {
-      let data;
-      try {
-        data = JSON.parse(event.data);
-      } catch {
-        return;
-      }
+  ws.onclose = () => {
+    if (wsRef.current === ws) wsRef.current = null;
+  };
 
-      if (data.type === "players") {
-        setPlayers(
-          (data.players || []).map((p) => ({
-            name: p.name,
-            avatar: p.avatar || "/avatar_blue.png",
-          }))
-        );
-        return;
-      }
+  return () => {
+    cancelled = true;
 
-      if (data.type === "message") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            user: data.user,
-            text: data.text,
-          },
-        ]);
-      }
-    };
+    if (wsRef.current === ws) wsRef.current = null;
 
-    return () => ws.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // ne ferme que si déjà ouvert -> évite "closed before established"
+    if (ws.readyState === WebSocket.OPEN) ws.close(1000, "cleanup");
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   /* ===============================
      🔁 AVATAR → SYNCHRO IMMEDIATE
