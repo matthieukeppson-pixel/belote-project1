@@ -7,14 +7,13 @@ import "../styles/Table.css";
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 import Partie from "../game/Partie";
 
-
-
 // ============================================
 // HELPERS ATTOUT — UI TABLE UNIQUEMENT
 // ============================================
 
 const ALL_SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const BID_VALUES = [80, 90, 100, 110, 120, 130, 140, 150, 160, 500];
+
 function suitLabel(suit) {
   switch (suit) {
     case "hearts":
@@ -60,7 +59,6 @@ function cardImgSrc(card) {
 }
 
 const SUIT_RANK = { clubs: 0, diamonds: 1, spades: 2, hearts: 3 };
-
 const VALUE_RANK = { "7": 0, "8": 1, "9": 2, J: 3, Q: 4, K: 5, "10": 6, A: 7 };
 
 function compareCards(a, b) {
@@ -75,9 +73,12 @@ function compareCards(a, b) {
 
 export default function Table() {
   const navigate = useNavigate();
-const location = useLocation();
-const mode = location.state?.mode || "classic";
-const [bidValue, setBidValue] = useState(80);
+  const location = useLocation();
+  const mode = location.state?.mode || "classic";
+
+  const [bidValue, setBidValue] = useState(80);
+  const [scoreDebug, setScoreDebug] = useState(null);
+
   // ============================================
   // PARTIE (présente mais non pilotante)
   // ============================================
@@ -87,62 +88,31 @@ const [bidValue, setBidValue] = useState(80);
   const finDeMancheCompteeRef = useRef(false);
   const finDeMancheRef = useRef(null);
 
-useEffect(() => {
-  if (partieRef.current === null) {
-    const targetScore = mode === "contree" ? 1500 : 500; 
+  useEffect(() => {
+    if (partieRef.current === null) {
+      const targetScore = mode === "contree" ? 1500 : 500;
 
-    partieRef.current = new Partie({
-      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
-      targetScore,
-    });
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-function handleNouvellePartie() {
-  setDisplayPli([]);
-  setHideLastPli(false);
+      partieRef.current = new Partie({
+        players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+        targetScore,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  finDeMancheCompteeRef.current = false;
-  finDeMancheRef.current = null;
-
-  const targetScore = mode === "contree" ? 1500 : 500;
-  partieRef.current = new Partie({
-    players: game.players,
-    targetScore,
-  });
-
-  setScorePartie({ nous: 0, eux: 0 });
-  setPartieTerminee(false);
-
-  let g = createInitialGameState();
-  g = {
-    ...g,
-    ruleset: mode,
-    contratMultiplicateur: 1,
-    contratValeur: null,
-    players: game.players,
-  };
-
-  g = dispatch(g, { type: "TABLE_READY" });
-  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-
-  setGame(g);
-}
   // ============================================
   // GAME STATE
   // ============================================
   const [game, setGame] = useState(() => {
     let g = createInitialGameState();
 
-   g = {
-  ...g,
-  ruleset: mode,               // ✅ classic | contree | moderne
-  contratMultiplicateur: 1,    // ✅ reset
-  contratValeur: null,         // ✅ (ajoute ce champ dans createInitialGameState)
-  players: ["joueur1", "joueur4", "joueur2", "joueur3"],
-};
-
+    g = {
+      ...g,
+      ruleset: mode, // ✅ classic | contree | moderne
+      contratMultiplicateur: 1, // ✅ reset
+      contratValeur: null, // ✅ (ajoute ce champ dans createInitialGameState)
+      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+    };
 
     g = dispatch(g, { type: "TABLE_READY" });
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -150,39 +120,75 @@ function handleNouvellePartie() {
 
     return g;
   });
-useEffect(() => {
-  // Contrée : reset de la valeur UI au début des enchères (début de manche / redistribution)
-  if (mode !== "contree") return;
-  if (game.state !== STATES.ENCHERES) return;
-  if (game.currentBid) return;
 
-  setBidValue(80);
- 
-}, [mode, game.state, game.currentBid]);
   // ============================================
   // UI STATES
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
-const [beloteToast, setBeloteToast] = useState(null); // { text, ts } | null
+  const [beloteToast, setBeloteToast] = useState(null); // { text, ts } | null
+
   // ✅ SCORE DE PARTIE (501)
   const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 
   // ✅ FIN DE PARTIE
   const [partieTerminee, setPartieTerminee] = useState(false);
-useEffect(() => {
-  const s = game?.belote?.state;
-  if (!s || s === "NONE") return;
 
-  if (s === "BELOTE") {
-    setBeloteToast({ text: `Belote ! (${game.belote.joueur})`, ts: Date.now() });
-  } else if (s === "REBELOTE") {
-    setBeloteToast({ text: `Rebelote ! (${game.belote.joueur})`, ts: Date.now() });
+  function handleNouvellePartie() {
+    setDisplayPli([]);
+    setHideLastPli(false);
+
+    finDeMancheCompteeRef.current = false;
+    finDeMancheRef.current = null;
+
+    const targetScore = mode === "contree" ? 1500 : 500;
+    partieRef.current = new Partie({
+      players: game.players,
+      targetScore,
+    });
+
+    setScorePartie({ nous: 0, eux: 0 });
+    setPartieTerminee(false);
+
+    let g = createInitialGameState();
+    g = {
+      ...g,
+      ruleset: mode,
+      contratMultiplicateur: 1,
+      contratValeur: null,
+      players: game.players,
+    };
+
+    g = dispatch(g, { type: "TABLE_READY" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+
+    setGame(g);
   }
 
-  const t = setTimeout(() => setBeloteToast(null), 1200);
-  return () => clearTimeout(t);
-}, [game?.belote?.state, game?.belote?.joueur]);
+  useEffect(() => {
+    // Contrée : reset de la valeur UI au début des enchères (début de manche / redistribution)
+    if (mode !== "contree") return;
+    if (game.state !== STATES.ENCHERES) return;
+    if (game.currentBid) return;
+
+    setBidValue(80);
+  }, [mode, game.state, game.currentBid]);
+
+  useEffect(() => {
+    const s = game?.belote?.state;
+    if (!s || s === "NONE") return;
+
+    if (s === "BELOTE") {
+      setBeloteToast({ text: `Belote ! (${game.belote.joueur})`, ts: Date.now() });
+    } else if (s === "REBELOTE") {
+      setBeloteToast({ text: `Rebelote ! (${game.belote.joueur})`, ts: Date.now() });
+    }
+
+    const t = setTimeout(() => setBeloteToast(null), 1200);
+    return () => clearTimeout(t);
+  }, [game?.belote?.state, game?.belote?.joueur]);
+
   // ============================================
   // AFFICHAGE DU PLI
   // ============================================
@@ -208,43 +214,74 @@ useEffect(() => {
   // ============================================
   // FIN DE MANCHE — CALCUL PARTIE
   // ============================================
-useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
-  if (!partieRef.current) return;
+  useEffect(() => {
+    if (game.state !== STATES.FIN_DE_MANCHE) return;
+    if (!partieRef.current) return;
 
-  if (finDeMancheCompteeRef.current) return;
-  finDeMancheCompteeRef.current = true;
+    if (finDeMancheCompteeRef.current) return;
+    finDeMancheCompteeRef.current = true;
 
-  // ✅ En FIN_DE_MANCHE, on exige un vrai payload
-  if (!game.finDeManche) {
-    console.warn("FIN_DE_MANCHE sans game.finDeManche -> abort (évite score faux)");
-    return;
-  }
+    // ✅ En FIN_DE_MANCHE, on exige un vrai payload
+    if (!game.finDeManche) {
+      console.warn("FIN_DE_MANCHE sans game.finDeManche -> abort (évite score faux)");
+      return;
+    }
 
-  // ✅ Defaults puis payload réel par-dessus (le réel gagne)
-  const finDeMancheSafe = {
-    scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
-    contratValeur: game.contratValeur ?? null,
-    contratMultiplicateur: game.contratMultiplicateur || 1,
-    ruleset: game.ruleset ?? mode,
-    preneur: game.preneur ?? null,
-    atout: game.atout ?? null,
-    ...game.finDeManche, // <- IMPORTANT : écrase les defaults avec la vérité du moteur
-  };
+    // ✅ Defaults puis payload réel par-dessus (le réel gagne)
+    const finDeMancheSafe = {
+      scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
+      contratValeur: game.contratValeur ?? null,
+      contratMultiplicateur: game.contratMultiplicateur || 1,
+      ruleset: game.ruleset ?? mode,
+      preneur: game.preneur ?? null,
+      atout: game.atout ?? null,
+      ...game.finDeManche, // <- IMPORTANT : écrase les defaults avec la vérité du moteur
+    };
 
-  console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
+    console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
 
-  const next = partieRef.current.onFinDeManche({
-    dealerIndex: game.dealerIndex,
-    finDeManche: finDeMancheSafe,
-  });
+    // ==========================
+    // SCORE GUARDRAIL (DEV ONLY)
+    // ==========================
+    if (import.meta.env.DEV) {
+      const sf = finDeMancheSafe.scoreFinal || { nous: 0, eux: 0 };
+      const total = (sf.nous || 0) + (sf.eux || 0);
 
-  finDeMancheRef.current = next;
+      const ruleset = finDeMancheSafe.ruleset;
+      const atout = finDeMancheSafe.atout;
 
-  if (next?.scorePartie) setScorePartie(next.scorePartie);
-  if (next?.partieTerminee) setPartieTerminee(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [game.state]);
+      const contrat = finDeMancheSafe.contratValeur || 0;
+      const multLocal = finDeMancheSafe.contratMultiplicateur || 1;
+
+      let ok = true;
+
+      if (ruleset === "moderne" && atout === "TA") ok = total === 258;
+      else if (ruleset === "classic") ok = total === 162 || total === 182;
+      else if (ruleset === "contree") {
+        const base = 162 + contrat * multLocal;
+        ok = total === base || total === base + 20;
+      }
+
+      if (!ok) {
+        setScoreDebug(
+          `⚠️ Score incohérent: total=${total} ruleset=${ruleset} atout=${atout} contrat=${contrat} mult=${multLocal}`
+        );
+      } else {
+        setScoreDebug(null);
+      }
+    }
+
+    const next = partieRef.current.onFinDeManche({
+      dealerIndex: game.dealerIndex,
+      finDeManche: finDeMancheSafe,
+    });
+
+    finDeMancheRef.current = next;
+
+    if (next?.scorePartie) setScorePartie(next.scorePartie);
+    if (next?.partieTerminee) setPartieTerminee(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.state]);
 
   // ============================================
   // FIN DE MANCHE — VISUEL (dernier pli)
@@ -278,15 +315,15 @@ useEffect(() => {
 
       let g = createInitialGameState();
 
-     g = {
-  ...g,
-  ruleset: mode,               // ✅ garde contree / classic selon la table
-  contratMultiplicateur: 1,    // ✅ reset
-  contratValeur: null,         // ✅ reset
-  players: game.players,
-  dealerIndex: next.dealerIndex,
-  currentPlayerIndex: next.startingPlayerIndex,
-};
+      g = {
+        ...g,
+        ruleset: mode, // ✅ garde contree / classic selon la table
+        contratMultiplicateur: 1, // ✅ reset
+        contratValeur: null, // ✅ reset
+        players: game.players,
+        dealerIndex: next.dealerIndex,
+        currentPlayerIndex: next.startingPlayerIndex,
+      };
 
       g = dispatch(g, { type: "TABLE_READY" });
       g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
@@ -302,20 +339,21 @@ useEffect(() => {
   // ============================================
   // FIN DE PLI
   // ============================================
-useEffect(() => {
-  if (game.state !== STATES.PLI_TERMINE) return;
+  useEffect(() => {
+    if (game.state !== STATES.PLI_TERMINE) return;
 
-  const timer = setTimeout(() => {
-    // ✅ force le nettoyage visuel du pli précédent
-    setDisplayPli([]);
-    setHideLastPli(false);
+    const timer = setTimeout(() => {
+      // ✅ force le nettoyage visuel du pli précédent
+      setDisplayPli([]);
+      setHideLastPli(false);
 
-    // ✅ passe au pli suivant côté moteur
-    setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
-  }, 800);
+      // ✅ passe au pli suivant côté moteur
+      setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
+    }, 800);
 
-  return () => clearTimeout(timer);
-}, [game.state]);
+    return () => clearTimeout(timer);
+  }, [game.state]);
+
   // ============================================
   // ACTIONS
   // ============================================
@@ -326,13 +364,14 @@ useEffect(() => {
   function handlePass() {
     setGame((g) => dispatch(g, { type: "PASS" }));
   }
-function handleContre() {
-  setGame((g) => dispatch(g, { type: "CONTRE" }));
-}
 
-function handleSurContre() {
-  setGame((g) => dispatch(g, { type: "SURCONTRE" }));
-}
+  function handleContre() {
+    setGame((g) => dispatch(g, { type: "CONTRE" }));
+  }
+
+  function handleSurContre() {
+    setGame((g) => dispatch(g, { type: "SURCONTRE" }));
+  }
 
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
@@ -344,19 +383,20 @@ function handleSurContre() {
   const dealerId = game.players[game.dealerIndex];
 
   const scoreUI = scorePartie;
-
   const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
-const actorId = game.players[game.currentPlayerIndex];
-const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
-const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
-const preneurTeam =
-  preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
+  const actorId = game.players[game.currentPlayerIndex];
+  const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
-const mult = game.contratMultiplicateur || 1;
+  const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
+  const preneurTeam = preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
+
+  const mult = game.contratMultiplicateur || 1;
+
   // ============================================
   // BOUTON TEST — jouer pour le joueur actif
   // ============================================
+  // (gardé tel quel, même s'il n'est pas rendu dans ton extrait)
   function playForActivePlayer() {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
@@ -377,62 +417,76 @@ const mult = game.contratMultiplicateur || 1;
     console.warn("Aucune carte jouable pour", active);
   }
 
-// ============================================
-// RENDER
-// ============================================
-return (
-  <div
-    className="table-page"
-    data-mode={mode}
-    data-state={game.state}
-    style={{ position: "relative" }}
-  >
+  // ============================================
+  // RENDER
+  // ============================================
+  return (
+    <div
+      className="table-page"
+      data-mode={mode}
+      data-state={game.state}
+      style={{ position: "relative" }}
+    >
+ <button className="table-back-btn" onClick={() => navigate("/salon")}>
+  ← Retour au salon
+</button>
 
-{/* BOUTON TEST ULTRA SIMPLE */}
-{import.meta.env.DEV ? (
+{import.meta.env.DEV && (
   <button
+    type="button"
     onClick={playForActivePlayer}
     style={{
       position: "absolute",
       top: 10,
-      left: 10,
-      padding: "10px 16px",
-      background: "red",
-      color: "white",
-      fontSize: "16px",
+      right: 10,
       zIndex: 9999,
+      padding: "6px 10px",
+      borderRadius: 10,
+      background: "rgba(0,0,0,0.35)",
+      color: "#fff",
+      fontWeight: 800,
+      border: "1px solid rgba(255,255,255,0.2)",
+      cursor: "pointer",
+    }}
+    title="DEV: joue une carte pour le joueur actif si possible"
+  >
+    ▶ Auto-play
+  </button>
+)}
+
+{import.meta.env.DEV && (
+  <div
+    style={{
+      position: "absolute",
+      top: 60,
+      left: 20,
+      zIndex: 9999,
+      color: "#fff",
+      fontWeight: 800,
     }}
   >
-    TEST JOUER
-  </button>
-) : null}
-
-
-
-      <button className="table-back-btn" onClick={() => navigate("/salon")}>
-        ← Retour au salon
-      </button>
-{import.meta.env.DEV && (
-  <div style={{ position: "absolute", top: 60, left: 20, zIndex: 9999, color: "#fff", fontWeight: 800 }}>
     Mode: {mode}
   </div>
 )}
+
 {import.meta.env.DEV && (
   <div
     style={{
       position: "absolute",
       top: 10,
-      left: 120, // pour ne pas gêner le bouton TEST
+      left: 120,
       zIndex: 9999,
-      padding: "4px 8px",
-      borderRadius: 8,
-      background: "rgba(0,0,0,0.45)",
+      padding: "6px 10px",
+      borderRadius: 10,
+      background: "rgba(0,0,0,0.35)",
       color: "#fff",
       fontWeight: 800,
-      fontSize: 12,
     }}
   >
     {mode} | {game.state}
+    {scoreDebug ? (
+      <div style={{ marginTop: 6, fontWeight: 700 }}>{scoreDebug}</div>
+    ) : null}
   </div>
 )}
 
@@ -440,113 +494,114 @@ return (
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
-{beloteToast && (
-  <div
-    style={{
-      position: "absolute",
-      top: 90,
-      right: 120,
-      zIndex: 9999,
-      padding: "8px 14px",
-      borderRadius: 999,
-      background: "rgba(255,255,255,0.12)",
-      backdropFilter: "blur(6px)",
-      border: "1px solid rgba(255,255,255,0.22)",
-      color: "#fff",
-      fontWeight: 800,
-    }}
-  >
-    {beloteToast.text}
-  </div>
-)}
 
-{mode === "contree" && game.state === STATES.ENCHERES && (
-  <div className="atout-panel contree-encheres-panel">
-    <div className="atout-title">Enchères (Contrée)</div>
+            {beloteToast && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 90,
+                  right: 120,
+                  zIndex: 9999,
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.12)",
+                  backdropFilter: "blur(6px)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  color: "#fff",
+                  fontWeight: 800,
+                }}
+              >
+                {beloteToast.text}
+              </div>
+            )}
 
-    <div style={{ fontWeight: 800, marginBottom: 8 }}>
-      Enchère actuelle :{" "}
-      {game.currentBid
-        ? `${game.currentBid.value} ${atoutSymbol(game.currentBid.suit)}`
-        : "Aucune"}
-    </div>
+            {mode === "contree" && game.state === STATES.ENCHERES && (
+              <div className="atout-panel contree-encheres-panel">
+                <div className="atout-title">Enchères (Contrée)</div>
 
-    {game.currentBid ? (
-      <div className="contree-panel-inline">
-        <div className="contree-title">Contrat</div>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>
+                  Enchère actuelle :{" "}
+                  {game.currentBid
+                    ? `${game.currentBid.value} ${atoutSymbol(game.currentBid.suit)}`
+                    : "Aucune"}
+                </div>
 
-        <div className="contree-row">
-          <span>Multiplicateur :</span>
-          <span>x{game.contratMultiplicateur || 1}</span>
-        </div>
+                {game.currentBid ? (
+                  <div className="contree-panel-inline">
+                    <div className="contree-title">Contrat</div>
 
-        <div className="contree-actions">
-          <button
-            className="contree-btn"
-            onClick={handleContre}
-            disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
-          >
-            Contrer
-          </button>
+                    <div className="contree-row">
+                      <span>Multiplicateur :</span>
+                      <span>x{game.contratMultiplicateur || 1}</span>
+                    </div>
 
-          <button
-            className="contree-btn"
-            onClick={handleSurContre}
-            disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
-          >
-            Surcontrer
-          </button>
-        </div>
-      </div>
-    ) : null}
+                    <div className="contree-actions">
+                      <button
+                        className="contree-btn"
+                        onClick={handleContre}
+                        disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
+                      >
+                        Contrer
+                      </button>
 
-    {/* PALIERS 80..160 */}
-    <div className="atout-actions" style={{ gap: 8, flexWrap: "wrap" }}>
-      {BID_VALUES.map((v) => {
-        const min = game.currentBid ? game.currentBid.value + 10 : 80;
-        const disabled = v < min;
+                      <button
+                        className="contree-btn"
+                        onClick={handleSurContre}
+                        disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
+                      >
+                        Surcontrer
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
-        return (
-          <button
-            key={v}
-            className="atout-btn take"
-            onClick={() => setBidValue(v)}
-            disabled={disabled}
-            style={{
-              opacity: disabled ? 0.45 : 1,
-              border:
-                bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
-            }}
-          >
-            {v}
-          </button>
-        );
-      })}
-    </div>
+                {/* PALIERS 80..160 */}
+                <div className="atout-actions" style={{ gap: 8, flexWrap: "wrap" }}>
+                  {BID_VALUES.map((v) => {
+                    const min = game.currentBid ? game.currentBid.value + 10 : 80;
+                    const disabled = v < min;
 
-    {/* COULEURS */}
-    <div className="atout-actions" style={{ marginTop: 10 }}>
-      {ALL_SUITS.map((suit) => (
-        <button
-          key={suit}
-          className="atout-btn take atout-suit-btn"
-          onClick={() =>
-            setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
-          }
-        >
-          <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
-        </button>
-      ))}
-    </div>
+                    return (
+                      <button
+                        key={v}
+                        className="atout-btn take"
+                        onClick={() => setBidValue(v)}
+                        disabled={disabled}
+                        style={{
+                          opacity: disabled ? 0.45 : 1,
+                          border: bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
+                        }}
+                      >
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
 
-    {/* PASS */}
-    <div className="atout-actions" style={{ marginTop: 10 }}>
-      <button className="atout-btn pass" onClick={handlePass}>
-        Passer
-      </button>
-    </div>
-  </div>
-)}
+                {/* COULEURS */}
+                <div className="atout-actions" style={{ marginTop: 10 }}>
+                  {ALL_SUITS.map((suit) => (
+                    <button
+                      key={suit}
+                      className="atout-btn take atout-suit-btn"
+                      onClick={() =>
+                        setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
+                      }
+                    >
+                      <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* PASS */}
+                <div className="atout-actions" style={{ marginTop: 10 }}>
+                  <button className="atout-btn pass" onClick={handlePass}>
+                    Passer
+                  </button>
+                </div>
+              </div>
+            )}
+
             {scoreUI && (
               <div className="score-overlay score-pill">
                 <span className="score-side">Nous</span>
@@ -568,221 +623,210 @@ return (
             {shouldShowPli &&
               displayPli.map((play, index) =>
                 play?.card ? (
-                 <div key={index} className={`pli-card pli-${play.playerId}`}>
-  <img
-    src={cardImgSrc(play.card)}
-    alt={`${play.card.value} ${play.card.suit}`}
-    className="card-img"
-    draggable={false}
-  />
-</div>
-
+                  <div key={index} className={`pli-card pli-${play.playerId}`}>
+                    <img
+                      src={cardImgSrc(play.card)}
+                      alt={`${play.card.value} ${play.card.suit}`}
+                      className="card-img"
+                      draggable={false}
+                    />
+                  </div>
                 ) : null
               )}
 
-          
-{[
-  ["joueur2", "top"],
-  ["joueur4", "left"],
-  ["joueur3", "right"],
-  ["joueur1", "bottom"],
-].map(([player, position]) => (
-  <div
-    key={player}
-    className={`player-seat ${position} ${
-      activePlayer === player ? "active" : ""
-    }`}
-  >
-    {/* ✅ Donneur */}
-    {player === dealerId && <div className="dealer-badge">D</div>}
+            {[
+              ["joueur2", "top"],
+              ["joueur4", "left"],
+              ["joueur3", "right"],
+              ["joueur1", "bottom"],
+            ].map(([player, position]) => (
+              <div
+                key={player}
+                className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
+              >
+                {player === dealerId && <div className="dealer-badge">D</div>}
 
-    <img src="/avatar.png" alt="Avatar" className="player-avatar" />
+                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
 
-    {/* 🂠 Cartes cachées (dos) pour les autres joueurs */}
-    {player !== "joueur1" && (
-      <div className={`back-cards back-cards-${position}`}>
-        {(() => {
-          const n = game.hands[player]?.length ?? 0;
-          const visible = Math.min(2, n);
+                {player !== "joueur1" && (
+                  <div className={`back-cards back-cards-${position}`}>
+                    {(() => {
+                      const n = game.hands[player]?.length ?? 0;
+                      const visible = Math.min(2, n);
 
-          return (
-            <div className="back-stack">
-              {Array.from({ length: visible }).map((_, i) => (
-                <img
-                  key={i}
-                  src="/card_back.png"
-                  alt="Dos"
-                  className="card-back"
-                  style={{
-                    transform: `translateX(${i * 10}px) rotate(${i * 2}deg)`,
-                  }}
-                  draggable={false}
-                />
-              ))}
-            </div>
-          );
-        })()}
-      </div>
-    )}
+                      return (
+                        <div className="back-stack">
+                          {Array.from({ length: visible }).map((_, i) => (
+                            <img
+                              key={i}
+                              src="/card_back.png"
+                              alt="Dos"
+                              className="card-back"
+                              style={{
+                                transform: `translateX(${i * 10}px) rotate(${i * 2}deg)`,
+                              }}
+                              draggable={false}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
-    {activePlayer === player && <div className="active-dot" />}
+                {activePlayer === player && <div className="active-dot" />}
 
-    <div className="player-pseudo">{player}</div>
+                <div className="player-pseudo">{player}</div>
 
-    {/* 👇 ATOUT — ICI ET PAS AILLEURS */}
-    {game.atout && game.players[game.preneur] === player && (
-      <div className={`atout-indicator ${position} ${game.atout}`}>
-        {atoutSymbol(game.atout)}
-      </div>
-    )}
-  </div>
-))}
+                {game.atout && game.players[game.preneur] === player && (
+                  <div className={`atout-indicator ${position} ${game.atout}`}>
+                    {atoutSymbol(game.atout)}
+                  </div>
+                )}
+              </div>
+            ))}
 
-{game.hands["joueur1"] && (
-  <div className="player-bottom">
-    {[...(game.hands["joueur1"] || [])]
-      .filter(Boolean)
-      .sort(compareCards)
-      .map((card, index) => {
-        const total = game.hands["joueur1"].length;
-        const center = (total - 1) / 2;
-        const offset = index - center;
+            {game.hands["joueur1"] && (
+              <div className="player-bottom">
+                {[...(game.hands["joueur1"] || [])]
+                  .filter(Boolean)
+                  .sort(compareCards)
+                  .map((card, index) => {
+                    const total = game.hands["joueur1"].length;
+                    const center = (total - 1) / 2;
+                    const offset = index - center;
 
-        return (
-          <div
-            key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
-            className={`card ${isMyTurn ? "clickable" : "disabled"}`}
-            onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
-            style={{
-              transform: `
-                translateX(${offset * -28}px)
-                translateY(${-8 + Math.abs(offset) * 2}px)
-                rotate(${offset * 4}deg)
-              `,
-              transformOrigin: "bottom center",
-              zIndex: 100 + index,
-            }}
-          >
-            <img
-              src={cardImgSrc(card)}
-              alt={`${card.value} ${card.suit}`}
-              className="card-img"
-              draggable={false}
-            />
-          </div>
-        );
-      })}
-  </div>
-)}
+                    return (
+                      <div
+                        key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+                        className={`card ${isMyTurn ? "clickable" : "disabled"}`}
+                        onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+                        style={{
+                          transform: `
+                            translateX(${offset * -28}px)
+                            translateY(${-8 + Math.abs(offset) * 2}px)
+                            rotate(${offset * 4}deg)
+                          `,
+                          transformOrigin: "bottom center",
+                          zIndex: 100 + index,
+                        }}
+                      >
+                        <img
+                          src={cardImgSrc(card)}
+                          alt={`${card.value} ${card.suit}`}
+                          className="card-img"
+                          draggable={false}
+                        />
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
 
-{(mode === "classic" || mode === "moderne") &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-    <div className="atout-panel">
-      <div className="atout-title">Choisir l’atout</div>
-      <div className="atout-actions">
-        <button className="atout-btn take" onClick={handleTakeAtout}>
-          Prendre
-        </button>
+            {(mode === "classic" || mode === "moderne") &&
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                <div className="atout-panel">
+                  <div className="atout-title">Choisir l’atout</div>
+                  <div className="atout-actions">
+                    <button className="atout-btn take" onClick={handleTakeAtout}>
+                      Prendre
+                    </button>
 
-        {mode === "moderne" && (
-          <>
-            <button
-              className="atout-btn take"
-              onClick={() =>
-                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
-              }
-              title="Sans Atout"
-            >
-              SA
-            </button>
-            <button
-              className="atout-btn take"
-              onClick={() =>
-                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
-              }
-              title="Tout Atout"
-            >
-              TA
-            </button>
-          </>
-        )}
+                    {mode === "moderne" && (
+                      <>
+                        <button
+                          className="atout-btn take"
+                          onClick={() =>
+                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
+                          }
+                          title="Sans Atout"
+                        >
+                          SA
+                        </button>
+                        <button
+                          className="atout-btn take"
+                          onClick={() =>
+                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
+                          }
+                          title="Tout Atout"
+                        >
+                          TA
+                        </button>
+                      </>
+                    )}
 
-        <button className="atout-btn pass" onClick={handlePass}>
-          Passer
-        </button>
-      </div>
-    </div>
-  )}
+                    <button className="atout-btn pass" onClick={handlePass}>
+                      Passer
+                    </button>
+                  </div>
+                </div>
+              )}
 
-{/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) */}
-{(mode === "classic" || mode === "moderne") &&
-  (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-    game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
-  game.atoutPropose && (
-    <div className="atout-card">
-      <div className="label">Atout</div>
-      <img
-        src={cardImgSrc(game.atoutPropose)}
-        alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
-        className="card-img"
-        draggable={false}
-      />
-    </div>
-  )}
-{/* CLASSIC — Tour 2 : choisir l’atout */}
-{(mode === "classic" || mode === "moderne") &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
-  game.atoutPropose && (
-    <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
-      <div className="atout-title">Choisir l’atout</div>
+            {/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) */}
+            {(mode === "classic" || mode === "moderne") &&
+              (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+                game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
+              game.atoutPropose && (
+                <div className="atout-card">
+                  <div className="label">Atout</div>
+                  <img
+                    src={cardImgSrc(game.atoutPropose)}
+                    alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
+                    className="card-img"
+                    draggable={false}
+                  />
+                </div>
+              )}
 
-      <div className="atout-actions atout-actions--tour2">
-        {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map(
-          (suit) => (
-            <button
-              key={suit}
-              className="atout-btn take atout-suit-btn"
-              onClick={() =>
-                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))
-              }
-            >
-              <span className={`atout-suit-symbol ${suit}`}>
-                {suitLabel(suit)}
-              </span>
-            </button>
-          )
-        )}
+            {/* CLASSIC — Tour 2 : choisir l’atout */}
+            {(mode === "classic" || mode === "moderne") &&
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+              game.atoutPropose && (
+                <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
+                  <div className="atout-title">Choisir l’atout</div>
 
-        {mode === "moderne" && (
-          <>
-            <button
-              className="atout-btn take"
-              onClick={() =>
-                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
-              }
-              title="Sans Atout"
-            >
-              SA
-            </button>
-            <button
-              className="atout-btn take"
-              onClick={() =>
-                setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
-              }
-              title="Tout Atout"
-            >
-              TA
-            </button>
-          </>
-        )}
+                  <div className="atout-actions atout-actions--tour2">
+                    {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map(
+                      (suit) => (
+                        <button
+                          key={suit}
+                          className="atout-btn take atout-suit-btn"
+                          onClick={() => setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))}
+                        >
+                          <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
+                        </button>
+                      )
+                    )}
 
-        <button className="atout-btn pass atout-pass-inline" onClick={handlePass}>
-          Passer
-        </button>
-      </div>
-    </div>
-  )}
+                    {mode === "moderne" && (
+                      <>
+                        <button
+                          className="atout-btn take"
+                          onClick={() =>
+                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
+                          }
+                          title="Sans Atout"
+                        >
+                          SA
+                        </button>
+                        <button
+                          className="atout-btn take"
+                          onClick={() =>
+                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
+                          }
+                          title="Tout Atout"
+                        >
+                          TA
+                        </button>
+                      </>
+                    )}
 
+                    <button className="atout-btn pass atout-pass-inline" onClick={handlePass}>
+                      Passer
+                    </button>
+                  </div>
+                </div>
+              )}
           </div>
         </div>
 
@@ -793,106 +837,3 @@ return (
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
