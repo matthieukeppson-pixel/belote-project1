@@ -12,41 +12,43 @@ export default function SalonJeu({ user }) {
   const [inputMessage, setInputMessage] = useState("");
   const [showProfil, setShowProfil] = useState(false);
 
-  // ✅ Tables (state) : chaque table a son mode
-  const [tables, setTables] = useState([
-    { id: 1, joueurs: 2, mode: "classic" },
-    { id: 2, joueurs: 0, mode: "classic" },
-    { id: 3, joueurs: 0, mode: "classic" },
-  ]);
+  // ✅ Tables viennent du serveur WS (plus de mock)
+  // format attendu depuis serveur: { id, mode, seats, count }
+  const [tables, setTables] = useState([]);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
   const navigate = useNavigate();
 
   // ==========================
-  // MENU MODE (PORTAL) — vers le bas, jamais coupé
+  // MENU MODE (PORTAL)
   // ==========================
   const [openMenu, setOpenMenu] = useState(null); // tableId ouvert ou null
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 160 });
-  const triggerRefs = useRef({}); // refs des boutons "Belote ▾" par table
+  const triggerRefs = useRef({}); // refs des boutons mode par table
 
-const modeText = (mode) => {
-  switch (mode) {
-    case "classic":
-      return "Classique";
-    case "contree":
-      return "Contrée";
-    case "moderne":
-      return "Moderne";
-    default:
-      return "Classique";
+  const modeText = (mode) => {
+    switch (mode) {
+      case "classic":
+        return "Classique";
+      case "contree":
+        return "Contrée";
+      case "moderne":
+        return "Moderne";
+      default:
+        return "Classique";
+    }
+  };
+
+  function sendWS(obj) {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(obj));
   }
-};
 
   function setTableMode(tableId, newMode) {
-    setTables((prev) =>
-      prev.map((t) => (t.id === tableId ? { ...t, mode: newMode } : t))
-    );
+    // ✅ demande au serveur (source de vérité)
+    sendWS({ type: "set_table_mode", tableId, mode: newMode });
     setOpenMenu(null);
   }
 
@@ -61,7 +63,7 @@ const modeText = (mode) => {
 
     const r = el.getBoundingClientRect();
     setMenuPos({
-      top: r.bottom + 6, // ✅ ouvre vers le bas
+      top: r.bottom + 6,
       left: r.left,
       width: Math.max(170, r.width),
     });
@@ -69,126 +71,132 @@ const modeText = (mode) => {
     setOpenMenu(tableId);
   }
 
-  // Fermer le menu au clic dehors / scroll / resize
-useEffect(() => {
-  const onPointerDown = (e) => {
-    // ✅ si clic sur un bouton trigger OU dans le menu portal => ne ferme pas
-    if (e.target.closest(".table-mode-trigger")) return;
-    if (e.target.closest(".table-mode-menu-portal")) return;
+  // Fermer menu au clic dehors / scroll / resize
+  useEffect(() => {
+    const onPointerDown = (e) => {
+      if (e.target.closest(".table-mode-trigger")) return;
+      if (e.target.closest(".table-mode-menu-portal")) return;
+      setOpenMenu(null);
+    };
 
-    setOpenMenu(null);
-  };
+    const onScrollOrResize = () => setOpenMenu(null);
 
-  const onScrollOrResize = () => setOpenMenu(null);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
 
-  // capture = plus fiable que click en bubbling avec React
-  document.addEventListener("pointerdown", onPointerDown, true);
-  window.addEventListener("scroll", onScrollOrResize, true);
-  window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, []);
 
-  return () => {
-    document.removeEventListener("pointerdown", onPointerDown, true);
-    window.removeEventListener("scroll", onScrollOrResize, true);
-    window.removeEventListener("resize", onScrollOrResize);
-  };
-}, []);
+  /* ===============================
+     WEBSOCKET SALON
+  ================================ */
+  useEffect(() => {
+    if (wsRef.current) return;
 
+    let cancelled = false;
 
-/* ===============================
-   WEBSOCKET SALON (micro-fix safe)
-================================ */
-useEffect(() => {
-  // évite double connexion (dev/refresh)
-  if (wsRef.current) return;
+    const ws = new WebSocket("ws://localhost:4000");
+    wsRef.current = ws;
 
-  let cancelled = false;
+    ws.onopen = () => {
+      if (cancelled) {
+        ws.close(1000, "cleanup");
+        return;
+      }
 
-  const ws = new WebSocket("ws://localhost:4000");
-  wsRef.current = ws;
-
-  ws.onopen = () => {
-    // si le composant a été démonté avant l'ouverture
-    if (cancelled) {
-      ws.close(1000, "cleanup");
-      return;
-    }
-
-    ws.send(
-      JSON.stringify({
+      sendWS({
         type: "join_salon",
         pseudo: currentName,
         avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
-      })
-    );
+      });
 
-    ws.send(JSON.stringify({ type: "get_players" }));
-  };
+      // ✅ état initial
+      sendWS({ type: "get_players" });
+      sendWS({ type: "get_tables" });
+    };
 
-  ws.onmessage = (event) => {
-    let data;
-    try {
-      data = JSON.parse(event.data);
-    } catch {
-      return;
-    }
+    ws.onmessage = (event) => {
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
 
-    if (data.type === "players") {
-      setPlayers(
-        (data.players || []).map((p) => ({
-          name: p.name,
-          avatar: p.avatar || "/avatar_blue.png",
-        }))
-      );
-      return;
-    }
+      if (data.type === "players") {
+        setPlayers(
+          (data.players || []).map((p) => ({
+            name: p.name,
+            avatar: p.avatar || "/avatar_blue.png",
+          }))
+        );
+        return;
+      }
 
-    if (data.type === "message") {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          user: data.user,
-          text: data.text,
-        },
-      ]);
-    }
-  };
+      // ✅ NEW : tables venant du serveur
+      if (data.type === "tables") {
+        setTables(Array.isArray(data.tables) ? data.tables : []);
+        return;
+      }
 
-  ws.onclose = () => {
-    if (wsRef.current === ws) wsRef.current = null;
-  };
+      // message chat
+      if (data.type === "message") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            user: data.user,
+            text: data.text,
+          },
+        ]);
+        return;
+      }
 
-  return () => {
-    cancelled = true;
+      // système (optionnel) -> on l’affiche dans le chat
+      if (data.type === "system") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            user: "Système",
+            text: data.text,
+          },
+        ]);
+      }
+    };
 
-    if (wsRef.current === ws) wsRef.current = null;
+    ws.onclose = () => {
+      if (wsRef.current === ws) wsRef.current = null;
+    };
 
-    // ne ferme que si déjà ouvert -> évite "closed before established"
-    if (ws.readyState === WebSocket.OPEN) ws.close(1000, "cleanup");
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    return () => {
+      cancelled = true;
+      if (wsRef.current === ws) wsRef.current = null;
+      if (ws.readyState === WebSocket.OPEN) ws.close(1000, "cleanup");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ===============================
      🔁 AVATAR → SYNCHRO IMMEDIATE
   ================================ */
   const handleAvatarChanged = (newAvatar) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    // 1️⃣ Mise à jour locale
+    // mise à jour locale
     setPlayers((prev) =>
       prev.map((p) => (p.name === currentName ? { ...p, avatar: newAvatar } : p))
     );
 
-    // 2️⃣ Envoi backend
-    ws.send(
-      JSON.stringify({
-        type: "update_avatar",
-        pseudo: currentName,
-        avatar: newAvatar,
-      })
-    );
+    // envoi backend
+    sendWS({
+      type: "update_avatar",
+      pseudo: currentName,
+      avatar: newAvatar,
+    });
   };
 
   /* ===============================
@@ -198,16 +206,11 @@ useEffect(() => {
     const text = inputMessage.trim();
     if (!text) return;
 
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    ws.send(
-      JSON.stringify({
-        type: "message",
-        user: currentName,
-        text,
-      })
-    );
+    sendWS({
+      type: "message",
+      user: currentName,
+      text,
+    });
 
     setInputMessage("");
   };
@@ -231,44 +234,51 @@ useEffect(() => {
           <h2 className="panel-title">Tables</h2>
 
           <div className="tables-list">
-            {tables.map((t) => (
-              <div key={t.id} className="table-card">
-                <div className="table-title">Table {t.id}</div>
-                <div className="table-info">Joueurs : {t.joueurs} / 4</div>
+            {tables.map((t) => {
+              const count = t.count ?? (t.seats ? t.seats.filter(Boolean).length : 0);
+              const isFull = count >= 4;
 
-                <div className="table-info">Statut : En attente</div>
+              return (
+                <div key={t.id} className="table-card">
+                  <div className="table-title">Table {t.id}</div>
+                  <div className="table-info">Joueurs : {count} / 4</div>
+                  <div className="table-info">Statut : {isFull ? "Complète" : "En attente"}</div>
 
-                {/* ✅ Mode : sous le statut (Belote ▾ + menu) */}
-                <div className="table-info mode">
-                  <span className="table-mode-label">Mode{"\u00A0"}:</span>
+                  {/* Mode */}
+                  <div className="table-info mode">
+                    <span className="table-mode-label">Mode{"\u00A0"}:</span>
 
-                  <div className="table-mode-dropdown">
-                    <button
-                      type="button"
-                      className="table-mode-trigger"
-                      ref={(node) => (triggerRefs.current[t.id] = node)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleModeMenu(t.id);
-                      }}
-                    >
-                      Belote <span className="caret">▾</span>
-                    </button>
+                    <div className="table-mode-dropdown">
+                      <button
+                        type="button"
+                        className="table-mode-trigger"
+                        ref={(node) => (triggerRefs.current[t.id] = node)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleModeMenu(t.id);
+                        }}
+                      >
+                        {modeText(t.mode)} <span className="caret">▾</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <span className="table-mode-value">{modeText(t.mode)}</span>
-                </div>
+                  <button
+                    className="btn-join"
+                    disabled={isFull}
+                    onClick={() => {
+                      // ✅ informe le serveur
+                      sendWS({ type: "join_table", tableId: t.id });
 
-                <button
-                  className="btn-join"
-                  onClick={() => {
-                    navigate(`/table/${t.id}`, { state: { mode: t.mode } });
-                  }}
-                >
-                  Rejoindre
-                </button>
-              </div>
-            ))}
+                      // ✅ navigation vers la table
+                      navigate(`/table/${t.id}`, { state: { mode: t.mode } });
+                    }}
+                  >
+                    {isFull ? "Table complète" : "Rejoindre"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -329,7 +339,7 @@ useEffect(() => {
         />
       )}
 
-      {/* ✅ MENU PORTAL (vers le bas, jamais coupé par overflow) */}
+      {/* MENU PORTAL */}
       {openMenu !== null &&
         createPortal(
           <div
@@ -347,9 +357,9 @@ useEffect(() => {
             <button type="button" onClick={() => setTableMode(openMenu, "contree")}>
               Contrée
             </button>
-            <button onClick={() => navigate("/table", { state: { mode: "moderne" } })}>
-  Moderne
-</button>
+            <button type="button" onClick={() => setTableMode(openMenu, "moderne")}>
+              Moderne
+            </button>
           </div>,
           document.body
         )}
