@@ -128,15 +128,16 @@ export default function SalonJeu({ user }) {
         return;
       }
 
-      if (data.type === "players") {
-        setPlayers(
-          (data.players || []).map((p) => ({
-            name: p.name,
-            avatar: p.avatar || "/avatar_blue.png",
-          }))
-        );
-        return;
-      }
+      if (data.type === "joined_table") {
+  navigate(`/table/${data.tableId}`, {
+    state: {
+      mode: data.mode,
+      pseudo: currentName,
+      avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+    },
+  });
+  return;
+}
 
       // ✅ NEW : tables venant du serveur
       if (data.type === "tables") {

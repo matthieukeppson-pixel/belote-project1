@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
 import "../styles/Table.css";
@@ -75,7 +75,39 @@ export default function Table() {
   const navigate = useNavigate();
   const location = useLocation();
   const mode = location.state?.mode || "classic";
+const { id } = useParams();
+const tableId = Number(id);
 
+const pseudo = location.state?.pseudo || "joueur1";
+const avatar = location.state?.avatar || "/avatar_blue.png";
+
+const wsTableRef = useRef(null);
+
+useEffect(() => {
+  if (!tableId) return;
+
+  const ws = new WebSocket("ws://localhost:4000");
+  wsTableRef.current = ws;
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
+    ws.send(JSON.stringify({ type: "join_table", tableId }));
+  };
+
+  return () => {
+    try {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "leave_table", tableId }));
+        ws.close(1000, "leave");
+      } else {
+        ws.close(1000, "leave");
+      }
+  } catch (e) {
+  if (import.meta.env.DEV) console.warn("WS cleanup error", e);
+}
+    if (wsTableRef.current === ws) wsTableRef.current = null;
+  };
+}, [tableId, pseudo, avatar]);
   const [bidValue, setBidValue] = useState(80);
   const [scoreDebug, setScoreDebug] = useState(null);
 
