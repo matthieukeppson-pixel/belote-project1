@@ -241,14 +241,10 @@
   font-weight: 600;
 }
 
-.atout-btn.take {
-  background: #7a1f1f;
-  color: white;
-}
-
+.atout-btn.take,
 .atout-btn.pass {
-  background: #333;
-  color: white;
+  background: #7a1f1f;
+  color: #fff;
 }
 
 /* ============================================
@@ -896,6 +892,19 @@
 
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
+/* Harmonisation Moderne: mêmes panels "glass" (évite le noir) */
+.table-page[data-mode="moderne"] .atout-panel,
+.table-page[data-mode="moderne"] .atout-panel--glass {
+  background: rgba(80, 18, 28, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.table-page[data-mode="moderne"] .atout-title {
+  color: rgba(255, 255, 255, 0.95);
+}
+
 
 
 

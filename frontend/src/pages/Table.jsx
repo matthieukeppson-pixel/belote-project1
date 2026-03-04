@@ -432,60 +432,61 @@ export default function Table() {
 </button>
 
 {import.meta.env.DEV && (
-  <button
-    type="button"
-    onClick={playForActivePlayer}
+  <div
     style={{
       position: "absolute",
       top: 10,
       right: 10,
       zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
       padding: "6px 10px",
-      borderRadius: 10,
+      borderRadius: 12,
       background: "rgba(0,0,0,0.35)",
       color: "#fff",
       fontWeight: 800,
+      fontSize: 12,
       border: "1px solid rgba(255,255,255,0.2)",
-      cursor: "pointer",
+      maxWidth: 520,
     }}
-    title="DEV: joue une carte pour le joueur actif si possible"
   >
-    ▶ Auto-play
-  </button>
-)}
+    <button
+      type="button"
+      onClick={playForActivePlayer}
+      style={{
+        padding: "4px 8px",
+        borderRadius: 10,
+        background: "rgba(255,255,255,0.12)",
+        color: "#fff",
+        border: "1px solid rgba(255,255,255,0.2)",
+        cursor: "pointer",
+        fontWeight: 900,
+      }}
+      title="DEV: joue une carte pour le joueur actif si possible"
+    >
+      ▶ Auto-play
+    </button>
 
-{import.meta.env.DEV && (
-  <div
-    style={{
-      position: "absolute",
-      top: 60,
-      left: 20,
-      zIndex: 9999,
-      color: "#fff",
-      fontWeight: 800,
-    }}
-  >
-    Mode: {mode}
-  </div>
-)}
+    <span style={{ opacity: 0.9 }}>{mode}</span>
+    <span style={{ opacity: 0.9 }}>|</span>
+    <span>{game.state}</span>
 
-{import.meta.env.DEV && (
-  <div
-    style={{
-      position: "absolute",
-      top: 10,
-      left: 120,
-      zIndex: 9999,
-      padding: "6px 10px",
-      borderRadius: 10,
-      background: "rgba(0,0,0,0.35)",
-      color: "#fff",
-      fontWeight: 800,
-    }}
-  >
-    {mode} | {game.state}
     {scoreDebug ? (
-      <div style={{ marginTop: 6, fontWeight: 700 }}>{scoreDebug}</div>
+      <span
+        style={{
+          marginLeft: 8,
+          paddingLeft: 8,
+          borderLeft: "1px solid rgba(255,255,255,0.25)",
+          color: "#ffd36a",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+        title={scoreDebug}
+      >
+        {scoreDebug}
+      </span>
     ) : null}
   </div>
 )}
@@ -723,9 +724,9 @@ export default function Table() {
               </div>
             )}
 
-            {(mode === "classic" || mode === "moderne") &&
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-                <div className="atout-panel">
+           {(mode === "classic" || mode === "moderne") &&
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+    <div className="atout-panel atout-panel--glass">
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
                     <button className="atout-btn take" onClick={handleTakeAtout}>
