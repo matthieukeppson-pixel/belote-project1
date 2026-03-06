@@ -96,6 +96,7 @@ export default function SalonJeu({ user }) {
      WEBSOCKET SALON
   ================================ */
   useEffect(() => {
+    // évite double connexion (dev/refresh)
     if (wsRef.current) return;
 
     let cancelled = false;
@@ -109,67 +110,77 @@ export default function SalonJeu({ user }) {
         return;
       }
 
-      sendWS({
-        type: "join_salon",
-        pseudo: currentName,
-        avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+      ws.send(
+        JSON.stringify({
+          type: "join_salon",
+          pseudo: currentName,
+          avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+        })
+      );
+
+      // état initial
+      ws.send(JSON.stringify({ type: "get_players" }));
+      ws.send(JSON.stringify({ type: "get_tables" }));
+    };
+
+ws.onmessage = (event) => {
+  let data;
+  try {
+    data = JSON.parse(event.data);
+  } catch {
+    return;
+  }
+
+  switch (data.type) {
+    case "players":
+      setPlayers(
+        (data.players || []).map((p) => ({
+          name: p.name,
+          avatar: p.avatar || "/avatar_blue.png",
+        }))
+      );
+      return;
+
+    case "tables":
+      setTables(Array.isArray(data.tables) ? data.tables : []);
+      return;
+
+    case "joined_table":
+      navigate(`/table/${data.tableId}`, {
+        state: {
+          mode: data.mode,
+          pseudo: currentName,
+          avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+        },
       });
+      return;
 
-      // ✅ état initial
-      sendWS({ type: "get_players" });
-      sendWS({ type: "get_tables" });
-    };
+    case "message":
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          user: data.user,
+          text: data.text,
+        },
+      ]);
+      return;
 
-    ws.onmessage = (event) => {
-      let data;
-      try {
-        data = JSON.parse(event.data);
-      } catch {
-        return;
-      }
+    case "system":
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          user: "Système",
+          text: data.text,
+        },
+      ]);
+      return;
 
-      if (data.type === "joined_table") {
-  navigate(`/table/${data.tableId}`, {
-    state: {
-      mode: data.mode,
-      pseudo: currentName,
-      avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
-    },
-  });
-  return;
-}
-
-      // ✅ NEW : tables venant du serveur
-      if (data.type === "tables") {
-        setTables(Array.isArray(data.tables) ? data.tables : []);
-        return;
-      }
-
-      // message chat
-      if (data.type === "message") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            user: data.user,
-            text: data.text,
-          },
-        ]);
-        return;
-      }
-
-      // système (optionnel) -> on l’affiche dans le chat
-      if (data.type === "system") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            user: "Système",
-            text: data.text,
-          },
-        ]);
-      }
-    };
+    default:
+      return;
+  }
+};
 
     ws.onclose = () => {
       if (wsRef.current === ws) wsRef.current = null;
@@ -268,10 +279,7 @@ export default function SalonJeu({ user }) {
                     className="btn-join"
                     disabled={isFull}
                     onClick={() => {
-                      // ✅ informe le serveur
                       sendWS({ type: "join_table", tableId: t.id });
-
-                      // ✅ navigation vers la table
                       navigate(`/table/${t.id}`, { state: { mode: t.mode } });
                     }}
                   >
@@ -367,410 +375,3 @@ export default function SalonJeu({ user }) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
