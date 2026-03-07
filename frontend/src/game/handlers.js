@@ -715,6 +715,9 @@ function getBestAnnouncement(announcements, atout) {
     return compareAnnouncements(current, best, atout) > 0 ? current : best;
   }, null);
 }
+function sumAnnouncementPoints(announcements) {
+  return (announcements || []).reduce((sum, ann) => sum + (ann.points || 0), 0);
+}
 export function handleModernAnnouncements(game, event) {
   if (!event || game.state !== STATES.ANNONCES_MODERNE) return game;
 
@@ -1101,6 +1104,18 @@ if (isLastPli && beloteState === "REBELOTE" && beloteJoueur) {
     ...scoreFinal,
     [team]: (scoreFinal?.[team] ?? 0) + 20,
   };
+}
+if (isLastPli && game.ruleset === "moderne") {
+  const validated = game.modernAnnouncements?.validated || [];
+  const announcePoints = sumAnnouncementPoints(validated);
+  const winningTeam = game.modernAnnouncements?.winningTeam;
+
+  if (announcePoints > 0 && (winningTeam === "nous" || winningTeam === "eux")) {
+    scoreFinal = {
+      ...scoreFinal,
+      [winningTeam]: (scoreFinal?.[winningTeam] ?? 0) + announcePoints,
+    };
+  }
 }
 if (isLastPli) {
   finDeManche = {
