@@ -9,13 +9,185 @@ const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 
 const ATTOUT_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
 const NORMAL_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
+const SEQUENCE_ORDER = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+
+const ANNOUNCE_TYPE_STRENGTH = {
+  tierce: 1,
+  cinquante: 2,
+  cent: 3,
+  carre: 4
+};
+
+const CARRE_POINTS = {
+  J: 200,
+  9: 150,
+  A: 100,
+  "10": 100,
+  K: 100,
+  Q: 100
+};
 
 // 🔑 clé canonique compatible avec Table.jsx (qui upper-case)
 function cardKey(card) {
   if (!card) return "";
   return `${card.suit}:${String(card.value).toUpperCase()}`;
 }
+function normalizeValue(value) {
+  return String(value).toUpperCase();
+}
 
+function getSequenceHighRankValue(value) {
+  return SEQUENCE_ORDER.indexOf(normalizeValue(value));
+}
+
+function getAnnounceStrength(a) {
+  return ANNOUNCE_TYPE_STRENGTH[a?.type] || 0;
+}
+
+function _isAnnounceTrump(announce, atout) {
+  if (!announce || !announce.suit) return false;
+  if (atout === "SA" || atout === "TA") return false;
+  return announce.suit === atout;
+}
+function detectCarres(hand, playerId, atout, teams) {
+  const byValue = {};
+
+  for (const card of hand || []) {
+    const value = normalizeValue(card.value);
+    if (!byValue[value]) byValue[value] = [];
+    byValue[value].push(card);
+  }
+
+  const team = teams?.nous?.includes(playerId) ? "nous" : "eux";
+  const annonces = [];
+
+  for (const value of Object.keys(byValue)) {
+    if (byValue[value].length !== 4) continue;
+
+    const points = CARRE_POINTS[value] || 0;
+    if (!points) continue;
+
+    annonces.push({
+      type: "carre",
+      label: "Carré",
+      points,
+      highRank: value,
+      highRankValue: getSequenceHighRankValue(value),
+      suit: null,
+      cards: byValue[value],
+      playerId,
+      team,
+      isTrump: false
+    });
+  }
+
+  return annonces;
+}
+function pushSequenceAnnouncement(run, annonces, suit, playerId, atout, teams) {
+  if (!Array.isArray(run) || run.length < 3) return;
+
+  const length = run.length;
+  const highCard = run[run.length - 1];
+  const highRank = normalizeValue(highCard.value);
+  const team = teams?.nous?.includes(playerId) ? "nous" : "eux";
+
+  let type = null;
+  let points = 0;
+
+  if (length >= 5) {
+    type = "cent";
+    points = 100;
+  } else if (length === 4) {
+    type = "cinquante";
+    points = 50;
+  } else if (length === 3) {
+    type = "tierce";
+    points = 20;
+  }
+
+  if (!type) return;
+
+  annonces.push({
+    type,
+    label: type === "cent" ? "Cent" : type === "cinquante" ? "Cinquante" : "Tierce",
+    points,
+    highRank,
+    highRankValue: getSequenceHighRankValue(highRank),
+    suit,
+    cards: [...run],
+    playerId,
+    team,
+    isTrump: atout !== "SA" && atout !== "TA" && suit === atout
+  });
+}
+
+function detectSequences(hand, playerId, atout, teams) {
+  const bySuit = {};
+
+  for (const card of hand || []) {
+    if (!bySuit[card.suit]) bySuit[card.suit] = [];
+    bySuit[card.suit].push(card);
+  }
+
+  const annonces = [];
+
+  for (const suit of Object.keys(bySuit)) {
+    const cards = [...bySuit[suit]].sort(
+      (a, b) => getSequenceHighRankValue(a.value) - getSequenceHighRankValue(b.value)
+    );
+
+    if (cards.length === 0) continue;
+
+    let run = [cards[0]];
+
+    for (let i = 1; i < cards.length; i++) {
+      const prev = getSequenceHighRankValue(cards[i - 1].value);
+      const curr = getSequenceHighRankValue(cards[i].value);
+
+      if (curr === prev + 1) {
+        run.push(cards[i]);
+      } else {
+        pushSequenceAnnouncement(run, annonces, suit, playerId, atout, teams);
+        run = [cards[i]];
+      }
+    }
+
+    pushSequenceAnnouncement(run, annonces, suit, playerId, atout, teams);
+  }
+
+  return annonces;
+}
+function cardsOverlap(a, b) {
+  const aKeys = new Set((a?.cards || []).map(cardKey));
+  return (b?.cards || []).some((c) => aKeys.has(cardKey(c)));
+}
+
+function selectAnnouncementsWithoutOverlap(allAnnouncements) {
+  const sorted = [...allAnnouncements].sort((a, b) => {
+    const typeDiff = getAnnounceStrength(b) - getAnnounceStrength(a);
+    if (typeDiff !== 0) return typeDiff;
+
+    const pointsDiff = (b.points || 0) - (a.points || 0);
+    if (pointsDiff !== 0) return pointsDiff;
+
+    return (b.highRankValue || 0) - (a.highRankValue || 0);
+  });
+
+  const selected = [];
+
+  for (const ann of sorted) {
+    const overlaps = selected.some((s) => cardsOverlap(s, ann));
+    if (!overlaps) selected.push(ann);
+  }
+
+  return selected;
+}
+
+function detectModernAnnouncementsForPlayer(hand, playerId, atout, teams) {
+  const carres = detectCarres(hand, playerId, atout, teams);
+  const sequences = detectSequences(hand, playerId, atout, teams);
+  return selectAnnouncementsWithoutOverlap([...carres, ...sequences]);
+}
 function createDeck() {
   const deck = [];
   for (const suit of SUITS) {
@@ -34,7 +206,27 @@ function shuffle(deck) {
   }
   return shuffled;
 }
+function buildModernAnnouncementsState(game, hands) {
+  const detectedByPlayer = {};
 
+  for (const playerId of game.players) {
+    const hand = hands?.[playerId] || [];
+    detectedByPlayer[playerId] = detectModernAnnouncementsForPlayer(
+      hand,
+      playerId,
+      game.atout,
+      game.teams
+    );
+  }
+
+  return {
+    detectedByPlayer,
+    declaredByPlayer: {},
+    validated: [],
+    winningTeam: null,
+    resolved: false
+  };
+}
 // ============================================
 // POINTS DES CARTES — BELOTE CLASSIQUE
 // ============================================
@@ -261,18 +453,20 @@ if (game.state === STATES.DISTRIBUTION_3_FINAL) {
       index = (index + 1) % playersCount;
     }
 
-    const firstTrickIndex = (game.dealerIndex + 1) % playersCount;
+    const firstPlayerIndex = (game.dealerIndex + 1) % playersCount;
+    const modernAnnouncements = buildModernAnnouncementsState(game, hands);
 
     return {
       ...game,
-      state: STATES.PLI_EN_COURS,
+      state: STATES.ANNONCES_MODERNE,
       deck,
       hands,
       pli: [],
       couleurDemandee: null,
       winnerIndex: null,
       atoutPropose: null,
-      currentPlayerIndex: firstTrickIndex
+      currentPlayerIndex: firstPlayerIndex,
+      modernAnnouncements
     };
   }
 
@@ -295,7 +489,24 @@ if (game.state === STATES.DISTRIBUTION_3_FINAL) {
 
   const firstTrickIndex = (game.dealerIndex + 1) % playersCount;
 
-  return {
+  if (game.ruleset === "moderne") {
+    const modernAnnouncements = buildModernAnnouncementsState(game, hands);
+
+    return {
+      ...game,
+      state: STATES.ANNONCES_MODERNE,
+      deck,
+      hands,
+      pli: [],
+      couleurDemandee: null,
+      winnerIndex: null,
+      atoutPropose: null,
+      currentPlayerIndex: firstTrickIndex,
+      modernAnnouncements
+    };
+  }
+
+   return {
     ...game,
     state: STATES.PLI_EN_COURS,
     deck,
@@ -308,18 +519,20 @@ if (game.state === STATES.DISTRIBUTION_3_FINAL) {
   };
 }
 
-  // ----------------------------
-  // DISTRIBUTIONS NORMALES (3 puis 2)
-  // ----------------------------
-  let index = (game.dealerIndex + 1) % 4;
 
-  for (let r = 0; r < count; r++) {
-    for (let i = 0; i < game.players.length; i++) {
-      const playerId = game.players[index];
-      hands[playerId] = [...hands[playerId], deck.shift()];
-      index = (index + 1) % 4;
-    }
+
+// ----------------------------
+// DISTRIBUTIONS NORMALES (3 puis 2)
+// ----------------------------
+let dealIndex = (game.dealerIndex + 1) % 4;
+
+for (let r = 0; r < count; r++) {
+  for (let i = 0; i < game.players.length; i++) {
+    const playerId = game.players[dealIndex];
+    hands[playerId] = [...hands[playerId], deck.shift()];
+    dealIndex = (dealIndex + 1) % 4;
   }
+}
 
   if (game.state === STATES.DISTRIBUTION_3) {
     return { ...game, state: STATES.DISTRIBUTION_2, deck, hands };
@@ -469,8 +682,136 @@ export function handleAnnonce(game, event) {
 
   return game;
 }
+function gameLikeTrumpCheck(announce, atout) {
+  if (!announce || !announce.suit) return false;
+  if (atout === "SA" || atout === "TA") return false;
+  return announce.suit === atout;
+}
 
+function compareAnnouncements(a, b, atout) {
+  if (!a && !b) return 0;
+  if (a && !b) return 1;
+  if (!a && b) return -1;
 
+  const typeDiff = getAnnounceStrength(a) - getAnnounceStrength(b);
+  if (typeDiff !== 0) return typeDiff > 0 ? 1 : -1;
+
+  const highDiff = (a.highRankValue || 0) - (b.highRankValue || 0);
+  if (highDiff !== 0) return highDiff > 0 ? 1 : -1;
+
+  const aTrump = a?.suit && gameLikeTrumpCheck(a, atout);
+  const bTrump = b?.suit && gameLikeTrumpCheck(b, atout);
+
+  if (aTrump !== bTrump) return aTrump ? 1 : -1;
+
+  return 0;
+}
+
+function getBestAnnouncement(announcements, atout) {
+  if (!Array.isArray(announcements) || announcements.length === 0) return null;
+
+  return announcements.reduce((best, current) => {
+    if (!best) return current;
+    return compareAnnouncements(current, best, atout) > 0 ? current : best;
+  }, null);
+}
+export function handleModernAnnouncements(game, event) {
+  if (!event || game.state !== STATES.ANNONCES_MODERNE) return game;
+
+  if (event.type !== "PASS_ANNOUNCEMENT" && event.type !== "DECLARE_ANNOUNCEMENT") {
+    return game;
+  }
+
+  const playersCount = game.players.length;
+  const currentPlayerId = game.players[game.currentPlayerIndex];
+
+  const current = game.modernAnnouncements || {
+    detectedByPlayer: {},
+    declaredByPlayer: {},
+    validated: [],
+    winningTeam: null,
+    resolved: false
+  };
+
+  const declaredByPlayer = { ...current.declaredByPlayer };
+
+  if (event.type === "PASS_ANNOUNCEMENT") {
+    declaredByPlayer[currentPlayerId] = null;
+  }
+
+  if (event.type === "DECLARE_ANNOUNCEMENT") {
+    const detected = current.detectedByPlayer?.[currentPlayerId] || [];
+
+    const chosen = detected.find((a) => {
+      return (
+        a.type === event.announcementType &&
+        a.highRank === event.highRank &&
+        (a.suit || null) === (event.suit || null)
+      );
+    });
+
+    if (!chosen) return game;
+
+    declaredByPlayer[currentPlayerId] = chosen;
+  }
+
+  const everyoneAnswered = game.players.every((playerId) =>
+    Object.prototype.hasOwnProperty.call(declaredByPlayer, playerId)
+  );
+
+  if (!everyoneAnswered) {
+    return {
+      ...game,
+      currentPlayerIndex: (game.currentPlayerIndex + 1) % playersCount,
+      modernAnnouncements: {
+        ...current,
+        declaredByPlayer
+      }
+    };
+  }
+
+  const nousAnnouncements = game.players
+    .filter((playerId) => game.teams.nous.includes(playerId))
+    .map((playerId) => declaredByPlayer[playerId])
+    .filter(Boolean);
+
+  const euxAnnouncements = game.players
+    .filter((playerId) => game.teams.eux.includes(playerId))
+    .map((playerId) => declaredByPlayer[playerId])
+    .filter(Boolean);
+
+  const bestNous = getBestAnnouncement(nousAnnouncements, game.atout);
+  const bestEux = getBestAnnouncement(euxAnnouncements, game.atout);
+
+  const comparison = compareAnnouncements(bestNous, bestEux, game.atout);
+
+  let winningTeam = null;
+  let validated = [];
+
+  if (comparison > 0) {
+    winningTeam = "nous";
+    validated = nousAnnouncements;
+  } else if (comparison < 0) {
+    winningTeam = "eux";
+    validated = euxAnnouncements;
+  } else {
+    winningTeam = null;
+    validated = [];
+  }
+
+  return {
+    ...game,
+    state: STATES.PLI_EN_COURS,
+    currentPlayerIndex: (game.dealerIndex + 1) % playersCount,
+    modernAnnouncements: {
+      ...current,
+      declaredByPlayer,
+      validated,
+      winningTeam,
+      resolved: true
+    }
+  };
+}
 export function handlePli(game, event) {
   if (!event) return game;
 

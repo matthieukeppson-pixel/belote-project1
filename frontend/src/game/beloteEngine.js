@@ -6,6 +6,7 @@ import {
   handleTableIdle,
   handleDistribution,
   handleAnnonce,
+  handleModernAnnouncements,
   handlePli,
   handleFinDeManche,
   handleAnnounceAllPassed,
@@ -28,6 +29,7 @@ export const STATES = {
   ANNOUNCE_ALL_PASSED: "ANNOUNCE_ALL_PASSED",
 
   ENCHERES: "ENCHERES",
+  ANNONCES_MODERNE: "ANNONCES_MODERNE",
 
   PLI_EN_COURS: "PLI_EN_COURS",
   PLI_TERMINE: "PLI_TERMINE",
@@ -51,6 +53,7 @@ const ALLOWED_EVENTS_BY_STATE = {
   [STATES.ANNOUNCE_ALL_PASSED]: ["AUTO"],
 
   [STATES.ENCHERES]: ["BID", "PASS", "CONTRE", "SURCONTRE"],
+  [STATES.ANNONCES_MODERNE]: ["DECLARE_ANNOUNCEMENT", "PASS_ANNOUNCEMENT"],
 
   [STATES.PLI_EN_COURS]: ["PLAY_CARD"],
   [STATES.PLI_TERMINE]: ["NEXT_PLI"],
@@ -85,11 +88,19 @@ export function createInitialGameState() {
     atoutChoisi: false,
     preneur: null,
 
-   belote: {
-  atout: null,
-  joueur: null,
-  state: "NONE",   // "NONE" | "BELOTE" | "REBELOTE"
-},
+    belote: {
+      atout: null,
+      joueur: null,
+      state: "NONE" // "NONE" | "BELOTE" | "REBELOTE"
+    },
+
+    modernAnnouncements: {
+      detectedByPlayer: {},
+      declaredByPlayer: {},
+      validated: [],
+      winningTeam: null,
+      resolved: false
+    },
 
     currentPlayerIndex: 0,
     pli: [],
@@ -140,6 +151,9 @@ export function dispatch(game, event) {
 
     case STATES.ENCHERES:
       return handleBidding(game, event);
+
+    case STATES.ANNONCES_MODERNE:
+      return handleModernAnnouncements(game, event);
 
     case STATES.PLI_EN_COURS:
     case STATES.PLI_TERMINE:
