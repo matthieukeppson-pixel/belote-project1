@@ -53,8 +53,8 @@ function atoutSymbol(atout) {
 
 function cardImgSrc(card) {
   if (!card) return "";
-  const suit = String(card.suit); // hearts/diamonds/clubs/spades
-  const value = String(card.value).toUpperCase(); // 7..10,J,Q,K,A
+  const suit = String(card.suit);
+  const value = String(card.value).toUpperCase();
   return `/cards/${suit}/${value}.png`;
 }
 
@@ -71,43 +71,64 @@ function compareCards(a, b) {
   return va - vb;
 }
 
+function announcementText(announcement) {
+  if (!announcement) return "";
+
+  if (announcement.type === "carre") {
+    return `Carré de ${announcement.highRank}`;
+  }
+
+  const label =
+    announcement.type === "cent"
+      ? "Cent"
+      : announcement.type === "cinquante"
+      ? "Cinquante"
+      : "Tierce";
+
+  const suit = announcement.suit ? ` ${suitLabel(announcement.suit)}` : "";
+  return `${label}${suit} hauteur ${announcement.highRank}`;
+}
+
 export default function Table() {
   const navigate = useNavigate();
   const location = useLocation();
   const mode = location.state?.mode || "classic";
-const { id } = useParams();
-const tableId = Number(id);
 
-const pseudo = location.state?.pseudo || "joueur1";
-const avatar = location.state?.avatar || "/avatar_blue.png";
+  const { id } = useParams();
+  const tableId = Number(id);
 
-const wsTableRef = useRef(null);
+  const pseudo = location.state?.pseudo || "joueur1";
+  const avatar = location.state?.avatar || "/avatar_blue.png";
 
-useEffect(() => {
-  if (!tableId) return;
+  const wsTableRef = useRef(null);
 
-  const ws = new WebSocket("ws://localhost:4000");
-  wsTableRef.current = ws;
+  useEffect(() => {
+    if (!tableId) return;
 
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
-    ws.send(JSON.stringify({ type: "join_table", tableId }));
-  };
+    const ws = new WebSocket("ws://localhost:4000");
+    wsTableRef.current = ws;
 
-  return () => {
-    try {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "leave_table", tableId }));
-        ws.close(1000, "leave");
-      } else {
-        ws.close(1000, "leave");
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
+      ws.send(JSON.stringify({ type: "join_table", tableId }));
+    };
+
+    return () => {
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "leave_table", tableId }));
+          ws.close(1000, "leave");
+        } else {
+          ws.close(1000, "leave");
+        }
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn("WS cleanup error", e);
       }
-  } catch (e) {
-  if (import.meta.env.DEV) console.warn("WS cleanup error", e);
-}
-    if (wsTableRef.current === ws) wsTableRef.current = null;
-  };
-}, [tableId, pseudo, avatar]);
+
+      if (wsTableRef.current === ws) wsTableRef.current = null;
+    };
+  }, [tableId, pseudo, avatar]);
+
   const [bidValue, setBidValue] = useState(80);
   const [scoreDebug, setScoreDebug] = useState(null);
 
@@ -140,9 +161,9 @@ useEffect(() => {
 
     g = {
       ...g,
-      ruleset: mode, // ✅ classic | contree | moderne
-      contratMultiplicateur: 1, // ✅ reset
-      contratValeur: null, // ✅ (ajoute ce champ dans createInitialGameState)
+      ruleset: mode,
+      contratMultiplicateur: 1,
+      contratValeur: null,
       players: ["joueur1", "joueur4", "joueur2", "joueur3"],
     };
 
@@ -158,12 +179,9 @@ useEffect(() => {
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
-  const [beloteToast, setBeloteToast] = useState(null); // { text, ts } | null
+  const [beloteToast, setBeloteToast] = useState(null);
 
-  // ✅ SCORE DE PARTIE (501)
   const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
-
-  // ✅ FIN DE PARTIE
   const [partieTerminee, setPartieTerminee] = useState(false);
 
   function handleNouvellePartie() {
@@ -199,7 +217,6 @@ useEffect(() => {
   }
 
   useEffect(() => {
-    // Contrée : reset de la valeur UI au début des enchères (début de manche / redistribution)
     if (mode !== "contree") return;
     if (game.state !== STATES.ENCHERES) return;
     if (game.currentBid) return;
@@ -253,13 +270,11 @@ useEffect(() => {
     if (finDeMancheCompteeRef.current) return;
     finDeMancheCompteeRef.current = true;
 
-    // ✅ En FIN_DE_MANCHE, on exige un vrai payload
     if (!game.finDeManche) {
       console.warn("FIN_DE_MANCHE sans game.finDeManche -> abort (évite score faux)");
       return;
     }
 
-    // ✅ Defaults puis payload réel par-dessus (le réel gagne)
     const finDeMancheSafe = {
       scoreFinal: game.scoreManche ?? { nous: 0, eux: 0 },
       contratValeur: game.contratValeur ?? null,
@@ -267,14 +282,11 @@ useEffect(() => {
       ruleset: game.ruleset ?? mode,
       preneur: game.preneur ?? null,
       atout: game.atout ?? null,
-      ...game.finDeManche, // <- IMPORTANT : écrase les defaults avec la vérité du moteur
+      ...game.finDeManche,
     };
 
     console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
 
-    // ==========================
-    // SCORE GUARDRAIL (DEV ONLY)
-    // ==========================
     if (import.meta.env.DEV) {
       const sf = finDeMancheSafe.scoreFinal || { nous: 0, eux: 0 };
       const total = (sf.nous || 0) + (sf.eux || 0);
@@ -341,17 +353,16 @@ useEffect(() => {
       setDisplayPli([]);
       setHideLastPli(false);
 
-      // 🔑 RÉARMEMENT DU VERROU POUR LA PROCHAINE MANCHE
       finDeMancheCompteeRef.current = false;
-      finDeMancheRef.current = null; // optionnel mais propre
+      finDeMancheRef.current = null;
 
       let g = createInitialGameState();
 
       g = {
         ...g,
-        ruleset: mode, // ✅ garde contree / classic selon la table
-        contratMultiplicateur: 1, // ✅ reset
-        contratValeur: null, // ✅ reset
+        ruleset: mode,
+        contratMultiplicateur: 1,
+        contratValeur: null,
         players: game.players,
         dealerIndex: next.dealerIndex,
         currentPlayerIndex: next.startingPlayerIndex,
@@ -375,11 +386,8 @@ useEffect(() => {
     if (game.state !== STATES.PLI_TERMINE) return;
 
     const timer = setTimeout(() => {
-      // ✅ force le nettoyage visuel du pli précédent
       setDisplayPli([]);
       setHideLastPli(false);
-
-      // ✅ passe au pli suivant côté moteur
       setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
     }, 800);
 
@@ -397,6 +405,23 @@ useEffect(() => {
     setGame((g) => dispatch(g, { type: "PASS" }));
   }
 
+  function handlePassAnnouncement() {
+    setGame((g) => dispatch(g, { type: "PASS_ANNOUNCEMENT" }));
+  }
+
+  function handleDeclareAnnouncement(announcement) {
+    if (!announcement) return;
+
+    setGame((g) =>
+      dispatch(g, {
+        type: "DECLARE_ANNOUNCEMENT",
+        announcementType: announcement.type,
+        highRank: announcement.highRank,
+        suit: announcement.suit || null,
+      })
+    );
+  }
+
   function handleContre() {
     setGame((g) => dispatch(g, { type: "CONTRE" }));
   }
@@ -412,6 +437,8 @@ useEffect(() => {
 
   const activePlayer = game.players[game.currentPlayerIndex];
   const isMyTurn = activePlayer === "joueur1";
+  const currentAnnouncements =
+    game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
   const dealerId = game.players[game.dealerIndex];
 
   const scoreUI = scorePartie;
@@ -425,10 +452,6 @@ useEffect(() => {
 
   const mult = game.contratMultiplicateur || 1;
 
-  // ============================================
-  // BOUTON TEST — jouer pour le joueur actif
-  // ============================================
-  // (gardé tel quel, même s'il n'est pas rendu dans ton extrait)
   function playForActivePlayer() {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
@@ -449,6 +472,14 @@ useEffect(() => {
     console.warn("Aucune carte jouable pour", active);
   }
 
+  function backToSalon() {
+    const ws = wsTableRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN && tableId) {
+      ws.send(JSON.stringify({ type: "leave_table", tableId }));
+    }
+    navigate("/salon");
+  }
+
   // ============================================
   // RENDER
   // ============================================
@@ -459,69 +490,69 @@ useEffect(() => {
       data-state={game.state}
       style={{ position: "relative" }}
     >
- <button className="table-back-btn" onClick={() => navigate("/salon")}>
-  ← Retour au salon
-</button>
+      <button className="table-back-btn" onClick={backToSalon}>
+        ← Retour au salon
+      </button>
 
-{import.meta.env.DEV && (
-  <div
-    style={{
-      position: "absolute",
-      top: 10,
-      right: 10,
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "6px 10px",
-      borderRadius: 12,
-      background: "rgba(0,0,0,0.35)",
-      color: "#fff",
-      fontWeight: 800,
-      fontSize: 12,
-      border: "1px solid rgba(255,255,255,0.2)",
-      maxWidth: 520,
-    }}
-  >
-    <button
-      type="button"
-      onClick={playForActivePlayer}
-      style={{
-        padding: "4px 8px",
-        borderRadius: 10,
-        background: "rgba(255,255,255,0.12)",
-        color: "#fff",
-        border: "1px solid rgba(255,255,255,0.2)",
-        cursor: "pointer",
-        fontWeight: 900,
-      }}
-      title="DEV: joue une carte pour le joueur actif si possible"
-    >
-      ▶ Auto-play
-    </button>
+      {import.meta.env.DEV && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "6px 10px",
+            borderRadius: 12,
+            background: "rgba(0,0,0,0.35)",
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 12,
+            border: "1px solid rgba(255,255,255,0.2)",
+            maxWidth: 520,
+          }}
+        >
+          <button
+            type="button"
+            onClick={playForActivePlayer}
+            style={{
+              padding: "4px 8px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.12)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.2)",
+              cursor: "pointer",
+              fontWeight: 900,
+            }}
+            title="DEV: joue une carte pour le joueur actif si possible"
+          >
+            ▶ Auto-play
+          </button>
 
-    <span style={{ opacity: 0.9 }}>{mode}</span>
-    <span style={{ opacity: 0.9 }}>|</span>
-    <span>{game.state}</span>
+          <span style={{ opacity: 0.9 }}>{mode}</span>
+          <span style={{ opacity: 0.9 }}>|</span>
+          <span>{game.state}</span>
 
-    {scoreDebug ? (
-      <span
-        style={{
-          marginLeft: 8,
-          paddingLeft: 8,
-          borderLeft: "1px solid rgba(255,255,255,0.25)",
-          color: "#ffd36a",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-        title={scoreDebug}
-      >
-        {scoreDebug}
-      </span>
-    ) : null}
-  </div>
-)}
+          {scoreDebug ? (
+            <span
+              style={{
+                marginLeft: 8,
+                paddingLeft: 8,
+                borderLeft: "1px solid rgba(255,255,255,0.25)",
+                color: "#ffd36a",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={scoreDebug}
+            >
+              {scoreDebug}
+            </span>
+          ) : null}
+        </div>
+      )}
 
       <div className="table-layout">
         <div className="table-zone">
@@ -588,7 +619,6 @@ useEffect(() => {
                   </div>
                 ) : null}
 
-                {/* PALIERS 80..160 */}
                 <div className="atout-actions" style={{ gap: 8, flexWrap: "wrap" }}>
                   {BID_VALUES.map((v) => {
                     const min = game.currentBid ? game.currentBid.value + 10 : 80;
@@ -602,7 +632,8 @@ useEffect(() => {
                         disabled={disabled}
                         style={{
                           opacity: disabled ? 0.45 : 1,
-                          border: bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
+                          border:
+                            bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
                         }}
                       >
                         {v}
@@ -611,7 +642,6 @@ useEffect(() => {
                   })}
                 </div>
 
-                {/* COULEURS */}
                 <div className="atout-actions" style={{ marginTop: 10 }}>
                   {ALL_SUITS.map((suit) => (
                     <button
@@ -626,9 +656,51 @@ useEffect(() => {
                   ))}
                 </div>
 
-                {/* PASS */}
                 <div className="atout-actions" style={{ marginTop: 10 }}>
                   <button className="atout-btn pass" onClick={handlePass}>
+                    Passer
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mode === "moderne" && game.state === STATES.ANNONCES_MODERNE && (
+              <div className="atout-panel atout-panel--glass">
+                <div className="atout-title">Annonces</div>
+
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>
+                  Joueur actif : {activePlayer}
+                </div>
+
+                {currentAnnouncements.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {currentAnnouncements.map((announcement, index) => (
+                      <div
+                        key={`${announcement.type}-${announcement.highRank}-${announcement.suit || "none"}-${index}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <span>{announcementText(announcement)}</span>
+
+                        <button
+                          className="atout-btn take"
+                          onClick={() => handleDeclareAnnouncement(announcement)}
+                        >
+                          Déclarer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 10 }}>Aucune annonce détectée</div>
+                )}
+
+                <div className="atout-actions" style={{ marginTop: 10 }}>
+                  <button className="atout-btn pass" onClick={handlePassAnnouncement}>
                     Passer
                   </button>
                 </div>
@@ -756,9 +828,9 @@ useEffect(() => {
               </div>
             )}
 
-           {(mode === "classic" || mode === "moderne") &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
-    <div className="atout-panel atout-panel--glass">
+            {(mode === "classic" || mode === "moderne") &&
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+                <div className="atout-panel atout-panel--glass">
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
                     <button className="atout-btn take" onClick={handleTakeAtout}>
@@ -795,7 +867,6 @@ useEffect(() => {
                 </div>
               )}
 
-            {/* ✅ CARTE RETOURNÉE (ATOUT PROPOSÉ) */}
             {(mode === "classic" || mode === "moderne") &&
               (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
                 game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
@@ -811,7 +882,6 @@ useEffect(() => {
                 </div>
               )}
 
-            {/* CLASSIC — Tour 2 : choisir l’atout */}
             {(mode === "classic" || mode === "moderne") &&
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
               game.atoutPropose && (
@@ -819,17 +889,15 @@ useEffect(() => {
                   <div className="atout-title">Choisir l’atout</div>
 
                   <div className="atout-actions atout-actions--tour2">
-                    {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map(
-                      (suit) => (
-                        <button
-                          key={suit}
-                          className="atout-btn take atout-suit-btn"
-                          onClick={() => setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))}
-                        >
-                          <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
-                        </button>
-                      )
-                    )}
+                    {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map((suit) => (
+                      <button
+                        key={suit}
+                        className="atout-btn take atout-suit-btn"
+                        onClick={() => setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))}
+                      >
+                        <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
+                      </button>
+                    ))}
 
                     {mode === "moderne" && (
                       <>
