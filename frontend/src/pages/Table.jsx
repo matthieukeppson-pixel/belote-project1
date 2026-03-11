@@ -451,7 +451,34 @@ export default function Table() {
   const preneurTeam = preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
 
   const mult = game.contratMultiplicateur || 1;
+useEffect(() => {
+  if (!import.meta.env.DEV) return;
+  if (game.state !== STATES.PLI_EN_COURS) return;
+  if (activePlayer === "joueur1") return;
 
+  const timer = setTimeout(() => {
+    setGame((g) => {
+      if (g.state !== STATES.PLI_EN_COURS) return g;
+
+      const active = g.players[g.currentPlayerIndex];
+      if (active === "joueur1") return g;
+
+      const hand = g.hands[active];
+      if (!hand || hand.length === 0) return g;
+
+      for (const card of hand) {
+        const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+        const next = dispatch(g, { type: "PLAY_CARD", cardKey });
+
+        if (next !== g) return next;
+      }
+
+      return g;
+    });
+  }, 450);
+
+  return () => clearTimeout(timer);
+}, [game.state, activePlayer, game.players, game.currentPlayerIndex]);
   function playForActivePlayer() {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
