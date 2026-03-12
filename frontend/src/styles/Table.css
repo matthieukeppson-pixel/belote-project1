@@ -904,7 +904,13 @@
 .table-page[data-mode="moderne"] .atout-title {
   color: rgba(255, 255, 255, 0.95);
 }
+.table-page[data-mode="moderne"][data-state="ANNOUNCE_ATOUT_TOUR_1"] .atout-card {
+  top: 36%;
+}
 
+.table-page[data-mode="moderne"][data-state="ANNOUNCE_ATOUT_TOUR_2"] .atout-card {
+  top: 34%;
+}
 
 
 
