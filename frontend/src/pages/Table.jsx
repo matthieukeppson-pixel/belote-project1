@@ -167,6 +167,7 @@ export default function Table() {
 const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 const [partieTerminee, setPartieTerminee] = useState(false);
 const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
+const [announcementFading, setAnnouncementFading] = useState(false);
 
   function handleNouvellePartie() {
     setDisplayPli([]);
@@ -458,18 +459,28 @@ const showModernAnnouncementPanel =
 useEffect(() => {
   if (mode !== "moderne") {
     setVisibleAnnouncement(null);
+    setAnnouncementFading(false);
     return;
   }
 
   if (!bestValidatedAnnouncement) return;
 
   setVisibleAnnouncement(bestValidatedAnnouncement);
+  setAnnouncementFading(false);
 
-  const timer = setTimeout(() => {
+  const fadeTimer = setTimeout(() => {
+    setAnnouncementFading(true);
+  }, 1700);
+
+  const hideTimer = setTimeout(() => {
     setVisibleAnnouncement(null);
+    setAnnouncementFading(false);
   }, 2000);
 
-  return () => clearTimeout(timer);
+  return () => {
+    clearTimeout(fadeTimer);
+    clearTimeout(hideTimer);
+  };
 }, [mode, bestValidatedAnnouncement]);
 useEffect(() => {
   if (mode !== "moderne") return;
@@ -788,17 +799,19 @@ useEffect(() => {
 
 {mode === "moderne" && visibleAnnouncement && (
   <div
-    style={{
-      position: "absolute",
-      top: 118,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 40,
-      pointerEvents: "none",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "flex-end",
-    }}
+style={{
+  position: "absolute",
+  top: 165,
+  left: "50%",
+  transform: `translateX(-50%) translateY(${announcementFading ? "-6px" : "0px"})`,
+  zIndex: 40,
+  pointerEvents: "none",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "flex-end",
+  opacity: announcementFading ? 0 : 1,
+  transition: "opacity 0.28s ease, transform 0.28s ease",
+}}
   >
     {(visibleAnnouncement.cards || []).map((card, index) => {
       const total = visibleAnnouncement.cards.length;
