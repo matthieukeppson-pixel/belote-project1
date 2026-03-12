@@ -605,65 +605,70 @@ useEffect(() => {
         ← Retour au salon
       </button>
 
-      {import.meta.env.DEV && (
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "6px 10px",
-            borderRadius: 12,
-            background: "rgba(0,0,0,0.35)",
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 12,
-            border: "1px solid rgba(255,255,255,0.2)",
-            maxWidth: 520,
-          }}
-        >
-          <button
-            type="button"
-            onClick={playForActivePlayer}
-            style={{
-              padding: "4px 8px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.12)",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.2)",
-              cursor: "pointer",
-              fontWeight: 900,
-            }}
-            title="DEV: joue une carte pour le joueur actif si possible"
-          >
-            ▶ Auto-play
-          </button>
+{import.meta.env.DEV && (
+  <div
+    style={{
+      position: "absolute",
+      top: 10,
+      right: 10,
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "4px 8px",
+      borderRadius: 10,
+      background: "rgba(0,0,0,0.18)",
+      backdropFilter: "blur(4px)",
+      color: "rgba(255,255,255,0.88)",
+      fontWeight: 600,
+      fontSize: 11,
+      border: "1px solid rgba(255,255,255,0.10)",
+      maxWidth: 420,
+      boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
+    }}
+  >
+    <button
+      type="button"
+      onClick={playForActivePlayer}
+      style={{
+        padding: "3px 7px",
+        borderRadius: 8,
+        background: "rgba(255,255,255,0.08)",
+        color: "rgba(255,255,255,0.9)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        cursor: "pointer",
+        fontWeight: 700,
+        fontSize: 11,
+      }}
+      title="DEV: joue une carte pour le joueur actif si possible"
+    >
+      ▶ Auto-play
+    </button>
 
-          <span style={{ opacity: 0.9 }}>{mode}</span>
-          <span style={{ opacity: 0.9 }}>|</span>
-          <span>{game.state}</span>
+    <span style={{ opacity: 0.9 }}>{mode}</span>
+    <span style={{ opacity: 0.65 }}>|</span>
+    <span>{game.state}</span>
 
-          {scoreDebug ? (
-            <span
-              style={{
-                marginLeft: 8,
-                paddingLeft: 8,
-                borderLeft: "1px solid rgba(255,255,255,0.25)",
-                color: "#ffd36a",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-              title={scoreDebug}
-            >
-              {scoreDebug}
-            </span>
-          ) : null}
-        </div>
-      )}
+    {scoreDebug ? (
+      <span
+        style={{
+          marginLeft: 6,
+          paddingLeft: 6,
+          borderLeft: "1px solid rgba(255,255,255,0.14)",
+          color: "#ffd36a",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          fontSize: 10.5,
+          opacity: 0.9,
+        }}
+        title={scoreDebug}
+      >
+        {scoreDebug}
+      </span>
+    ) : null}
+  </div>
+)}
 
       <div className="table-layout">
         <div className="table-zone">
