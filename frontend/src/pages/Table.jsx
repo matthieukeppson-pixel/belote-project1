@@ -71,25 +71,8 @@ function compareCards(a, b) {
   return va - vb;
 }
 
-function announcementText(announcement) {
-  if (!announcement) return "";
-
-  if (announcement.type === "carre") {
-    return `Carré de ${announcement.highRank}`;
-  }
-
-  const label =
-    announcement.type === "cent"
-      ? "Cent"
-      : announcement.type === "cinquante"
-      ? "Cinquante"
-      : "Tierce";
-
-  const suit = announcement.suit ? ` ${suitLabel(announcement.suit)}` : "";
-  return `${label}${suit} hauteur ${announcement.highRank}`;
-}
-
 export default function Table() {
+
   const navigate = useNavigate();
   const location = useLocation();
   const mode = location.state?.mode || "classic";
@@ -181,8 +164,9 @@ export default function Table() {
   const [hideLastPli, setHideLastPli] = useState(false);
   const [beloteToast, setBeloteToast] = useState(null);
 
-  const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
-  const [partieTerminee, setPartieTerminee] = useState(false);
+const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
+const [partieTerminee, setPartieTerminee] = useState(false);
+const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
 
   function handleNouvellePartie() {
     setDisplayPli([]);
@@ -287,33 +271,42 @@ export default function Table() {
 
     console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
 
-    if (import.meta.env.DEV) {
-      const sf = finDeMancheSafe.scoreFinal || { nous: 0, eux: 0 };
-      const total = (sf.nous || 0) + (sf.eux || 0);
+   if (import.meta.env.DEV) {
+  const sf = finDeMancheSafe.scoreFinal || { nous: 0, eux: 0 };
+  const total = (sf.nous || 0) + (sf.eux || 0);
 
-      const ruleset = finDeMancheSafe.ruleset;
-      const atout = finDeMancheSafe.atout;
+  const ruleset = finDeMancheSafe.ruleset;
+  const atout = finDeMancheSafe.atout;
 
-      const contrat = finDeMancheSafe.contratValeur || 0;
-      const multLocal = finDeMancheSafe.contratMultiplicateur || 1;
+  const contrat = finDeMancheSafe.contratValeur || 0;
+  const multLocal = finDeMancheSafe.contratMultiplicateur || 1;
 
-      let ok = true;
+  let ok = true;
 
-      if (ruleset === "moderne" && atout === "TA") ok = total === 258;
-      else if (ruleset === "classic") ok = total === 162 || total === 182;
-      else if (ruleset === "contree") {
-        const base = 162 + contrat * multLocal;
-        ok = total === base || total === base + 20;
-      }
+  if (ruleset === "moderne") {
+    const base = atout === "TA" ? 258 : 162;
+    const announcePoints = (game.modernAnnouncements?.validated || []).reduce(
+      (sum, ann) => sum + (ann?.points || 0),
+      0
+    );
+    const beloteBonus = game?.belote?.state === "REBELOTE" ? 20 : 0;
 
-      if (!ok) {
-        setScoreDebug(
-          `⚠️ Score incohérent: total=${total} ruleset=${ruleset} atout=${atout} contrat=${contrat} mult=${multLocal}`
-        );
-      } else {
-        setScoreDebug(null);
-      }
-    }
+    ok = total === base + announcePoints + beloteBonus;
+  } else if (ruleset === "classic") {
+    ok = total === 162 || total === 182;
+  } else if (ruleset === "contree") {
+    const base = 162 + contrat * multLocal;
+    ok = total === base || total === base + 20;
+  }
+
+  if (!ok) {
+    setScoreDebug(
+      `⚠️ Score incohérent: total=${total} ruleset=${ruleset} atout=${atout} contrat=${contrat} mult=${multLocal}`
+    );
+  } else {
+    setScoreDebug(null);
+  }
+}
 
     const next = partieRef.current.onFinDeManche({
       dealerIndex: game.dealerIndex,
@@ -450,11 +443,84 @@ export default function Table() {
   const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
   const preneurTeam = preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
 
-  const mult = game.contratMultiplicateur || 1;
+const mult = game.contratMultiplicateur || 1;
+
+const bestValidatedAnnouncement =
+  mode === "moderne"
+    ? (game.modernAnnouncements?.validated || [])[0] || null
+    : null;
+
+const showModernAnnouncementPanel =
+  mode === "moderne" &&
+  game.state === STATES.ANNONCES_MODERNE &&
+  activePlayer === "joueur1" &&
+  currentAnnouncements.length > 0;
+useEffect(() => {
+  if (mode !== "moderne") {
+    setVisibleAnnouncement(null);
+    return;
+  }
+
+  if (!bestValidatedAnnouncement) return;
+
+  setVisibleAnnouncement(bestValidatedAnnouncement);
+
+  const timer = setTimeout(() => {
+    setVisibleAnnouncement(null);
+  }, 2000);
+
+  return () => clearTimeout(timer);
+}, [mode, bestValidatedAnnouncement]);
+useEffect(() => {
+  if (mode !== "moderne") return;
+  if (game.state !== STATES.ANNONCES_MODERNE) return;
+
+  const timer = setTimeout(() => {
+    setGame((g) => {
+      if (g.state !== STATES.ANNONCES_MODERNE) return g;
+
+      const active = g.players[g.currentPlayerIndex];
+      const declaredByPlayer = g.modernAnnouncements?.declaredByPlayer || {};
+      const alreadyAnswered = Object.prototype.hasOwnProperty.call(
+        declaredByPlayer,
+        active
+      );
+
+      if (alreadyAnswered) return g;
+
+      const detected =
+        g.modernAnnouncements?.detectedByPlayer?.[active] || [];
+
+      if (active === "joueur1") {
+        if (detected.length > 0) return g;
+        return dispatch(g, { type: "PASS_ANNOUNCEMENT" });
+      }
+
+      if (!import.meta.env.DEV) return g;
+
+      const best = detected[0] || null;
+
+      if (best) {
+        return dispatch(g, {
+          type: "DECLARE_ANNOUNCEMENT",
+          announcementType: best.type,
+          highRank: best.highRank,
+          suit: best.suit || null,
+        });
+      }
+
+      return dispatch(g, { type: "PASS_ANNOUNCEMENT" });
+    });
+  }, 350);
+
+  return () => clearTimeout(timer);
+}, [mode, game.state, game.currentPlayerIndex, game.modernAnnouncements, game.atout]);
+
 useEffect(() => {
   if (!import.meta.env.DEV) return;
   if (game.state !== STATES.PLI_EN_COURS) return;
   if (activePlayer === "joueur1") return;
+  if (visibleAnnouncement) return;
 
   const timer = setTimeout(() => {
     setGame((g) => {
@@ -475,10 +541,17 @@ useEffect(() => {
 
       return g;
     });
-  }, 450);
+  }, 900);
 
   return () => clearTimeout(timer);
-}, [game.state, activePlayer, game.players, game.currentPlayerIndex]);
+}, [
+  game.state,
+  activePlayer,
+  game.players,
+  game.currentPlayerIndex,
+  visibleAnnouncement,
+]);
+
   function playForActivePlayer() {
     if (game.state !== STATES.PLI_EN_COURS) return;
 
@@ -691,50 +764,69 @@ useEffect(() => {
               </div>
             )}
 
-            {mode === "moderne" && game.state === STATES.ANNONCES_MODERNE && (
-              <div className="atout-panel atout-panel--glass">
-                <div className="atout-title">Annonces</div>
+{showModernAnnouncementPanel && (
+  <div className="atout-panel atout-panel--glass">
+    <div className="atout-title">Annonce</div>
 
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>
-                  Joueur actif : {activePlayer}
-                </div>
+    <div
+      className="atout-actions"
+      style={{ marginTop: 10, justifyContent: "center", gap: 12 }}
+    >
+      <button
+        className="atout-btn take"
+        onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
+      >
+        Annonce
+      </button>
 
-                {currentAnnouncements.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {currentAnnouncements.map((announcement, index) => (
-                      <div
-                        key={`${announcement.type}-${announcement.highRank}-${announcement.suit || "none"}-${index}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                        }}
-                      >
-                        <span>{announcementText(announcement)}</span>
+      <button className="atout-btn pass" onClick={handlePassAnnouncement}>
+        Passer
+      </button>
+    </div>
+  </div>
+)}
 
-                        <button
-                          className="atout-btn take"
-                          onClick={() => handleDeclareAnnouncement(announcement)}
-                        >
-                          Déclarer
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ marginBottom: 10 }}>Aucune annonce détectée</div>
-                )}
+{mode === "moderne" && visibleAnnouncement && (
+  <div
+    style={{
+      position: "absolute",
+      top: 118,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 40,
+      pointerEvents: "none",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "flex-end",
+    }}
+  >
+    {(visibleAnnouncement.cards || []).map((card, index) => {
+      const total = visibleAnnouncement.cards.length;
+      const center = (total - 1) / 2;
+      const offset = index - center;
 
-                <div className="atout-actions" style={{ marginTop: 10 }}>
-                  <button className="atout-btn pass" onClick={handlePassAnnouncement}>
-                    Passer
-                  </button>
-                </div>
-              </div>
-            )}
+      return (
+        <img
+          key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+          src={cardImgSrc(card)}
+          alt={`${card.value} ${card.suit}`}
+          className="card-img"
+          draggable={false}
+          style={{
+            width: 76,
+            height: "auto",
+            marginLeft: index === 0 ? 0 : -14,
+            transform: `translateY(${Math.abs(offset) * 4}px) rotate(${offset * 5}deg)`,
+            boxShadow: "0 6px 14px rgba(0,0,0,0.35)",
+            borderRadius: 8,
+          }}
+        />
+      );
+    })}
+  </div>
+)}
 
-            {scoreUI && (
+{scoreUI && (
               <div className="score-overlay score-pill">
                 <span className="score-side">Nous</span>
                 <div className="score-pill-box">
