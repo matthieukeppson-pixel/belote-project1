@@ -270,7 +270,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
       ...game.finDeManche,
     };
 
-    console.log("CONTREE FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
+   console.log("FIN MANCHE (finDeMancheSafe)", finDeMancheSafe);
 
    if (import.meta.env.DEV) {
   const sf = finDeMancheSafe.scoreFinal || { nous: 0, eux: 0 };
