@@ -886,7 +886,7 @@ style={{
                 key={player}
                 className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
               >
-                {player === dealerId && <div className="dealer-badge">D</div>}
+              
 
                 <img src="/avatar.png" alt="Avatar" className="player-avatar" />
 
