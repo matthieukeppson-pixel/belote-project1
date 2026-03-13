@@ -155,44 +155,38 @@ ws.onmessage = (event) => {
       });
       return;
 
-    case "message":
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          user: data.user,
-          text: data.text,
-        },
-      ]);
-      return;
+case "message":
+  if (data.user === "Système") return;
 
-    case "system":
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          user: "Système",
-          text: data.text,
-        },
-      ]);
-      return;
+  setMessages((prev) => [
+    ...prev,
+    {
+      id: `${Date.now()}-${Math.random()}`,
+      user: data.user,
+      text: data.text,
+    },
+  ]);
+  return;
 
-    default:
-      return;
-  }
+case "system":
+  return;
+
+default:
+  return;
+}
 };
 
-    ws.onclose = () => {
-      if (wsRef.current === ws) wsRef.current = null;
-    };
+ws.onclose = () => {
+  if (wsRef.current === ws) wsRef.current = null;
+};
 
-    return () => {
-      cancelled = true;
-      if (wsRef.current === ws) wsRef.current = null;
-      if (ws.readyState === WebSocket.OPEN) ws.close(1000, "cleanup");
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+return () => {
+  cancelled = true;
+  if (wsRef.current === ws) wsRef.current = null;
+  if (ws.readyState === WebSocket.OPEN) ws.close(1000, "cleanup");
+};
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   /* ===============================
      🔁 AVATAR → SYNCHRO IMMEDIATE

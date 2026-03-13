@@ -3,7 +3,7 @@
 ============================================ */
 
 .table-page {
-  width: 100vw;
+  width: 100%;
   height: 100vh;
 
   background-image: url("/table_background.jpg");
@@ -911,7 +911,19 @@
 .table-page[data-mode="moderne"][data-state="ANNOUNCE_ATOUT_TOUR_2"] .atout-card {
   top: 34%;
 }
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
 
+body {
+  overscroll-behavior: none;
+}
 
 
 

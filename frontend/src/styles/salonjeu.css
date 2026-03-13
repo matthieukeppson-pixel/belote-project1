@@ -18,9 +18,9 @@
 
 .salon-grid {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1210px;
   display: grid;
-  grid-template-columns: 220px 1fr 220px;
+  grid-template-columns: 250px 1fr 220px;
   gap: 20px;
   margin-top: 35px;
 }
@@ -230,6 +230,7 @@
   align-items: center;
   gap: 12px;
   height: 42px;
+  margin-bottom: 8px;
 }
 
 /* INPUT */
