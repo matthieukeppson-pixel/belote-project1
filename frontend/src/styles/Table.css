@@ -643,8 +643,15 @@
 
 /* Ajuste selon tes positions (optionnel) */
 .back-cards-top { margin-top: 8px; }
-.back-cards-left { margin-top: 8px; }
-.back-cards-right { margin-top: 8px; }
+.back-cards-left {
+  margin-top: 8px;
+  transform: translateX(14px);
+}
+
+.back-cards-right {
+  margin-top: 8px;
+  transform: translateX(-14px);
+}
 
 .back-stack {
   position: relative;

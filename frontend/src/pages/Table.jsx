@@ -890,35 +890,41 @@ style={{
 
                 <img src="/avatar.png" alt="Avatar" className="player-avatar" />
 
-                {player !== "joueur1" && (
-                  <div className={`back-cards back-cards-${position}`}>
-                    {(() => {
-                      const n = game.hands[player]?.length ?? 0;
-                      const visible = Math.min(2, n);
+{player !== "joueur1" && (
+  <div className={`back-cards back-cards-${position}`}>
+    {(() => {
+      const n = game.hands[player]?.length ?? 0;
+      const visible = Math.min(2, n);
 
-                      return (
-                        <div className="back-stack">
-                          {Array.from({ length: visible }).map((_, i) => (
-                            <img
-                              key={i}
-                              src="/card_back.png"
-                              alt="Dos"
-                              className="card-back"
-                              style={{
-                                transform: `translateX(${i * 10}px) rotate(${i * 2}deg)`,
-                              }}
-                              draggable={false}
-                            />
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+      const overlapStep =
+        position === "left" || position === "right" ? 6 : 10;
+
+      const inwardBase =
+        position === "left" ? 8 : position === "right" ? -8 : 0;
+
+      return (
+        <div className="back-stack">
+          {Array.from({ length: visible }).map((_, i) => (
+            <img
+              key={i}
+              src="/card_back.png"
+              alt="Dos"
+              className="card-back"
+              style={{
+                transform: `translateX(${inwardBase + i * overlapStep}px) rotate(${i * 2}deg)`,
+              }}
+              draggable={false}
+            />
+          ))}
+        </div>
+      );
+    })()}
+  </div>
+)}
 
                 {activePlayer === player && <div className="active-dot" />}
 
-                <div className="player-pseudo">{player}</div>
+                
 
                 {game.atout && game.players[game.preneur] === player && (
                   <div className={`atout-indicator ${position} ${game.atout}`}>
