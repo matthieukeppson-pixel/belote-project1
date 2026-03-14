@@ -76,7 +76,10 @@ export default function Table() {
   const navigate = useNavigate();
   const location = useLocation();
   const mode = location.state?.mode || "classic";
-
+const modeLabel =
+  mode === "contree" ? "Contrée" :
+  mode === "moderne" ? "Moderne" :
+  "Classique";
   const { id } = useParams();
   const tableId = Number(id);
 
@@ -586,7 +589,7 @@ useEffect(() => {
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
-
+<div className="table-mode-pill">Mode : {modeLabel}</div>
 
 
       <div className="table-layout">
