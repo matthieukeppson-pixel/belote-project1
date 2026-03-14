@@ -29,6 +29,7 @@ function suitLabel(suit) {
   }
 }
 
+
 // ============================================
 // UI — SYMBOLE ATOUT
 // ============================================
@@ -87,7 +88,7 @@ const modeLabel =
   const avatar = location.state?.avatar || "/avatar_blue.png";
 
   const wsTableRef = useRef(null);
-
+const [_tableSnapshot, setTableSnapshot] = useState(null);
   useEffect(() => {
     if (!tableId) return;
 
@@ -98,7 +99,18 @@ const modeLabel =
       ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
       ws.send(JSON.stringify({ type: "join_table", tableId }));
     };
+ws.onmessage = (event) => {
+  try {
+    const msg = JSON.parse(event.data);
 
+    if (msg.type === "tables" && Array.isArray(msg.tables)) {
+      const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
+      setTableSnapshot(found);
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn("WS message parse error", e);
+  }
+};
     return () => {
       try {
         if (ws.readyState === WebSocket.OPEN) {
@@ -115,8 +127,15 @@ const modeLabel =
     };
   }, [tableId, pseudo, avatar]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!_tableSnapshot) return;
+
+   console.log("TABLE SNAPSHOT JSON", JSON.stringify(_tableSnapshot, null, 2));
+  }, [_tableSnapshot]);
+
   const [bidValue, setBidValue] = useState(80);
- const [, setScoreDebug] = useState(null);
+  const [, setScoreDebug] = useState(null);
 
   // ============================================
   // PARTIE (présente mais non pilotante)
@@ -809,8 +828,14 @@ style={{
                 className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
               >
               
-
-                <img src="/avatar.png" alt="Avatar" className="player-avatar" />
+<img
+  src={
+    _tableSnapshot?.seatsInfo?.find((seat) => seat?.name === player)?.avatar ||
+    "/avatar.png"
+  }
+  alt={player || "Avatar"}
+  className="player-avatar"
+/>
 
 {player !== "joueur1" && (
   <div className={`back-cards back-cards-${position}`}>
