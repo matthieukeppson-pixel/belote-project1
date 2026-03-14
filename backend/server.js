@@ -78,12 +78,29 @@ function playersArray() {
     avatar: p.avatar || "/avatar_blue.png",
   }));
 }
+function seatInfoFromPseudo(pseudo) {
+  if (!pseudo) return null;
 
+  const p = playersMap.get(pseudo);
+
+  return {
+    name: pseudo,
+    avatar: p?.avatar || "/avatar_blue.png",
+  };
+}
 function tablesArray() {
   return Array.from(tablesMap.values()).map((t) => {
     const seats = t.seats.map((x) => x || null);
+    const seatsInfo = seats.map((pseudo) => seatInfoFromPseudo(pseudo));
     const count = seats.filter(Boolean).length;
-    return { id: t.id, mode: t.mode, seats, count };
+
+    return {
+      id: t.id,
+      mode: t.mode,
+      seats,
+      seatsInfo,
+      count,
+    };
   });
 }
 
@@ -152,14 +169,14 @@ wss.on("connection", (ws) => {
       const avatar =
         String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
 
-      const existing = playersMap.get(pseudo);
-      if (!existing) {
-        playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
-        system(`⭐ Bienvenue ${pseudo} ⭐`);
-      } else {
-        existing.count += 1;
-        if (avatar) existing.avatar = avatar;
-      }
+     const existing = playersMap.get(pseudo);
+if (!existing) {
+  playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
+  system(`⭐ Bienvenue ${pseudo} ⭐`);
+} else {
+  existing.count += 1;
+  // ✅ on ne touche PAS existing.avatar ici
+}
 
       broadcastPlayers();
       broadcastTables();
