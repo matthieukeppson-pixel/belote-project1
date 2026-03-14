@@ -85,7 +85,10 @@ const modeLabel =
   const tableId = Number(id);
 
   const pseudo = location.state?.pseudo || "joueur1";
-  const avatar = location.state?.avatar || "/avatar_blue.png";
+ const avatar =
+  location.state?.avatar ||
+  localStorage.getItem("profile_photo_local") ||
+  "/avatar_blue.png";
 
   const wsTableRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
@@ -131,7 +134,7 @@ ws.onmessage = (event) => {
     if (!import.meta.env.DEV) return;
     if (!_tableSnapshot) return;
 
-   console.log("TABLE SNAPSHOT JSON", JSON.stringify(_tableSnapshot, null, 2));
+
   }, [_tableSnapshot]);
 
   const [bidValue, setBidValue] = useState(80);
@@ -830,8 +833,10 @@ style={{
               
 <img
   src={
-    _tableSnapshot?.seatsInfo?.find((seat) => seat?.name === player)?.avatar ||
-    "/avatar.png"
+    player === "joueur1"
+      ? avatar
+      : _tableSnapshot?.seatsInfo?.find((seat) => seat?.name === player)?.avatar ||
+        "/avatar.png"
   }
   alt={player || "Avatar"}
   className="player-avatar"
