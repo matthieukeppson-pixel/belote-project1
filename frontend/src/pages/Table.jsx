@@ -113,7 +113,7 @@ export default function Table() {
   }, [tableId, pseudo, avatar]);
 
   const [bidValue, setBidValue] = useState(80);
-  const [scoreDebug, setScoreDebug] = useState(null);
+ const [, setScoreDebug] = useState(null);
 
   // ============================================
   // PARTIE (présente mais non pilotante)
@@ -433,7 +433,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   const isMyTurn = activePlayer === "joueur1";
   const currentAnnouncements =
     game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
-  const dealerId = game.players[game.dealerIndex];
+ 
 
   const scoreUI = scorePartie;
   const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
@@ -563,25 +563,7 @@ useEffect(() => {
   visibleAnnouncement,
 ]);
 
-  function playForActivePlayer() {
-    if (game.state !== STATES.PLI_EN_COURS) return;
-
-    const active = game.players[game.currentPlayerIndex];
-    const hand = game.hands[active];
-    if (!hand || hand.length === 0) return;
-
-    for (const card of hand) {
-      const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-      const next = dispatch(game, { type: "PLAY_CARD", cardKey });
-
-      if (next !== game) {
-        setGame(next);
-        return;
-      }
-    }
-
-    console.warn("Aucune carte jouable pour", active);
-  }
+  
 
   function backToSalon() {
     const ws = wsTableRef.current;
@@ -605,70 +587,7 @@ useEffect(() => {
         ← Retour au salon
       </button>
 
-{import.meta.env.DEV && (
-  <div
-    style={{
-      position: "absolute",
-      top: 10,
-      right: 10,
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "4px 8px",
-      borderRadius: 10,
-      background: "rgba(0,0,0,0.18)",
-      backdropFilter: "blur(4px)",
-      color: "rgba(255,255,255,0.88)",
-      fontWeight: 600,
-      fontSize: 11,
-      border: "1px solid rgba(255,255,255,0.10)",
-      maxWidth: 420,
-      boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
-    }}
-  >
-    <button
-      type="button"
-      onClick={playForActivePlayer}
-      style={{
-        padding: "3px 7px",
-        borderRadius: 8,
-        background: "rgba(255,255,255,0.08)",
-        color: "rgba(255,255,255,0.9)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        cursor: "pointer",
-        fontWeight: 700,
-        fontSize: 11,
-      }}
-      title="DEV: joue une carte pour le joueur actif si possible"
-    >
-      ▶ Auto-play
-    </button>
 
-    <span style={{ opacity: 0.9 }}>{mode}</span>
-    <span style={{ opacity: 0.65 }}>|</span>
-    <span>{game.state}</span>
-
-    {scoreDebug ? (
-      <span
-        style={{
-          marginLeft: 6,
-          paddingLeft: 6,
-          borderLeft: "1px solid rgba(255,255,255,0.14)",
-          color: "#ffd36a",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          fontSize: 10.5,
-          opacity: 0.9,
-        }}
-        title={scoreDebug}
-      >
-        {scoreDebug}
-      </span>
-    ) : null}
-  </div>
-)}
 
       <div className="table-layout">
         <div className="table-zone">
