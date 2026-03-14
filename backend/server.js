@@ -197,17 +197,18 @@ if (!existing) {
       return;
     }
 
-    if (msg.type === "update_avatar") {
-      const avatar = String(msg.avatar || "").trim();
-      if (!avatar) return;
+   if (msg.type === "update_avatar") {
+  const avatar = String(msg.avatar || "").trim();
+  if (!avatar) return;
 
-      const p = playersMap.get(pseudo);
-      if (p) {
-        p.avatar = avatar;
-        broadcastPlayers();
-      }
-      return;
-    }
+  const p = playersMap.get(pseudo);
+  if (p) {
+    p.avatar = avatar;
+    broadcastPlayers();
+    broadcastTables();
+  }
+  return;
+}
 
     if (msg.type === "get_players") {
       ws.send(JSON.stringify({ type: "players", players: playersArray() }));
