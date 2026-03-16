@@ -92,6 +92,20 @@ const modeLabel =
 
   const wsTableRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
+const remotePlayers = (_tableSnapshot?.seatsInfo || []).filter(
+  (seat) => seat?.name && seat.name !== pseudo
+);
+
+function remoteAvatarForPosition(position) {
+  const idx =
+    position === "top" ? 0 :
+    position === "left" ? 1 :
+    position === "right" ? 2 :
+    -1;
+
+  if (idx < 0) return avatar;
+  return remotePlayers[idx]?.avatar || "/avatar.png";
+}
   useEffect(() => {
     if (!tableId) return;
 
@@ -832,15 +846,11 @@ style={{
               >
               
 <img
-  src={
-    player === "joueur1"
-      ? avatar
-      : _tableSnapshot?.seatsInfo?.find((seat) => seat?.name === player)?.avatar ||
-        "/avatar.png"
-  }
-  alt={player || "Avatar"}
+  src={player === "joueur1" ? avatar : remoteAvatarForPosition(position)}
+  alt={player === "joueur1" ? pseudo || "Avatar" : "Avatar"}
   className="player-avatar"
 />
+
 
 {player !== "joueur1" && (
   <div className={`back-cards back-cards-${position}`}>
