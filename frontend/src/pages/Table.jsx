@@ -808,30 +808,56 @@ useEffect(() => {
 )}
             
 {showModernAnnouncementPanel && (
-<div
-  className="atout-panel contree-encheres-panel"
-  style={{
-    background: "rgba(120, 10, 35, 0.72)",
-    backdropFilter: "blur(6px)",
-    border: "1px solid rgba(255,255,255,0.16)",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
-    transform: "translateY(-42px)",
-  }}
->
-    <div className="atout-title">Annonce</div>
+  <div
+    className="atout-panel modern-announcement-panel"
+    style={{
+      position: "absolute",
+      left: "50%",
+      bottom: 262,
+      top: "auto",
+      transform: "translateX(-50%)",
+      width: 300,
+      padding: "10px 14px",
+      background: "rgba(72, 16, 28, 0.88)",
+      backdropFilter: "blur(4px)",
+      border: "1px solid rgba(255,255,255,0.10)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+      borderRadius: 16,
+      zIndex: 30,
+    }}
+  >
+    <div
+      className="atout-title"
+      style={{
+        marginBottom: 6,
+        fontSize: 15,
+        lineHeight: 1.1,
+      }}
+    >
+      Annonce
+    </div>
 
     <div
       className="atout-actions"
-      style={{ marginTop: 10, justifyContent: "center", gap: 12 }}
+      style={{
+        marginTop: 4,
+        justifyContent: "center",
+        gap: 10,
+      }}
     >
       <button
         className="atout-btn take"
+        style={{ minWidth: 96, padding: "8px 12px" }}
         onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
       >
         Annonce
       </button>
 
-      <button className="atout-btn pass" onClick={handlePassAnnouncement}>
+      <button
+        className="atout-btn pass"
+        style={{ minWidth: 96, padding: "8px 12px" }}
+        onClick={handlePassAnnouncement}
+      >
         Passer
       </button>
     </div>
