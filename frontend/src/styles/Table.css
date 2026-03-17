@@ -537,24 +537,23 @@
 }
 /* ============================================
    ATOUT — INDICATEUR PRENEUR
+   Version compacte, proche du carreau validé
 ============================================ */
 
 .atout-indicator {
   position: absolute;
 
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1;
 
   background: #ffffff;
-  border-radius: 50%;
-  padding: 5px 8px;
+  border-radius: 999px;
+  padding: 4px 7px;
 
-  /* Halo lumineux rouge */
   box-shadow:
-    0 0 6px rgba(231, 76, 60, 0.8),
-    0 0 12px rgba(231, 76, 60, 0.6),
-    0 0 18px rgba(231, 76, 60, 0.4);
+    0 2px 6px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(120, 30, 30, 0.10);
 
   pointer-events: none;
 }
@@ -562,29 +561,50 @@
 /* Couleurs */
 .atout-indicator.hearts,
 .atout-indicator.diamonds {
-  color: #c0392b;
+  color: #c01818;
 }
 
 .atout-indicator.spades,
 .atout-indicator.clubs {
-  color: #2c3e50;
+  color: #111;
+}
+
+/* SA / TA : même pastille, juste texte plus petit */
+.atout-indicator.SA,
+.atout-indicator.TA {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  padding: 6px 6px;
+  min-width: 26px;
+  text-align: center;
 }
 
 /* Placement selon position */
 .atout-indicator.bottom {
-  right: -46px;   /* ⬅️ plus d’air */
+  right: -46px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-
-
 .atout-indicator.top {
   left: -46px;
-     top: 28%;
+  top: 28%;
   transform: translateY(-50%);
 }
 
+.atout-indicator.left,
+.atout-indicator.right {
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.atout-indicator.top {
+  left: -46px;
+  top: 28%;
+  transform: translateY(-50%);
+}
 
 .atout-indicator.left,
 .atout-indicator.right {
