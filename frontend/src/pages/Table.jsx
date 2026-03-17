@@ -84,8 +84,13 @@ const modeLabel =
   const { id } = useParams();
   const tableId = Number(id);
 
-  const pseudo = location.state?.pseudo || "joueur1";
- const avatar =
+const pseudo =
+  location.state?.pseudo ||
+  localStorage.getItem("pseudo") ||
+  JSON.parse(localStorage.getItem("user") || "{}").pseudo ||
+  "Joueur";
+
+const avatar =
   location.state?.avatar ||
   localStorage.getItem("profile_photo_local") ||
   "/avatar_blue.png";
@@ -653,93 +658,155 @@ useEffect(() => {
               </div>
             )}
 
-            {mode === "contree" && game.state === STATES.ENCHERES && (
-              <div className="atout-panel contree-encheres-panel">
-                <div className="atout-title">Enchères (Contrée)</div>
+{mode === "contree" && game.state === STATES.ENCHERES && (
+  <div
+    className="atout-panel"
+    style={{
+      position: "absolute",
+      left: "50%",
+      bottom: 245,
+      top: "auto",
+      transform: "translateX(-50%)",
+      width: 500,
+      padding: "14px 18px 12px",
+      background: "linear-gradient(180deg, #7a0b27 0%, #5f081e 100%)",
+      backdropFilter: "none",
+      border: "1px solid rgba(255,255,255,0.10)",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.16)",
+    }}
+  >
+    <div className="atout-title" style={{ marginBottom: 8 }}>
+      Enchères (Contrée)
+    </div>
 
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>
-                  Enchère actuelle :{" "}
-                  {game.currentBid
-                    ? `${game.currentBid.value} ${atoutSymbol(game.currentBid.suit)}`
-                    : "Aucune"}
-                </div>
+    {game.currentBid ? (
+      <>
+        <div
+          style={{
+            marginBottom: 10,
+            textAlign: "center",
+            fontWeight: 800,
+          }}
+        >
+          Contrat actuel : {game.currentBid.value} {atoutSymbol(game.currentBid.suit)} · x
+          {game.contratMultiplicateur || 1}
+        </div>
 
-                {game.currentBid ? (
-                  <div className="contree-panel-inline">
-                    <div className="contree-title">Contrat</div>
+        <div
+          className="atout-actions"
+          style={{ marginBottom: 10, justifyContent: "center", gap: 10 }}
+        >
+<button
+  className="atout-btn take contree-btn"
+  style={{
+    background: mult >= 2 ? "#7c1f2d" : "#6f1620",
+    border:
+      mult >= 2
+        ? "2px solid rgba(255,255,255,0.22)"
+        : "1px solid rgba(255,255,255,0.08)",
+    color: "#fff",
+    boxShadow:
+      mult >= 2
+        ? "inset 0 0 0 1px rgba(255,255,255,0.06)"
+        : "none",
+    opacity:
+      mult >= 2
+        ? 1
+        : (!game.currentBid || actorTeam === preneurTeam ? 0.55 : 1),
+  }}
+  onClick={handleContre}
+  disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
+>
+  Contrer
+</button>
 
-                    <div className="contree-row">
-                      <span>Multiplicateur :</span>
-                      <span>x{game.contratMultiplicateur || 1}</span>
-                    </div>
+<button
+  className="atout-btn take contree-btn"
+  style={{
+    background: mult >= 4 ? "#7c1f2d" : "#6f1620",
+    border:
+      mult >= 4
+        ? "2px solid rgba(255,255,255,0.22)"
+        : "1px solid rgba(255,255,255,0.08)",
+    color: "#fff",
+    boxShadow:
+      mult >= 4
+        ? "inset 0 0 0 1px rgba(255,255,255,0.06)"
+        : "none",
+    opacity:
+      mult >= 4
+        ? 1
+        : (!game.currentBid || actorTeam !== preneurTeam ? 0.55 : 1),
+  }}
+  onClick={handleSurContre}
+  disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
+>
+  Surcontrer
+</button>
+        </div>
+      </>
+    ) : null}
 
-                    <div className="contree-actions">
-                      <button
-                        className="contree-btn"
-                        onClick={handleContre}
-                        disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
-                      >
-                        Contrer
-                      </button>
+    <div
+      className="atout-actions"
+      style={{ gap: 8, flexWrap: "wrap", justifyContent: "center" }}
+    >
+      {BID_VALUES.map((v) => {
+        const min = game.currentBid ? game.currentBid.value + 10 : 80;
+        const disabled = v < min;
 
-                      <button
-                        className="contree-btn"
-                        onClick={handleSurContre}
-                        disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
-                      >
-                        Surcontrer
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
+        return (
+          <button
+            key={v}
+            className="atout-btn take"
+            onClick={() => setBidValue(v)}
+            disabled={disabled}
+            style={{
+              opacity: disabled ? 0.45 : 1,
+              border:
+                bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
+            }}
+          >
+            {v}
+          </button>
+        );
+      })}
+    </div>
 
-                <div className="atout-actions" style={{ gap: 8, flexWrap: "wrap" }}>
-                  {BID_VALUES.map((v) => {
-                    const min = game.currentBid ? game.currentBid.value + 10 : 80;
-                    const disabled = v < min;
+    <div
+      className="atout-actions"
+      style={{ marginTop: 10, justifyContent: "center", gap: 10, flexWrap: "wrap" }}
+    >
+      {ALL_SUITS.map((suit) => (
+        <button
+          key={suit}
+          className="atout-btn take atout-suit-btn"
+          onClick={() =>
+            setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
+          }
+        >
+          <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
+        </button>
+      ))}
 
-                    return (
-                      <button
-                        key={v}
-                        className="atout-btn take"
-                        onClick={() => setBidValue(v)}
-                        disabled={disabled}
-                        style={{
-                          opacity: disabled ? 0.45 : 1,
-                          border:
-                            bidValue === v ? "2px solid rgba(255,255,255,0.9)" : undefined,
-                        }}
-                      >
-                        {v}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="atout-actions" style={{ marginTop: 10 }}>
-                  {ALL_SUITS.map((suit) => (
-                    <button
-                      key={suit}
-                      className="atout-btn take atout-suit-btn"
-                      onClick={() =>
-                        setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
-                      }
-                    >
-                      <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="atout-actions" style={{ marginTop: 10 }}>
-                  <button className="atout-btn pass" onClick={handlePass}>
-                    Passer
-                  </button>
-                </div>
-              </div>
-            )}
-
+      <button className="atout-btn pass" onClick={handlePass}>
+        Passer
+      </button>
+    </div>
+  </div>
+)}
+            
 {showModernAnnouncementPanel && (
-  <div className="atout-panel atout-panel--glass">
+<div
+  className="atout-panel contree-encheres-panel"
+  style={{
+    background: "rgba(120, 10, 35, 0.72)",
+    backdropFilter: "blur(6px)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
+    transform: "translateY(-42px)",
+  }}
+>
     <div className="atout-title">Annonce</div>
 
     <div
@@ -858,11 +925,11 @@ style={{
       const n = game.hands[player]?.length ?? 0;
       const visible = Math.min(2, n);
 
-      const overlapStep =
-        position === "left" || position === "right" ? 6 : 10;
+     const overlapStep =
+  position === "left" || position === "right" ? 6 : 10;
 
-      const inwardBase =
-        position === "left" ? 8 : position === "right" ? -8 : 0;
+const inwardBase =
+  position === "left" ? -14 : position === "right" ? 14 : 0;
 
       return (
         <div className="back-stack">
