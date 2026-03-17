@@ -111,7 +111,18 @@ function remoteAvatarForPosition(position) {
   if (idx < 0) return avatar;
   return remotePlayers[idx]?.avatar || "/avatar.png";
 }
+function remoteNameForPosition(position) {
+  const idx =
+    position === "top" ? 0 :
+    position === "left" ? 1 :
+    position === "right" ? 2 :
+    -1;
+
+  if (idx < 0) return "Joueur";
+  return remotePlayers[idx]?.name || "Joueur";
+}
   useEffect(() => {
+
     if (!tableId) return;
 
     const ws = new WebSocket("ws://localhost:4000");
@@ -917,6 +928,29 @@ style={{
   alt={player === "joueur1" ? pseudo || "Avatar" : "Avatar"}
   className="player-avatar"
 />
+
+<div
+  style={{
+    position: "absolute",
+    left: "50%",
+    top: position === "bottom" ? "100%" : "calc(100% + 6px)",
+    transform: "translateX(-50%)",
+    padding: "4px 10px",
+    borderRadius: 999,
+    background: "rgba(40, 8, 18, 0.78)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    zIndex: 6,
+    boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
+  }}
+>
+  {player === "joueur1" ? pseudo : remoteNameForPosition(position)}
+</div>
 
 
 {player !== "joueur1" && (
