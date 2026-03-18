@@ -71,7 +71,62 @@ function compareCards(a, b) {
   const vb = VALUE_RANK[String(b.value).toUpperCase()] ?? 99;
   return va - vb;
 }
+const RED_SUITS = ["hearts", "diamonds"];
+const BLACK_SUITS = ["spades", "clubs"];
 
+function sortCardsWithinSuit(cards) {
+  return [...cards].sort(compareCards);
+}
+
+function sortHandForDisplay(cards) {
+  const cleanCards = [...cards].filter(Boolean);
+
+  const bySuit = {
+    hearts: [],
+    spades: [],
+    diamonds: [],
+    clubs: [],
+  };
+
+  for (const card of cleanCards) {
+    if (bySuit[card.suit]) {
+      bySuit[card.suit].push(card);
+    }
+  }
+
+  Object.keys(bySuit).forEach((suit) => {
+    bySuit[suit] = sortCardsWithinSuit(bySuit[suit]);
+  });
+
+  const redQueue = ["hearts", "diamonds"].filter((suit) => bySuit[suit].length > 0);
+  const blackQueue = ["spades", "clubs"].filter((suit) => bySuit[suit].length > 0);
+
+  const orderedSuits = [];
+
+  const startWithRed = redQueue.length >= blackQueue.length;
+
+  let useRed = startWithRed;
+
+  while (redQueue.length > 0 || blackQueue.length > 0) {
+    if (useRed) {
+      if (redQueue.length > 0) {
+        orderedSuits.push(redQueue.shift());
+      } else if (blackQueue.length > 0) {
+        orderedSuits.push(blackQueue.shift());
+      }
+    } else {
+      if (blackQueue.length > 0) {
+        orderedSuits.push(blackQueue.shift());
+      } else if (redQueue.length > 0) {
+        orderedSuits.push(redQueue.shift());
+      }
+    }
+
+    useRed = !useRed;
+  }
+
+  return orderedSuits.flatMap((suit) => bySuit[suit]);
+}
 export default function Table() {
 
   const navigate = useNavigate();
@@ -1023,42 +1078,39 @@ const inwardBase =
               </div>
             ))}
 
-            {game.hands["joueur1"] && (
-              <div className="player-bottom">
-                {[...(game.hands["joueur1"] || [])]
-                  .filter(Boolean)
-                  .sort(compareCards)
-                  .map((card, index) => {
-                    const total = game.hands["joueur1"].length;
-                    const center = (total - 1) / 2;
-                    const offset = index - center;
+         {game.hands["joueur1"] && (
+  <div className="player-bottom">
+    {sortHandForDisplay(game.hands["joueur1"] || []).map((card, index) => {
+      const total = game.hands["joueur1"].length;
+      const center = (total - 1) / 2;
+      const offset = index - center;
 
-                    return (
-                      <div
-                        key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
-                        className={`card ${isMyTurn ? "clickable" : "disabled"}`}
-                        onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
-                        style={{
-                          transform: `
-                            translateX(${offset * -28}px)
-                            translateY(${-8 + Math.abs(offset) * 2}px)
-                            rotate(${offset * 4}deg)
-                          `,
-                          transformOrigin: "bottom center",
-                          zIndex: 100 + index,
-                        }}
-                      >
-                        <img
-                          src={cardImgSrc(card)}
-                          alt={`${card.value} ${card.suit}`}
-                          className="card-img"
-                          draggable={false}
-                        />
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+      return (
+        <div
+          key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+          className={`card ${isMyTurn ? "clickable" : "disabled"}`}
+          onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+          style={{
+            transform: `
+              translateX(${offset * -28}px)
+              translateY(${-8 + Math.abs(offset) * 2}px)
+              rotate(${offset * 4}deg)
+            `,
+            transformOrigin: "bottom center",
+            zIndex: 100 + index,
+          }}
+        >
+          <img
+            src={cardImgSrc(card)}
+            alt={`${card.value} ${card.suit}`}
+            className="card-img"
+            draggable={false}
+          />
+        </div>
+      );
+    })}
+  </div>
+)}
 
             {(mode === "classic" || mode === "moderne") &&
               game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
