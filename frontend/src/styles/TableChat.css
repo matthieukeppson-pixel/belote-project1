@@ -166,3 +166,92 @@
   scrollbar-width: thin;
   scrollbar-color: #7a1f1f rgba(60, 0, 0, 0.25);
 }
+/* ===============================
+   MESSAGES — VERSION SIMPLE VÉRO
+================================ */
+
+.tablechat-messages {
+  padding-top: 4px;
+  padding-right: 6px;
+  padding-bottom: 12px;
+}
+
+.tablechat-line {
+  font-size: 15px;
+  line-height: 1.45;
+  margin-bottom: 8px;
+
+  color: rgba(255, 245, 245, 0.96);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.tablechat-line.me {
+  color: #ffffff;
+}
+
+.tablechat-line.system {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 220, 170, 0.88);
+  opacity: 0.95;
+}
+
+.tablechat-author {
+  color: #ffd38a;
+  font-weight: 800;
+}
+
+/* ===============================
+   BARRE ÉMOJIS
+================================ */
+
+.tablechat-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  padding: 10px 0 12px;
+  margin-top: 6px;
+
+  border-top: 1px solid rgba(220, 180, 120, 0.18);
+}
+
+.tablechat-emoji-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(220, 180, 120, 0.28);
+  border-radius: 10px;
+
+  background: rgba(90, 20, 20, 0.42);
+  color: #fff;
+  font-size: 20px;
+
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.tablechat-emoji-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(220, 180, 120, 0.55);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* ===============================
+   INPUT + BOUTON — PETIT AJUSTEMENT
+================================ */
+
+.tablechat-inputzone {
+  margin-top: 0;
+  padding-top: 2px;
+}
+
+.tablechat-button:hover {
+  filter: brightness(1.06);
+}

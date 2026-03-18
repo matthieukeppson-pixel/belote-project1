@@ -119,6 +119,16 @@ function broadcastTables() {
   broadcast({ type: "tables", tables: tablesArray() });
 }
 
+function broadcastToTable(tableId, obj) {
+  const payload = JSON.stringify(obj);
+
+  wss.clients.forEach((client) => {
+    if (client.readyState !== 1) return;
+    if (Number(client.tableId) !== Number(tableId)) return;
+    client.send(payload);
+  });
+}
+
 function system(text) {
   broadcast({ type: "system", text });
 }
@@ -146,6 +156,7 @@ function removePlayerFromAnyTable(pseudo) {
 
 wss.on("connection", (ws) => {
   ws.pseudo = null;
+  ws.tableId = null;
 
   // état initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
@@ -190,12 +201,29 @@ if (!existing) {
     // ===============================
     // CHAT
     // ===============================
-    if (msg.type === "message") {
-      const text = String(msg.text || "").trim();
-      if (!text) return;
-      broadcast({ type: "message", user: pseudo, text });
-      return;
-    }
+   // ===============================
+// CHAT
+// ===============================
+if (msg.type === "message") {
+  const text = String(msg.text || "").trim();
+  if (!text) return;
+  broadcast({ type: "message", user: pseudo, text });
+  return;
+}
+
+if (msg.type === "table_message") {
+  const text = String(msg.text || "").trim();
+  if (!text) return;
+  if (!ws.tableId) return;
+
+  broadcastToTable(ws.tableId, {
+    type: "table_message",
+    tableId: ws.tableId,
+    user: pseudo,
+    text,
+  });
+  return;
+}
 
    if (msg.type === "update_avatar") {
   const avatar = String(msg.avatar || "").trim();
@@ -272,19 +300,31 @@ if (!existing) {
       const prev = findPlayerTable(pseudo);
       if (prev) prev.table.seats[prev.seatIndex] = null;
 
-      // place
-      t.seats[freeIdx] = pseudo;
+     // place
+t.seats[freeIdx] = pseudo;
+ws.tableId = t.id;
 
-      broadcastTables();
+broadcastTables();
 
-      const count = t.seats.filter(Boolean).length;
-      system(`🎮 ${pseudo} rejoint table ${t.id} (${t.mode}) — ${count}/4`);
+const count = t.seats.filter(Boolean).length;
 
-      // ✅ ACK au client qui a cliqué (IMPORTANT pour naviguer ensuite)
-      ws.send(JSON.stringify({ type: "joined_table", tableId: t.id, mode: t.mode }));
+broadcastToTable(t.id, {
+  type: "table_system",
+  tableId: t.id,
+  text: `${pseudo} a rejoint la table`,
+});
 
-      if (count === 4) system(`✅ Table ${t.id} complète (4/4)`);
-      return;
+// ✅ ACK au client qui a cliqué (IMPORTANT pour naviguer ensuite)
+ws.send(JSON.stringify({ type: "joined_table", tableId: t.id, mode: t.mode }));
+
+if (count === 4) {
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: `Table complète (4/4)`,
+  });
+}
+return;
     }
 
     if (msg.type === "leave_table") {
@@ -296,19 +336,38 @@ if (!existing) {
         if (!t) return;
 
         const idx = t.seats.findIndex((p) => p === pseudo);
-        if (idx !== -1) {
-          t.seats[idx] = null;
-          system(`👋 ${pseudo} quitte table ${t.id}`);
-          broadcastTables();
-        }
-        return;
+       if (idx !== -1) {
+  t.seats[idx] = null;
+
+  if (Number(ws.tableId) === Number(t.id)) {
+    ws.tableId = null;
+  }
+
+  broadcastTables();
+
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: `${pseudo} a quitté la table`,
+  });
+}
+return;
       }
 
-      const left = removePlayerFromAnyTable(pseudo);
-      if (left) {
-        system(`👋 ${pseudo} quitte table ${left}`);
-        broadcastTables();
-      }
+    const left = removePlayerFromAnyTable(pseudo);
+if (left) {
+  if (Number(ws.tableId) === Number(left)) {
+    ws.tableId = null;
+  }
+
+  broadcastTables();
+
+  broadcastToTable(left, {
+    type: "table_system",
+    tableId: left,
+    text: `${pseudo} a quitté la table`,
+  });
+}
     }
   });
 
@@ -322,18 +381,25 @@ if (!existing) {
     p.count -= 1;
 
     // dernière connexion du pseudo -> on le sort aussi des tables
-    if (p.count <= 0) {
-      playersMap.delete(pseudo);
+   if (p.count <= 0) {
+  playersMap.delete(pseudo);
 
-      const leftTableId = removePlayerFromAnyTable(pseudo);
+  const leftTableId = removePlayerFromAnyTable(pseudo);
 
-      broadcastPlayers();
-      broadcastTables();
+  broadcastPlayers();
+  broadcastTables();
 
-      if (leftTableId) system(`👋 ${pseudo} déconnecté (sorti de table ${leftTableId})`);
-      system(`⭐ À bientôt ${pseudo} ⭐`);
-      return;
-    }
+  if (leftTableId) {
+    broadcastToTable(leftTableId, {
+      type: "table_system",
+      tableId: leftTableId,
+      text: `${pseudo} a quitté la table`,
+    });
+  }
+
+  system(`⭐ À bientôt ${pseudo} ⭐`);
+  return;
+}
 
     broadcastPlayers();
   });

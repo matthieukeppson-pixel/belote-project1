@@ -152,6 +152,22 @@ const avatar =
 
   const wsTableRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
+const [tableChatMessages, setTableChatMessages] = useState([]);
+
+function sendTableMessage(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return;
+
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  ws.send(
+    JSON.stringify({
+      type: "table_message",
+      text: clean,
+    })
+  );
+}
 const remotePlayers = (_tableSnapshot?.seatsInfo || []).filter(
   (seat) => seat?.name && seat.name !== pseudo
 );
@@ -180,6 +196,8 @@ function remoteNameForPosition(position) {
 
     if (!tableId) return;
 
+    setTableChatMessages([]);
+
     const ws = new WebSocket("ws://localhost:4000");
     wsTableRef.current = ws;
 
@@ -194,6 +212,33 @@ ws.onmessage = (event) => {
     if (msg.type === "tables" && Array.isArray(msg.tables)) {
       const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
       setTableSnapshot(found);
+      return;
+    }
+
+    if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
+      setTableChatMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          type: "system",
+          text: msg.text,
+        },
+      ]);
+      return;
+    }
+
+    if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
+      setTableChatMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          type: "chat",
+          author: msg.user,
+          text: msg.text,
+          from: msg.user === pseudo ? "me" : "other",
+        },
+      ]);
+      return;
     }
   } catch (e) {
     if (import.meta.env.DEV) console.warn("WS message parse error", e);
@@ -1216,7 +1261,11 @@ const inwardBase =
         </div>
 
         <div className="table-chat-zone">
-          <TableChat tableName="Belote entre amis" />
+<TableChat
+  currentUserName={pseudo || "Invité"}
+  messages={tableChatMessages}
+  onSendMessage={sendTableMessage}
+/>
         </div>
       </div>
     </div>
