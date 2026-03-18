@@ -255,3 +255,6 @@
 .tablechat-button:hover {
   filter: brightness(1.06);
 }
+.tablechat-line.other {
+  color: rgba(255, 245, 245, 0.92);
+}

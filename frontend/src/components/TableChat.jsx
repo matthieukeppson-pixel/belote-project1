@@ -3,31 +3,22 @@ import "../styles/TableChat.css";
 
 const SIMPLE_EMOJIS = ["😊", "😂", "😍", "👍", "❤️", "🎉"];
 
-export default function TableChat({ currentUserName = "Invité" }) {
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Bienvenue à la table ⭐", from: "system" },
-    { id: 2, text: `➡️ Bienvenue ${currentUserName}`, from: "system" },
-  ]);
+export default function TableChat({
+  messages = [],
+  onSendMessage,
+}) {
+  
   const [newMessage, setNewMessage] = useState("");
 
   const messagesRef = useRef(null);
 
-  const sendMessage = () => {
-    const text = newMessage.trim();
-    if (!text) return;
+ const sendMessage = () => {
+  const text = newMessage.trim();
+  if (!text) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text,
-        author: currentUserName,
-        from: "me",
-      },
-    ]);
-
-    setNewMessage("");
-  };
+  onSendMessage?.(text);
+  setNewMessage("");
+};
 
   const addEmoji = (emoji) => {
     setNewMessage((prev) => `${prev}${emoji}`);
@@ -44,18 +35,18 @@ export default function TableChat({ currentUserName = "Invité" }) {
       <div className="tablechat-title">TCHAT</div>
 
       <div className="tablechat-messages" ref={messagesRef}>
-        {messages.map((msg) =>
-          msg.from === "system" ? (
-            <div key={msg.id} className="tablechat-line system">
-              {msg.text}
-            </div>
-          ) : (
-            <div key={msg.id} className="tablechat-line me">
-              <span className="tablechat-author">{msg.author} :</span>{" "}
-              {msg.text}
-            </div>
-          )
-        )}
+       {messages.map((msg) =>
+  msg.type === "system" ? (
+    <div key={msg.id} className="tablechat-line system">
+      {msg.text}
+    </div>
+  ) : (
+    <div key={msg.id} className={`tablechat-line ${msg.from || "other"}`}>
+      <span className="tablechat-author">{msg.author} :</span>{" "}
+      {msg.text}
+    </div>
+  )
+)}
       </div>
 
       <div className="tablechat-emojis">
