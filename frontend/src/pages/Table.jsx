@@ -150,7 +150,9 @@ const avatar =
   localStorage.getItem("profile_photo_local") ||
   "/avatar_blue.png";
 
-  const wsTableRef = useRef(null);
+const wsTableRef = useRef(null);
+const systemTimersRef = useRef(new Map());
+
 const [_tableSnapshot, setTableSnapshot] = useState(null);
 const [tableChatMessages, setTableChatMessages] = useState([]);
 
@@ -167,6 +169,26 @@ function sendTableMessage(text) {
       text: clean,
     })
   );
+}
+
+function pushTemporarySystemMessage(text) {
+  const id = `${Date.now()}-${Math.random()}`;
+
+  setTableChatMessages((prev) => [
+    ...prev,
+    {
+      id,
+      type: "system",
+      text,
+    },
+  ]);
+
+  const timer = setTimeout(() => {
+    setTableChatMessages((prev) => prev.filter((msg) => msg.id !== id));
+    systemTimersRef.current.delete(id);
+  }, 3000);
+
+  systemTimersRef.current.set(id, timer);
 }
 const remotePlayers = (_tableSnapshot?.seatsInfo || []).filter(
   (seat) => seat?.name && seat.name !== pseudo
@@ -215,17 +237,10 @@ ws.onmessage = (event) => {
       return;
     }
 
-    if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
-      setTableChatMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          type: "system",
-          text: msg.text,
-        },
-      ]);
-      return;
-    }
+  if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
+  pushTemporarySystemMessage(msg.text);
+  return;
+}
 
     if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
       setTableChatMessages((prev) => [
