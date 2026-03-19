@@ -249,7 +249,19 @@ return () => {
                   <div className="table-title">Table {t.id}</div>
                   <div className="table-info">Joueurs : {count} / 4</div>
                   <div className="table-info">Statut : {isFull ? "Complète" : "En attente"}</div>
+                  <div className="table-seated-players">
+  {(t.seatsInfo || [])
+    .filter((seat) => seat?.name)
+    .map((seat) => (
+      <div key={seat.name} className="table-seated-player">
+        {seat.name}
+      </div>
+    ))}
 
+  {(!t.seatsInfo || t.seatsInfo.filter((seat) => seat?.name).length === 0) && (
+    <div className="table-seated-player empty">Aucun joueur</div>
+  )}
+</div>
                   {/* Mode */}
                   <div className="table-info mode">
                     <span className="table-mode-label">Mode{"\u00A0"}:</span>
