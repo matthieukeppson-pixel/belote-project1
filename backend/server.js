@@ -78,6 +78,7 @@ function playersArray() {
     avatar: p.avatar || "/avatar_blue.png",
   }));
 }
+
 function seatInfoFromPseudo(pseudo) {
   if (!pseudo) return null;
 
@@ -88,6 +89,7 @@ function seatInfoFromPseudo(pseudo) {
     avatar: p?.avatar || "/avatar_blue.png",
   };
 }
+
 function tablesArray() {
   return Array.from(tablesMap.values()).map((t) => {
     const seats = t.seats.map((x) => x || null);
@@ -180,14 +182,14 @@ wss.on("connection", (ws) => {
       const avatar =
         String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
 
-     const existing = playersMap.get(pseudo);
-if (!existing) {
-  playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
-  system(`⭐ Bienvenue ${pseudo} ⭐`);
-} else {
-  existing.count += 1;
-  // ✅ on ne touche PAS existing.avatar ici
-}
+      const existing = playersMap.get(pseudo);
+      if (!existing) {
+        playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
+        system(`⭐ Bienvenue ${pseudo} ⭐`);
+      } else {
+        existing.count += 1;
+        // ✅ on ne touche PAS existing.avatar ici
+      }
 
       broadcastPlayers();
       broadcastTables();
@@ -201,42 +203,39 @@ if (!existing) {
     // ===============================
     // CHAT
     // ===============================
-   // ===============================
-// CHAT
-// ===============================
-if (msg.type === "message") {
-  const text = String(msg.text || "").trim();
-  if (!text) return;
-  broadcast({ type: "message", user: pseudo, text });
-  return;
-}
+    if (msg.type === "message") {
+      const text = String(msg.text || "").trim();
+      if (!text) return;
+      broadcast({ type: "message", user: pseudo, text });
+      return;
+    }
 
-if (msg.type === "table_message") {
-  const text = String(msg.text || "").trim();
-  if (!text) return;
-  if (!ws.tableId) return;
+    if (msg.type === "table_message") {
+      const text = String(msg.text || "").trim();
+      if (!text) return;
+      if (!ws.tableId) return;
 
-  broadcastToTable(ws.tableId, {
-    type: "table_message",
-    tableId: ws.tableId,
-    user: pseudo,
-    text,
-  });
-  return;
-}
+      broadcastToTable(ws.tableId, {
+        type: "table_message",
+        tableId: ws.tableId,
+        user: pseudo,
+        text,
+      });
+      return;
+    }
 
-   if (msg.type === "update_avatar") {
-  const avatar = String(msg.avatar || "").trim();
-  if (!avatar) return;
+    if (msg.type === "update_avatar") {
+      const avatar = String(msg.avatar || "").trim();
+      if (!avatar) return;
 
-  const p = playersMap.get(pseudo);
-  if (p) {
-    p.avatar = avatar;
-    broadcastPlayers();
-    broadcastTables();
-  }
-  return;
-}
+      const p = playersMap.get(pseudo);
+      if (p) {
+        p.avatar = avatar;
+        broadcastPlayers();
+        broadcastTables();
+      }
+      return;
+    }
 
     if (msg.type === "get_players") {
       ws.send(JSON.stringify({ type: "players", players: playersArray() }));
@@ -284,7 +283,27 @@ if (msg.type === "table_message") {
       const t = tableId ? tablesMap.get(tableId) : null;
       if (!t) return;
 
+      const prev = findPlayerTable(pseudo);
+      const wasAlreadyInTargetTable =
+        prev && Number(prev.table.id) === Number(t.id);
+
+      // joueur déjà assis sur cette table :
+      // on rattache juste le socket sans rejouer la logique métier
+      if (wasAlreadyInTargetTable) {
+        ws.tableId = t.id;
+        ws.send(
+          JSON.stringify({
+            type: "joined_table",
+            tableId: t.id,
+            mode: t.mode,
+          })
+        );
+        return;
+      }
+
+      const targetCountBefore = t.seats.filter(Boolean).length;
       const freeIdx = t.seats.findIndex((s) => !s);
+
       if (freeIdx === -1) {
         ws.send(
           JSON.stringify({
@@ -296,35 +315,44 @@ if (msg.type === "table_message") {
         return;
       }
 
-      // si déjà dans une table -> on sort
-      const prev = findPlayerTable(pseudo);
-      if (prev) prev.table.seats[prev.seatIndex] = null;
+      // si déjà dans une autre table -> on sort
+      if (prev) {
+        prev.table.seats[prev.seatIndex] = null;
+      }
 
-     // place
-t.seats[freeIdx] = pseudo;
-ws.tableId = t.id;
+      // place
+      t.seats[freeIdx] = pseudo;
+      ws.tableId = t.id;
 
-broadcastTables();
+      broadcastTables();
 
-const count = t.seats.filter(Boolean).length;
+      const targetCountAfter = t.seats.filter(Boolean).length;
 
-broadcastToTable(t.id, {
-  type: "table_system",
-  tableId: t.id,
-  text: `${pseudo} a rejoint la table`,
-});
+      broadcastToTable(t.id, {
+        type: "table_system",
+        tableId: t.id,
+        text: `${pseudo} a rejoint la table`,
+      });
 
-// ✅ ACK au client qui a cliqué (IMPORTANT pour naviguer ensuite)
-ws.send(JSON.stringify({ type: "joined_table", tableId: t.id, mode: t.mode }));
+      // ACK au client qui a cliqué
+      ws.send(
+        JSON.stringify({
+          type: "joined_table",
+          tableId: t.id,
+          mode: t.mode,
+        })
+      );
 
-if (count === 4) {
-  broadcastToTable(t.id, {
-    type: "table_system",
-    tableId: t.id,
-    text: `Table complète (4/4)`,
-  });
-}
-return;
+      // seulement sur la vraie transition 3 -> 4
+      if (targetCountBefore === 3 && targetCountAfter === 4) {
+        broadcastToTable(t.id, {
+          type: "table_system",
+          tableId: t.id,
+          text: "Table complète (4/4)",
+        });
+      }
+
+      return;
     }
 
     if (msg.type === "leave_table") {
@@ -336,38 +364,39 @@ return;
         if (!t) return;
 
         const idx = t.seats.findIndex((p) => p === pseudo);
-       if (idx !== -1) {
-  t.seats[idx] = null;
+        if (idx !== -1) {
+          t.seats[idx] = null;
 
-  if (Number(ws.tableId) === Number(t.id)) {
-    ws.tableId = null;
-  }
+          if (Number(ws.tableId) === Number(t.id)) {
+            ws.tableId = null;
+          }
 
-  broadcastTables();
+          broadcastTables();
 
-  broadcastToTable(t.id, {
-    type: "table_system",
-    tableId: t.id,
-    text: `${pseudo} a quitté la table`,
-  });
-}
-return;
+          broadcastToTable(t.id, {
+            type: "table_system",
+            tableId: t.id,
+            text: `${pseudo} a quitté la table`,
+          });
+        }
+        return;
       }
 
-    const left = removePlayerFromAnyTable(pseudo);
-if (left) {
-  if (Number(ws.tableId) === Number(left)) {
-    ws.tableId = null;
-  }
+      const left = removePlayerFromAnyTable(pseudo);
+      if (left) {
+        if (Number(ws.tableId) === Number(left)) {
+          ws.tableId = null;
+        }
 
-  broadcastTables();
+        broadcastTables();
 
-  broadcastToTable(left, {
-    type: "table_system",
-    tableId: left,
-    text: `${pseudo} a quitté la table`,
-  });
-}
+        broadcastToTable(left, {
+          type: "table_system",
+          tableId: left,
+          text: `${pseudo} a quitté la table`,
+        });
+      }
+      return;
     }
   });
 
@@ -381,25 +410,25 @@ if (left) {
     p.count -= 1;
 
     // dernière connexion du pseudo -> on le sort aussi des tables
-   if (p.count <= 0) {
-  playersMap.delete(pseudo);
+    if (p.count <= 0) {
+      playersMap.delete(pseudo);
 
-  const leftTableId = removePlayerFromAnyTable(pseudo);
+      const leftTableId = removePlayerFromAnyTable(pseudo);
 
-  broadcastPlayers();
-  broadcastTables();
+      broadcastPlayers();
+      broadcastTables();
 
-  if (leftTableId) {
-    broadcastToTable(leftTableId, {
-      type: "table_system",
-      tableId: leftTableId,
-      text: `${pseudo} a quitté la table`,
-    });
-  }
+      if (leftTableId) {
+        broadcastToTable(leftTableId, {
+          type: "table_system",
+          tableId: leftTableId,
+          text: `${pseudo} a quitté la table`,
+        });
+      }
 
-  system(`⭐ À bientôt ${pseudo} ⭐`);
-  return;
-}
+      system(`⭐ À bientôt ${pseudo} ⭐`);
+      return;
+    }
 
     broadcastPlayers();
   });

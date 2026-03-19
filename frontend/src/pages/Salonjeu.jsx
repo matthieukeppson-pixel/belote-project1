@@ -273,9 +273,8 @@ return () => {
                     className="btn-join"
                     disabled={isFull}
                     onClick={() => {
-                      sendWS({ type: "join_table", tableId: t.id });
-                      navigate(`/table/${t.id}`, { state: { mode: t.mode } });
-                    }}
+  navigate(`/table/${t.id}`, { state: { mode: t.mode } });
+}}
                   >
                     {isFull ? "Table complète" : "Rejoindre"}
                   </button>

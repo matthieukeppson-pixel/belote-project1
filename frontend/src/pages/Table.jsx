@@ -245,19 +245,18 @@ ws.onmessage = (event) => {
   }
 };
     return () => {
-      try {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "leave_table", tableId }));
-          ws.close(1000, "leave");
-        } else {
-          ws.close(1000, "leave");
-        }
-      } catch (e) {
-        if (import.meta.env.DEV) console.warn("WS cleanup error", e);
-      }
+  try {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close(1000, "cleanup");
+    } else {
+      ws.close(1000, "cleanup");
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn("WS cleanup error", e);
+  }
 
-      if (wsTableRef.current === ws) wsTableRef.current = null;
-    };
+  if (wsTableRef.current === ws) wsTableRef.current = null;
+};
   }, [tableId, pseudo, avatar]);
 
   useEffect(() => {
@@ -720,13 +719,14 @@ useEffect(() => {
 
   
 
-  function backToSalon() {
-    const ws = wsTableRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN && tableId) {
-      ws.send(JSON.stringify({ type: "leave_table", tableId }));
-    }
-    navigate("/salon");
+ function backToSalon() {
+  const ws = wsTableRef.current;
+  if (ws && ws.readyState === WebSocket.OPEN && tableId) {
+    ws.send(JSON.stringify({ type: "leave_table", tableId }));
+    ws.close(1000, "leave");
   }
+  navigate("/salon");
+}
 
   // ============================================
   // RENDER
