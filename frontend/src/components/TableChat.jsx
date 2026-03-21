@@ -19,9 +19,31 @@ const CUSTOM_CHAT_EMOJIS = {
   ":sourire:": "/emojis/sourire.png",
 };
 
-function getCustomEmojiSrc(text) {
-  const clean = String(text || "").trim().toLowerCase();
-  return CUSTOM_CHAT_EMOJIS[clean] || null;
+function renderCustomMessageContent(text) {
+  const raw = String(text || "");
+
+  const parts = raw.split(
+    /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:)/gi
+  );
+
+  return parts.map((part, index) => {
+    const clean = String(part || "").trim().toLowerCase();
+    const src = CUSTOM_CHAT_EMOJIS[clean];
+
+    if (src) {
+      return (
+        <span key={`emoji-${index}`} className="tablechat-custom-emoji-wrap">
+          <img
+            src={src}
+            alt={clean}
+            className="tablechat-custom-emoji"
+          />
+        </span>
+      );
+    }
+
+    return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
+  });
 }
 
 export default function TableChat({ messages = [], onSendMessage }) {
@@ -51,30 +73,18 @@ export default function TableChat({ messages = [], onSendMessage }) {
       <div className="tablechat-title">TCHAT</div>
 
       <div className="tablechat-messages" ref={messagesRef}>
-        {messages.map((msg) => {
-          const emojiSrc = getCustomEmojiSrc(msg.text);
-
-          return msg.type === "system" ? (
-            <div key={msg.id} className="tablechat-line system">
-              {msg.text}
-            </div>
-          ) : (
-            <div key={msg.id} className={`tablechat-line ${msg.from || "other"}`}>
-              <span className="tablechat-author">{msg.author} :</span>{" "}
-             {emojiSrc ? (
-  <span className="tablechat-custom-emoji-wrap">
-    <img
-      src={emojiSrc}
-      alt={String(msg.text || "").trim()}
-      className="tablechat-custom-emoji"
-    />
-  </span>
-) : (
-  msg.text
+      {messages.map((msg) =>
+  msg.type === "system" ? (
+    <div key={msg.id} className="tablechat-line system">
+      {msg.text}
+    </div>
+  ) : (
+    <div key={msg.id} className={`tablechat-line ${msg.from || "other"}`}>
+      <span className="tablechat-author">{msg.author} :</span>{" "}
+      {renderCustomMessageContent(msg.text)}
+    </div>
+  )
 )}
-            </div>
-          );
-        })}
       </div>
 
      <div className="tablechat-emojis">
