@@ -61,15 +61,17 @@ export default function TableChat({ messages = [], onSendMessage }) {
           ) : (
             <div key={msg.id} className={`tablechat-line ${msg.from || "other"}`}>
               <span className="tablechat-author">{msg.author} :</span>{" "}
-              {emojiSrc ? (
-                <img
-                  src={emojiSrc}
-                  alt={String(msg.text || "").trim()}
-                  className="tablechat-custom-emoji"
-                />
-              ) : (
-                msg.text
-              )}
+             {emojiSrc ? (
+  <span className="tablechat-custom-emoji-wrap">
+    <img
+      src={emojiSrc}
+      alt={String(msg.text || "").trim()}
+      className="tablechat-custom-emoji"
+    />
+  </span>
+) : (
+  msg.text
+)}
             </div>
           );
         })}

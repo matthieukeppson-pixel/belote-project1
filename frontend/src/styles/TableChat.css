@@ -259,11 +259,38 @@
 .tablechat-line.other {
   color: rgba(255, 245, 245, 0.92);
 }
+.tablechat-custom-emoji-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: tablechatEmojiPop 520ms ease-out;
+  transform-origin: center;
+}
+
 .tablechat-custom-emoji {
   width: 36px;
   height: 36px;
   object-fit: contain;
-  vertical-align: middle;
+  display: block;
+}
+
+@keyframes tablechatEmojiPop {
+  0% {
+    transform: scale(0.35) translateY(10px) rotate(-8deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.18) translateY(-4px) rotate(4deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.96) translateY(0) rotate(-2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    opacity: 1;
+  }
 }
 .tablechat-emoji-btn-img {
   width: 24px;
