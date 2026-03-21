@@ -259,3 +259,21 @@
 .tablechat-line.other {
   color: rgba(255, 245, 245, 0.92);
 }
+.tablechat-custom-emoji {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.tablechat-emoji-btn-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+}
+
+.tablechat-emoji-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -127,6 +127,19 @@ function sortHandForDisplay(cards) {
 
   return orderedSuits.flatMap((suit) => bySuit[suit]);
 }
+const TABLE_CHAT_EMOJIS = {
+  ":coeur:": "/emojis/coeur.png",
+  ":cool:": "/emojis/cool.png",
+  ":langue:": "/emojis/langue.png",
+  ":pouce:": "/emojis/pouce.png",
+  ":reflexion:": "/emojis/reflexion.png",
+  ":sourire:": "/emojis/sourire.png",
+};
+
+function _getTableChatEmojiSrc(text) {
+  const clean = String(text || "").trim().toLowerCase();
+  return TABLE_CHAT_EMOJIS[clean] || null;
+}
 export default function Table() {
 
   const navigate = useNavigate();
