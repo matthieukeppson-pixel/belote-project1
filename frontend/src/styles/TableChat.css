@@ -177,7 +177,7 @@
 }
 
 .tablechat-line {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.45;
   margin-bottom: 8px;
 
@@ -263,13 +263,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  vertical-align: middle;
+  margin: 0 3px;
   animation: tablechatEmojiPop 520ms ease-out;
   transform-origin: center;
 }
 
 .tablechat-custom-emoji {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   display: block;
 }
