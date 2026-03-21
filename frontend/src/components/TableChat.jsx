@@ -8,6 +8,17 @@ const SIMPLE_EMOJIS = [
   { code: ":cool:", src: "/emojis/cool.png", alt: "cool" },
   { code: ":sourire:", src: "/emojis/sourire.png", alt: "sourire" },
   { code: ":reflexion:", src: "/emojis/reflexion.png", alt: "reflexion" },
+
+  { code: ":cafe:", src: "/emojis/cafe.png", alt: "cafe" },
+  { code: ":cadeau:", src: "/emojis/cadeau.png", alt: "cadeau" },
+  { code: ":facepalm:", src: "/emojis/facepalm.png", alt: "facepalm" },
+  { code: ":diable:", src: "/emojis/diable.png", alt: "diable" },
+  { code: ":merci:", src: "/emojis/merci.png", alt: "merci" },
+  { code: ":clinoeil:", src: "/emojis/clinoeil.png", alt: "clinoeil" },
+  { code: ":attention:", src: "/emojis/attention.png", alt: "attention" },
+  { code: ":rougir:", src: "/emojis/rougir.png", alt: "rougir" },
+  { code: ":parfait:", src: "/emojis/parfait.png", alt: "parfait" },
+  { code: ":stress:", src: "/emojis/stress.png", alt: "stress" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = {
@@ -17,14 +28,25 @@ const CUSTOM_CHAT_EMOJIS = {
   ":pouce:": "/emojis/pouce.png",
   ":reflexion:": "/emojis/reflexion.png",
   ":sourire:": "/emojis/sourire.png",
+
+  ":cafe:": "/emojis/cafe.png",
+  ":cadeau:": "/emojis/cadeau.png",
+  ":facepalm:": "/emojis/facepalm.png",
+  ":diable:": "/emojis/diable.png",
+  ":merci:": "/emojis/merci.png",
+  ":clinoeil:": "/emojis/clinoeil.png",
+  ":attention:": "/emojis/attention.png",
+  ":rougir:": "/emojis/rougir.png",
+  ":parfait:": "/emojis/parfait.png",
+  ":stress:": "/emojis/stress.png",
 };
 
 function renderCustomMessageContent(text) {
   const raw = String(text || "");
 
-  const parts = raw.split(
-    /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:)/gi
-  );
+ const parts = raw.split(
+  /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:|:cafe:|:cadeau:|:facepalm:|:diable:|:merci:|:clinoeil:|:attention:|:rougir:|:parfait:|:stress:)/gi
+);
 
   return parts.map((part, index) => {
     const clean = String(part || "").trim().toLowerCase();
