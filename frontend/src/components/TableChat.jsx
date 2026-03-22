@@ -69,8 +69,12 @@ function renderCustomMessageContent(text) {
 }
 
 export default function TableChat({ messages = [], onSendMessage }) {
+
   const [newMessage, setNewMessage] = useState("");
+  const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
+
   const messagesRef = useRef(null);
+
 
   const sendMessage = () => {
     const text = newMessage.trim();
@@ -109,40 +113,51 @@ export default function TableChat({ messages = [], onSendMessage }) {
 )}
       </div>
 
-     <div className="tablechat-emojis">
-  {SIMPLE_EMOJIS.map((emoji) => (
-    <button
-      key={emoji.code}
-      type="button"
-      className="tablechat-emoji-btn"
-      onClick={() => addEmoji(emoji.code)}
-      title={emoji.alt}
-    >
-      <img
-        src={emoji.src}
-        alt={emoji.alt}
-        className="tablechat-emoji-btn-img"
-      />
-    </button>
-  ))}
-</div>
-
-      <div className="tablechat-inputzone">
-        <input
-          type="text"
-          className="tablechat-input"
-          placeholder="Écrire un message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") sendMessage();
-          }}
+   {isEmojiPanelOpen && (
+  <div className="tablechat-emojis">
+    {SIMPLE_EMOJIS.map((emoji) => (
+      <button
+        key={emoji.code}
+        type="button"
+        className="tablechat-emoji-btn"
+        onClick={() => addEmoji(emoji.code)}
+        title={emoji.alt}
+      >
+        <img
+          src={emoji.src}
+          alt={emoji.alt}
+          className="tablechat-emoji-btn-img"
         />
+      </button>
+    ))}
+  </div>
+)}
 
-        <button className="tablechat-button" onClick={sendMessage}>
-          Envoyer
-        </button>
-      </div>
+<div className="tablechat-inputzone">
+  <input
+    type="text"
+    className="tablechat-input"
+    placeholder="Écrire un message..."
+    value={newMessage}
+    onChange={(e) => setNewMessage(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") sendMessage();
+    }}
+  />
+
+  <button
+    type="button"
+    className="tablechat-emoji-toggle"
+    onClick={() => setIsEmojiPanelOpen((prev) => !prev)}
+    title="Ouvrir les emojis"
+  >
+    {isEmojiPanelOpen ? "✕" : "😊"}
+  </button>
+
+  <button className="tablechat-button" onClick={sendMessage}>
+    Envoyer
+  </button>
+</div>
     </div>
   );
 }

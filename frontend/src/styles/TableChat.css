@@ -306,3 +306,26 @@
   align-items: center;
   justify-content: center;
 }
+.tablechat-emoji-toggle {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(220, 180, 120, 0.28);
+  border-radius: 10px;
+
+  background: rgba(90, 20, 20, 0.42);
+  color: white;
+  font-size: 22px;
+
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tablechat-emoji-toggle:hover {
+  border-color: rgba(220, 180, 120, 0.55);
+}
