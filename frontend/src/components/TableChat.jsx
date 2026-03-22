@@ -76,15 +76,16 @@ export default function TableChat({ messages = [], onSendMessage }) {
   const messagesRef = useRef(null);
 
 
-  const sendMessage = () => {
-    const text = newMessage.trim();
-    if (!text) return;
+ const sendMessage = () => {
+  const text = newMessage.trim();
+  if (!text) return;
 
-    onSendMessage?.(text);
-    setNewMessage("");
-  };
+  onSendMessage?.(text);
+  setNewMessage("");
+  setIsEmojiPanelOpen(false);
+};
 
- const addEmoji = (code) => {
+const addEmoji = (code) => {
   setNewMessage((prev) => `${prev}${code}`);
 };
 
