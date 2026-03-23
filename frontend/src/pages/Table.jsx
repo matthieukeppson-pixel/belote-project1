@@ -183,6 +183,25 @@ function sendTableMessage(text) {
     })
   );
 }
+function _chooseSeat(seatIndex) {
+  pushTemporarySystemMessage(`Clic sur place ${seatIndex + 1}`);
+
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    pushTemporarySystemMessage("Connexion WS non ouverte");
+    return;
+  }
+
+  ws.send(
+    JSON.stringify({
+      type: "choose_seat",
+      tableId,
+      seatIndex,
+    })
+  );
+
+  pushTemporarySystemMessage(`Demande envoyée pour place ${seatIndex + 1}`);
+}
 
 function pushTemporarySystemMessage(text) {
   const id = `${Date.now()}-${Math.random()}`;
@@ -203,29 +222,68 @@ function pushTemporarySystemMessage(text) {
 
   systemTimersRef.current.set(id, timer);
 }
-const remotePlayers = (_tableSnapshot?.seatsInfo || []).filter(
-  (seat) => seat?.name && seat.name !== pseudo
+const seatsInfo =
+  Array.isArray(_tableSnapshot?.seatsInfo) && _tableSnapshot.seatsInfo.length > 0
+    ? _tableSnapshot.seatsInfo
+    : Array.isArray(_tableSnapshot?.seats)
+      ? _tableSnapshot.seats.map((name) =>
+          name
+            ? {
+                name,
+                avatar: name === pseudo ? avatar : "/avatar.png",
+              }
+            : null
+        )
+      : [];
+
+const mySeatIndex = seatsInfo.findIndex(
+  (seat) => seat?.name === pseudo
 );
 
-function remoteAvatarForPosition(position) {
-  const idx =
-    position === "top" ? 0 :
-    position === "left" ? 1 :
-    position === "right" ? 2 :
-    -1;
+function seatIndexForPosition(position) {
+  const fixedMap = {
+    top: 0,
+    left: 1,
+    right: 2,
+    bottom: 3,
+  };
 
-  if (idx < 0) return avatar;
-  return remotePlayers[idx]?.avatar || "/avatar.png";
+  if (mySeatIndex === -1) {
+    return fixedMap[position] ?? null;
+  }
+
+  if (position === "bottom") return mySeatIndex;
+  if (position === "left") return (mySeatIndex + 1) % 4;
+  if (position === "top") return (mySeatIndex + 2) % 4;
+  if (position === "right") return (mySeatIndex + 3) % 4;
+
+  return null;
 }
-function remoteNameForPosition(position) {
-  const idx =
-    position === "top" ? 0 :
-    position === "left" ? 1 :
-    position === "right" ? 2 :
-    -1;
 
-  if (idx < 0) return "Joueur";
-  return remotePlayers[idx]?.name || "Joueur";
+function seatForPosition(position) {
+  const idx = seatIndexForPosition(position);
+  if (idx == null) return null;
+  return seatsInfo[idx] || null;
+}
+
+function seatAvatarForPosition(position) {
+  const seat = seatForPosition(position);
+
+  if (position === "bottom" && mySeatIndex !== -1) {
+    return seat?.avatar || avatar;
+  }
+
+  return seat?.avatar || "/avatar.png";
+}
+
+function seatNameForPosition(position) {
+  const seat = seatForPosition(position);
+
+  if (position === "bottom" && mySeatIndex !== -1) {
+    return seat?.name || pseudo;
+  }
+
+  return seat?.name || "Place libre";
 }
   useEffect(() => {
 
@@ -254,7 +312,16 @@ ws.onmessage = (event) => {
   pushTemporarySystemMessage(msg.text);
   return;
 }
-
+if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)) {
+  if (msg.reason === "SEAT_TAKEN") {
+    pushTemporarySystemMessage("Cette place est déjà prise");
+  } else if (msg.reason === "INVALID_SEAT") {
+    pushTemporarySystemMessage("Place invalide");
+  } else {
+    pushTemporarySystemMessage("Impossible de choisir cette place");
+  }
+  return;
+}
     if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
       setTableChatMessages((prev) => [
         ...prev,
@@ -285,13 +352,19 @@ ws.onmessage = (event) => {
 
   if (wsTableRef.current === ws) wsTableRef.current = null;
 };
-  }, [tableId, pseudo, avatar]);
+  }, [tableId, pseudo, avatar]);console.log("TABLE SNAPSHOT", _tableSnapshot);
 
-  useEffect(() => {
+   useEffect(() => {
+  
     if (!import.meta.env.DEV) return;
     if (!_tableSnapshot) return;
 
-
+    console.log("TABLE SNAPSHOT", {
+      id: _tableSnapshot?.id,
+      count: _tableSnapshot?.count,
+      seats: _tableSnapshot?.seats,
+      seatsInfo: _tableSnapshot?.seatsInfo,
+    });
   }, [_tableSnapshot]);
 
   const [bidValue, setBidValue] = useState(80);
@@ -1072,13 +1145,25 @@ style={{
               ["joueur3", "right"],
               ["joueur1", "bottom"],
             ].map(([player, position]) => (
-              <div
-                key={player}
-                className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
-              >
+             <div
+  key={player}
+  className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
+  onClick={
+    !seatForPosition(position)?.name && seatIndexForPosition(position) != null
+      ? () => _chooseSeat(seatIndexForPosition(position))
+      : undefined
+  }
+  style={{
+    cursor:
+      !seatForPosition(position)?.name && seatIndexForPosition(position) != null
+        ? "pointer"
+        : "default",
+    opacity: seatForPosition(position)?.name ? 1 : 0.92,
+  }}
+>
               
 <img
-  src={player === "joueur1" ? avatar : remoteAvatarForPosition(position)}
+ src={seatAvatarForPosition(position)}
   alt={player === "joueur1" ? pseudo || "Avatar" : "Avatar"}
   className="player-avatar"
 />
@@ -1103,7 +1188,7 @@ style={{
     boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
   }}
 >
-  {player === "joueur1" ? pseudo : remoteNameForPosition(position)}
+ {seatNameForPosition(position)}
 </div>
 
 

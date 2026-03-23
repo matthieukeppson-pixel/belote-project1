@@ -8,7 +8,7 @@ import { WebSocketServer } from "ws";
  * - HTTP: 4001
  * - WS:   4000
  *
- * Client -> Server:
+ * * Client -> Server:
  *   - join_salon { pseudo, avatar }
  *   - message { text }
  *   - update_avatar { avatar }
@@ -17,16 +17,19 @@ import { WebSocketServer } from "ws";
  *   - get_tables
  *   - set_table_mode { tableId, mode }    (autorisé seulement si table vide)
  *   - join_table { tableId }
+ *   - choose_seat { tableId, seatIndex }
  *   - leave_table { tableId? }            (si absent -> quitte n'importe quelle table)
  *   - create_table { mode }               (optionnel)
  *
- * Server -> Client:
+ *  * Server -> Client:
  *   - players { players: [{ name, avatar }] }
  *   - tables  { tables: [{ id, mode, seats, count }] }
  *   - message { user, text }
  *   - system  { text }
  *   - joined_table { tableId, mode }      ✅ ACK join
  *   - join_table_denied { tableId, reason }
+ *   - seat_chosen { tableId, seatIndex }
+ *   - choose_seat_denied { tableId, reason }
  */
 
 const HTTP_PORT = 4001;
@@ -278,83 +281,181 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    if (msg.type === "join_table") {
-      const tableId = normalizeTableId(msg.tableId);
-      const t = tableId ? tablesMap.get(tableId) : null;
-      if (!t) return;
+   if (msg.type === "join_table") {
+  const tableId = normalizeTableId(msg.tableId);
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
 
-      const prev = findPlayerTable(pseudo);
-      const wasAlreadyInTargetTable =
-        prev && Number(prev.table.id) === Number(t.id);
+  const prev = findPlayerTable(pseudo);
+  const wasAlreadyInTargetTable =
+    prev && Number(prev.table.id) === Number(t.id);
 
-      // joueur déjà assis sur cette table :
-      // on rattache juste le socket sans rejouer la logique métier
-      if (wasAlreadyInTargetTable) {
-        ws.tableId = t.id;
-        ws.send(
-          JSON.stringify({
-            type: "joined_table",
-            tableId: t.id,
-            mode: t.mode,
-          })
-        );
-        return;
-      }
-
-      const targetCountBefore = t.seats.filter(Boolean).length;
-      const freeIdx = t.seats.findIndex((s) => !s);
-
-      if (freeIdx === -1) {
-        ws.send(
-          JSON.stringify({
-            type: "join_table_denied",
-            tableId: t.id,
-            reason: "FULL",
-          })
-        );
-        return;
-      }
-
-      // si déjà dans une autre table -> on sort
-      if (prev) {
-        prev.table.seats[prev.seatIndex] = null;
-      }
-
-      // place
-      t.seats[freeIdx] = pseudo;
-      ws.tableId = t.id;
-
-      broadcastTables();
-
-      const targetCountAfter = t.seats.filter(Boolean).length;
-
-      broadcastToTable(t.id, {
-        type: "table_system",
+  // déjà assis sur cette table : on rattache juste le socket
+  if (wasAlreadyInTargetTable) {
+    ws.tableId = t.id;
+    ws.send(
+      JSON.stringify({
+        type: "joined_table",
         tableId: t.id,
-        text: `${pseudo} a rejoint la table`,
-      });
+        mode: t.mode,
+      })
+    );
+    return;
+  }
 
-      // ACK au client qui a cliqué
-      ws.send(
-        JSON.stringify({
-          type: "joined_table",
-          tableId: t.id,
-          mode: t.mode,
-        })
-      );
+  const freeIdx = t.seats.findIndex((s) => !s);
 
-      // seulement sur la vraie transition 3 -> 4
-      if (targetCountBefore === 3 && targetCountAfter === 4) {
-        broadcastToTable(t.id, {
-          type: "table_system",
-          tableId: t.id,
-          text: "Table complète (4/4)",
-        });
-      }
+  // on garde le comportement actuel : impossible d'entrer si table pleine
+  if (freeIdx === -1) {
+    ws.send(
+      JSON.stringify({
+        type: "join_table_denied",
+        tableId: t.id,
+        reason: "FULL",
+      })
+    );
+    return;
+  }
 
-      return;
-    }
+  // si déjà assis dans une autre table -> on libère l'ancienne place
+  if (prev) {
+    prev.table.seats[prev.seatIndex] = null;
+  }
 
+  // IMPORTANT :
+  // on rattache le joueur à la table mais on ne l'assoit pas encore
+  ws.tableId = t.id;
+
+  broadcastTables();
+
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: `${pseudo} a rejoint la table`,
+  });
+
+  ws.send(
+    JSON.stringify({
+      type: "joined_table",
+      tableId: t.id,
+      mode: t.mode,
+    })
+  );
+
+  return;
+}
+if (msg.type === "choose_seat") {
+  console.log("CHOOSE_SEAT reçu", {
+  pseudo,
+  tableId: msg.tableId,
+  seatIndex: msg.seatIndex,
+  wsTableId: ws.tableId,
+});
+
+
+  const tableId =
+    msg.tableId != null ? normalizeTableId(msg.tableId) : normalizeTableId(ws.tableId);
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
+
+  console.log("CHOOSE_SEAT avant", {
+    pseudo,
+    seats: t.seats,
+  });
+
+  const seatIndex = Number(msg.seatIndex);
+
+  if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex >= t.seats.length) {
+    ws.send(
+      JSON.stringify({
+        type: "choose_seat_denied",
+        tableId: t.id,
+        reason: "INVALID_SEAT",
+      })
+    );
+    return;
+  }
+
+  // sécurité : le socket doit être rattaché à cette table
+  ws.tableId = t.id;
+
+  const currentSeatIndex = t.seats.findIndex((p) => p === pseudo);
+  const wasAlreadySeatedHere = currentSeatIndex !== -1;
+
+  // si le joueur clique sur sa propre place, on ACK simplement
+  if (currentSeatIndex === seatIndex) {
+    ws.send(
+      JSON.stringify({
+        type: "seat_chosen",
+        tableId: t.id,
+        seatIndex,
+      })
+    );
+    return;
+  }
+
+  // place déjà prise
+if (t.seats[seatIndex]) {
+  console.log("CHOOSE_SEAT refus SEAT_TAKEN", {
+    pseudo,
+    seatIndex,
+    occupant: t.seats[seatIndex],
+    seats: t.seats,
+  });
+
+  ws.send(
+    JSON.stringify({
+      type: "choose_seat_denied",
+      tableId: t.id,
+      reason: "SEAT_TAKEN",
+    })
+  );
+  return;
+}
+
+  const targetCountBefore = t.seats.filter(Boolean).length;
+
+  // si le joueur avait déjà une place dans cette table, on la libère
+  if (currentSeatIndex !== -1) {
+    t.seats[currentSeatIndex] = null;
+  }
+
+  // on pose le joueur sur la place choisie
+  t.seats[seatIndex] = pseudo;
+  console.log("CHOOSE_SEAT après", {
+  pseudo,
+  seatIndex,
+  seats: t.seats,
+});
+  broadcastTables();
+
+  ws.send(
+    JSON.stringify({
+      type: "seat_chosen",
+      tableId: t.id,
+      seatIndex,
+    })
+  );
+
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: `${pseudo} a pris la place ${seatIndex + 1}`,
+  });
+
+  const targetCountAfter = t.seats.filter(Boolean).length;
+
+  // seulement si on passe réellement de 3 assis à 4 assis
+  if (!wasAlreadySeatedHere && targetCountBefore === 3 && targetCountAfter === 4) {
+    broadcastToTable(t.id, {
+      type: "table_system",
+      tableId: t.id,
+      text: "Table complète (4/4)",
+    });
+  }
+
+  return;
+}
     if (msg.type === "leave_table") {
       // si tableId absent -> quitte n'importe quelle table
       const tableId = msg.tableId != null ? normalizeTableId(msg.tableId) : null;
@@ -433,7 +534,7 @@ wss.on("connection", (ws) => {
     broadcastPlayers();
   });
 });
-
+console.log("BACKEND BELOTE ACTIF - choix de place");
 wsServer.listen(WS_PORT);
 
 
