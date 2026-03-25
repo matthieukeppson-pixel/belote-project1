@@ -345,12 +345,7 @@ wss.on("connection", (ws) => {
   return;
 }
 if (msg.type === "choose_seat") {
-  console.log("CHOOSE_SEAT reçu", {
-  pseudo,
-  tableId: msg.tableId,
-  seatIndex: msg.seatIndex,
-  wsTableId: ws.tableId,
-});
+
 
 
   const tableId =
@@ -358,10 +353,7 @@ if (msg.type === "choose_seat") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
-  console.log("CHOOSE_SEAT avant", {
-    pseudo,
-    seats: t.seats,
-  });
+  
 
   const seatIndex = Number(msg.seatIndex);
 
@@ -396,12 +388,7 @@ if (msg.type === "choose_seat") {
 
   // place déjà prise
 if (t.seats[seatIndex]) {
-  console.log("CHOOSE_SEAT refus SEAT_TAKEN", {
-    pseudo,
-    seatIndex,
-    occupant: t.seats[seatIndex],
-    seats: t.seats,
-  });
+ 
 
   ws.send(
     JSON.stringify({
@@ -422,11 +409,7 @@ if (t.seats[seatIndex]) {
 
   // on pose le joueur sur la place choisie
   t.seats[seatIndex] = pseudo;
-  console.log("CHOOSE_SEAT après", {
-  pseudo,
-  seatIndex,
-  seats: t.seats,
-});
+
   broadcastTables();
 
   ws.send(
@@ -534,7 +517,7 @@ if (t.seats[seatIndex]) {
     broadcastPlayers();
   });
 });
-console.log("BACKEND BELOTE ACTIF - choix de place");
+
 wsServer.listen(WS_PORT);
 
 
