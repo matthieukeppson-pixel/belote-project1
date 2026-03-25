@@ -322,16 +322,16 @@ wss.on("connection", (ws) => {
     prev.table.seats[prev.seatIndex] = null;
   }
 
-  // IMPORTANT :
-  // on rattache le joueur à la table mais on ne l'assoit pas encore
+  // on rattache le joueur à la table ET on l'assoit automatiquement
   ws.tableId = t.id;
+  t.seats[freeIdx] = pseudo;
 
   broadcastTables();
 
   broadcastToTable(t.id, {
     type: "table_system",
     tableId: t.id,
-    text: `${pseudo} a rejoint la table`,
+    text: `${pseudo} a pris la place ${freeIdx + 1}`,
   });
 
   ws.send(
