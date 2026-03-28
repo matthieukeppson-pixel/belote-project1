@@ -19,6 +19,13 @@ const SIMPLE_EMOJIS = [
   { code: ":rougir:", src: "/emojis/rougir.png", alt: "rougir" },
   { code: ":parfait:", src: "/emojis/parfait.png", alt: "parfait" },
   { code: ":stress:", src: "/emojis/stress.png", alt: "stress" },
+
+  { code: ":rire:", src: "/emojis/rire.png", alt: "rire" },
+  { code: ":dodo:", src: "/emojis/dodo.png", alt: "dodo" },
+  { code: ":fleur:", src: "/emojis/fleur.png", alt: "fleur" },
+  { code: ":colere:", src: "/emojis/colere.png", alt: "colere" },
+  { code: ":glace:", src: "/emojis/glace.png", alt: "glace" },
+  { code: ":bisou:", src: "/emojis/bisou.png", alt: "bisou" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = {
@@ -39,14 +46,21 @@ const CUSTOM_CHAT_EMOJIS = {
   ":rougir:": "/emojis/rougir.png",
   ":parfait:": "/emojis/parfait.png",
   ":stress:": "/emojis/stress.png",
+
+  ":rire:": "/emojis/rire.png",
+  ":dodo:": "/emojis/dodo.png",
+  ":fleur:": "/emojis/fleur.png",
+  ":colere:": "/emojis/colere.png",
+  ":glace:": "/emojis/glace.png",
+  ":bisou:": "/emojis/bisou.png",
 };
 
 function renderCustomMessageContent(text) {
   const raw = String(text || "");
 
- const parts = raw.split(
-  /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:|:cafe:|:cadeau:|:facepalm:|:diable:|:merci:|:clinoeil:|:attention:|:rougir:|:parfait:|:stress:)/gi
-);
+  const parts = raw.split(
+    /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:|:cafe:|:cadeau:|:facepalm:|:diable:|:merci:|:clinoeil:|:attention:|:rougir:|:parfait:|:stress:|:rire:|:dodo:|:fleur:|:colere:|:glace:|:bisou:)/gi
+  );
 
   return parts.map((part, index) => {
     const clean = String(part || "").trim().toLowerCase();
@@ -64,7 +78,7 @@ function renderCustomMessageContent(text) {
       );
     }
 
-    return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
+    return <span key={`text-${index}`}>{part}</span>;
   });
 }
 
