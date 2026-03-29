@@ -715,9 +715,11 @@ function getBestAnnouncement(announcements, atout) {
     return compareAnnouncements(current, best, atout) > 0 ? current : best;
   }, null);
 }
+
 function sumAnnouncementPoints(announcements) {
   return (announcements || []).reduce((sum, ann) => sum + (ann.points || 0), 0);
 }
+
 export function handleModernAnnouncements(game, event) {
   if (!event || game.state !== STATES.ANNONCES_MODERNE) return game;
 
@@ -815,6 +817,101 @@ export function handleModernAnnouncements(game, event) {
     }
   };
 }
+
+// ✅ ICI tu gardes les nouveaux helpers
+function hasSuit(hand, suit) {
+  return Array.isArray(hand) && hand.some((c) => c.suit === suit);
+}
+
+
+
+function isSameTeam(game, playerA, playerB) {
+  const aNous = game.teams.nous.includes(playerA);
+  const bNous = game.teams.nous.includes(playerB);
+  return aNous === bNous;
+}
+
+function getBestTrumpPlay(pli, atout) {
+  const trumps = (pli || []).filter((p) => p?.card?.suit === atout);
+  if (trumps.length === 0) return null;
+
+  return trumps.reduce((best, play) => {
+    return rankValue(play.card.value, true) < rankValue(best.card.value, true)
+      ? play
+      : best;
+  });
+}
+
+function hasHigherTrumpThan(hand, atout, referenceCard) {
+  if (!referenceCard) return false;
+
+  return hand.some(
+    (c) =>
+      c.suit === atout &&
+      rankValue(c.value, true) < rankValue(referenceCard.value, true)
+  );
+}
+
+function isLegalPlayCurrentRules(game, playerId, hand, playedCard) {
+  if (!game || !playerId || !Array.isArray(hand) || !playedCard) return false;
+
+  if (!Array.isArray(game.pli) || game.pli.length === 0) return true;
+
+  const couleurDemandee = game.couleurDemandee;
+  const atout = game.atout;
+  const isSAorTA = atout === "SA" || atout === "TA";
+
+  const winnerIdActuel = getPliWinner(game.pli, couleurDemandee, atout);
+  const partenaireEstMaitre =
+    !!winnerIdActuel && isSameTeam(game, winnerIdActuel, playerId);
+
+  const hasDemandedSuit =
+    !!couleurDemandee && hasSuit(hand, couleurDemandee);
+
+  if (hasDemandedSuit) {
+    if (playedCard.suit !== couleurDemandee) return false;
+
+    if (!isSAorTA && couleurDemandee === atout && !partenaireEstMaitre) {
+      const bestTrumpPlay = getBestTrumpPlay(game.pli, atout);
+
+      if (bestTrumpPlay) {
+        const canOvertrump = hasHigherTrumpThan(hand, atout, bestTrumpPlay.card);
+        const doesOvertrump =
+          rankValue(playedCard.value, true) <
+          rankValue(bestTrumpPlay.card.value, true);
+
+        if (canOvertrump && !doesOvertrump) return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (isSAorTA) return true;
+
+  const hasTrump = !!atout && hasSuit(hand, atout);
+
+  if (!partenaireEstMaitre && hasTrump && playedCard.suit !== atout) {
+    return false;
+  }
+
+  if (playedCard.suit === atout && !partenaireEstMaitre) {
+    const bestTrumpPlay = getBestTrumpPlay(game.pli, atout);
+
+    if (bestTrumpPlay) {
+      const canOvertrump = hasHigherTrumpThan(hand, atout, bestTrumpPlay.card);
+      const doesOvertrump =
+        rankValue(playedCard.value, true) <
+        rankValue(bestTrumpPlay.card.value, true);
+
+      if (canOvertrump && !doesOvertrump) return false;
+    }
+  }
+
+  return true;
+}
+
+// ✅ puis ton handlePli continue normalement
 export function handlePli(game, event) {
   if (!event) return game;
 
@@ -840,118 +937,9 @@ export function handlePli(game, event) {
 
     const playedCard = hand[idx];
 
-    // ============================================
-    // OBLIGATIONS DE JEU
-    // Règle choisie : si partenaire maître -> on peut pisser (pas obligé de couper)
-    // SA/TA : pas de coupe / pas de montée (mais obligation de fournir reste)
-    // ============================================
-    const couleurDemandeeActuelle =
-      game.pli.length === 0 ? null : game.couleurDemandee;
-
-    const isSAorTA = game.atout === "SA" || game.atout === "TA";
-
-    const hasSuit = (h, suit) => h.some(c => c.suit === suit);
-    const hasAtout = (h, atout) => h.some(c => c.suit === atout);
-
-    // ✅ Gagnant actuel du pli (pendant le pli)
-    const winnerIdActuel =
-      game.pli.length > 0
-        ? getPliWinner(game.pli, game.couleurDemandee, game.atout)
-        : null;
-
-    // ✅ partenaire maître ?
-    const partenaireEstMaitre =
-      !!winnerIdActuel &&
-      (game.teams.nous.includes(winnerIdActuel) ===
-        game.teams.nous.includes(playerId));
-
-    // 1) Fournir si on a la couleur
-    if (
-      couleurDemandeeActuelle &&
-      playedCard.suit !== couleurDemandeeActuelle &&
-      hasSuit(hand, couleurDemandeeActuelle)
-    ) {
-      return game;
-    }
-
-    // 2) Couper si pas de couleur (désactivé en SA/TA)
-    if (
-      !isSAorTA &&
-      couleurDemandeeActuelle &&
-      playedCard.suit !== couleurDemandeeActuelle &&
-      !hasSuit(hand, couleurDemandeeActuelle) &&
-      playedCard.suit !== game.atout &&
-      hasAtout(hand, game.atout) &&
-      !partenaireEstMaitre
-    ) {
-      return game;
-    }
-
-    // 3) Monter à l’atout si adversaire maître (désactivé en SA/TA)
-    if (
-      !isSAorTA &&
-      playedCard.suit === game.atout &&
-      game.pli.length > 0 &&
-      !partenaireEstMaitre
-    ) {
-      const atoutsDansPli = game.pli.filter(
-        p => p.card && p.card.suit === game.atout
-      );
-
-      if (atoutsDansPli.length > 0) {
-        const meilleurAtout = atoutsDansPli.reduce((best, p) =>
-          rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
-        );
-
-        const peutMonter = hand.some(
-          c =>
-            c.suit === game.atout &&
-            rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
-        );
-
-        const monteAssez =
-          rankValue(playedCard.value, true) <
-          rankValue(meilleurAtout.card.value, true);
-
-        if (peutMonter && !monteAssez) return game;
-      }
-    }
-
-    // 2) Couper si pas de couleur (SAUF si partenaire maître)
-   if (
-  !isSAorTA &&
-  couleurDemandeeActuelle &&
-  playedCard.suit !== couleurDemandeeActuelle &&
-  !hasSuit(hand, couleurDemandeeActuelle) &&
-  playedCard.suit !== game.atout &&
-  hasAtout(hand, game.atout) &&
-  !partenaireEstMaitre
-) {
+if (!isLegalPlayCurrentRules(game, playerId, hand, playedCard)) {
   return game;
 }
-
-    // 3) Monter à l’atout si adversaire maître
-    if (playedCard.suit === game.atout && game.pli.length > 0 && !partenaireEstMaitre) {
-      const atoutsDansPli = game.pli.filter(p => p.card && p.card.suit === game.atout);
-
-      if (atoutsDansPli.length > 0) {
-        const meilleurAtout = atoutsDansPli.reduce((best, p) =>
-          rankValue(p.card.value, true) < rankValue(best.card.value, true) ? p : best
-        );
-
-        const peutMonter = hand.some(
-          c =>
-            c.suit === game.atout &&
-            rankValue(c.value, true) < rankValue(meilleurAtout.card.value, true)
-        );
-
-        const monteAssez =
-          rankValue(playedCard.value, true) <
-          rankValue(meilleurAtout.card.value, true);
-
-        if (peutMonter && !monteAssez) return game;
-      }
-    }
 
 
     // ============================================
