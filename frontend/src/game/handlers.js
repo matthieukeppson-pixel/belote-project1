@@ -859,26 +859,29 @@ function isLegalPlayCurrentRules(game, playerId, hand, playedCard) {
 
   const couleurDemandee = game.couleurDemandee;
   const atout = game.atout;
+  const ruleset = game.ruleset || "classic";
   const isSAorTA = atout === "SA" || atout === "TA";
 
   const winnerIdActuel = getPliWinner(game.pli, couleurDemandee, atout);
   const partenaireEstMaitre =
     !!winnerIdActuel && isSameTeam(game, winnerIdActuel, playerId);
 
-  const hasDemandedSuit =
-    !!couleurDemandee && hasSuit(hand, couleurDemandee);
+  const hasDemandedSuit = !!couleurDemandee && hasSuit(hand, couleurDemandee);
 
+  // 1) Fournir la couleur demandée si on l'a
   if (hasDemandedSuit) {
     if (playedCard.suit !== couleurDemandee) return false;
 
+    // Si la couleur demandée est l'atout, on garde l'obligation de monter si possible
     if (!isSAorTA && couleurDemandee === atout && !partenaireEstMaitre) {
       const bestTrumpPlay = getBestTrumpPlay(game.pli, atout);
 
       if (bestTrumpPlay) {
         const canOvertrump = hasHigherTrumpThan(hand, atout, bestTrumpPlay.card);
         const doesOvertrump =
+          playedCard.suit === atout &&
           rankValue(playedCard.value, true) <
-          rankValue(bestTrumpPlay.card.value, true);
+            rankValue(bestTrumpPlay.card.value, true);
 
         if (canOvertrump && !doesOvertrump) return false;
       }
@@ -887,25 +890,55 @@ function isLegalPlayCurrentRules(game, playerId, hand, playedCard) {
     return true;
   }
 
+  // 2) SA / TA : si on n'a pas la couleur demandée, pas de coupe forcée
   if (isSAorTA) return true;
 
   const hasTrump = !!atout && hasSuit(hand, atout);
 
-  if (!partenaireEstMaitre && hasTrump && playedCard.suit !== atout) {
-    return false;
+  // 3) Si le partenaire est maître, on garde ta règle actuelle :
+  // on peut pisser, même si on a de l'atout
+  if (partenaireEstMaitre) return true;
+
+  // 4) Si on n'a pas d'atout, on peut jouer ce qu'on veut
+  if (!hasTrump) return true;
+
+  const bestTrumpPlay = getBestTrumpPlay(game.pli, atout);
+  const trumpAlreadyPlayed = !!bestTrumpPlay;
+
+  const canOvertrump =
+    !!bestTrumpPlay && hasHigherTrumpThan(hand, atout, bestTrumpPlay.card);
+
+  const doesOvertrump =
+    !!bestTrumpPlay &&
+    playedCard.suit === atout &&
+    rankValue(playedCard.value, true) <
+      rankValue(bestTrumpPlay.card.value, true);
+
+  // CONTRÉE
+  if (ruleset === "contree") {
+    // Si personne n'a encore coupé : obligation de couper
+    if (!trumpAlreadyPlayed) {
+      return playedCard.suit === atout;
+    }
+
+    // Si un atout est déjà au pli :
+    // - si on peut surcouper, on doit surcouper
+    // - sinon on peut pisser / sous-couper / jouer autre chose
+    if (canOvertrump) {
+      return playedCard.suit === atout && doesOvertrump;
+    }
+
+    return true;
   }
 
-  if (playedCard.suit === atout && !partenaireEstMaitre) {
-    const bestTrumpPlay = getBestTrumpPlay(game.pli, atout);
+  // CLASSIQUE / MODERNE (hors SA/TA)
+  // Si on a de l'atout et que le partenaire n'est pas maître,
+  // on doit jouer atout
+  if (playedCard.suit !== atout) return false;
 
-    if (bestTrumpPlay) {
-      const canOvertrump = hasHigherTrumpThan(hand, atout, bestTrumpPlay.card);
-      const doesOvertrump =
-        rankValue(playedCard.value, true) <
-        rankValue(bestTrumpPlay.card.value, true);
-
-      if (canOvertrump && !doesOvertrump) return false;
-    }
+  // S'il y a déjà de l'atout et qu'on peut monter, on doit monter
+  if (trumpAlreadyPlayed && canOvertrump && !doesOvertrump) {
+    return false;
   }
 
   return true;
