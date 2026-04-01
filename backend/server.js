@@ -59,10 +59,78 @@ const playersMap = new Map();
 // tableId(number) -> { id, mode, seats: [pseudo|null, ...] }
 const tablesMap = new Map();
 let nextTableId = 1;
+const BOT_PREFIX = "__bot__";
+
+function isBotPseudo(pseudo) {
+  return typeof pseudo === "string" && pseudo.startsWith(BOT_PREFIX);
+}
+
+function makeBotPseudo(tableId, seatIndex) {
+  return `${BOT_PREFIX}table${tableId}_seat${seatIndex}`;
+}
+
+function makeBotName(tableId, seatIndex) {
+  return `Bot ${tableId}-${seatIndex + 1}`;
+}
+
+function makeBotAvatar(seatIndex) {
+  const avatars = [
+    "/avatar_blue.png",
+    "/avatar_red.png",
+    "/avatar_green.png",
+    "/avatar_yellow.png",
+  ];
+  return avatars[seatIndex % avatars.length] || "/avatar_blue.png";
+}
+
+function buildBotSeat(tableId, seatIndex) {
+  return makeBotPseudo(tableId, seatIndex);
+}
+
+function getHumanSeatCount(table) {
+  if (!table) return 0;
+  return table.seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
+}
+
+function syncBotsForTable(table) {
+  if (!table) return;
+
+  const humanCount = getHumanSeatCount(table);
+
+  // aucun humain => table vide, pas de bots
+  if (humanCount === 0) {
+    table.seats = table.seats.map((pseudo) => (isBotPseudo(pseudo) ? null : pseudo));
+    return;
+  }
+
+  // au moins un humain => on remplit les places libres avec des bots
+  table.seats = table.seats.map((pseudo, seatIndex) => {
+    if (pseudo) return pseudo;
+    return buildBotSeat(table.id, seatIndex);
+  });
+}
+function createEmptyServerGame() {
+  return {
+    status: "WAITING_FOR_PLAYERS", // WAITING_FOR_PLAYERS | READY
+    players: [],
+    teams: {
+      nous: [],
+      eux: [],
+    },
+    dealerSeatIndex: 0,
+    currentTurnSeatIndex: null,
+    version: 0,
+  };
+}
 
 function createTable(mode = "classic") {
   const id = nextTableId++;
-  tablesMap.set(id, { id, mode, seats: [null, null, null, null] });
+  tablesMap.set(id, {
+    id,
+    mode,
+    seats: [null, null, null, null],
+    game: createEmptyServerGame(),
+  });
   return tablesMap.get(id);
 }
 
@@ -85,11 +153,26 @@ function playersArray() {
 function seatInfoFromPseudo(pseudo) {
   if (!pseudo) return null;
 
+  if (isBotPseudo(pseudo)) {
+    const match = pseudo.match(/table(\d+)_seat(\d+)/);
+    const tableId = match ? Number(match[1]) : 0;
+    const seatIndex = match ? Number(match[2]) : 0;
+
+    return {
+      name: makeBotName(tableId, seatIndex),
+      avatar: makeBotAvatar(seatIndex),
+      isBot: true,
+      pseudo,
+    };
+  }
+
   const p = playersMap.get(pseudo);
 
   return {
     name: pseudo,
     avatar: p?.avatar || "/avatar_blue.png",
+    isBot: false,
+    pseudo,
   };
 }
 
@@ -97,7 +180,7 @@ function tablesArray() {
   return Array.from(tablesMap.values()).map((t) => {
     const seats = t.seats.map((x) => x || null);
     const seatsInfo = seats.map((pseudo) => seatInfoFromPseudo(pseudo));
-    const count = seats.filter(Boolean).length;
+    const count = seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
 
     return {
       id: t.id,
@@ -105,6 +188,20 @@ function tablesArray() {
       seats,
       seatsInfo,
       count,
+      game: {
+        status: t.game?.status || "WAITING_FOR_PLAYERS",
+        players: t.game?.players || [],
+        teams: t.game?.teams || { nous: [], eux: [] },
+        dealerSeatIndex:
+          typeof t.game?.dealerSeatIndex === "number"
+            ? t.game.dealerSeatIndex
+            : 0,
+        currentTurnSeatIndex:
+          t.game?.currentTurnSeatIndex != null
+            ? t.game.currentTurnSeatIndex
+            : null,
+        version: t.game?.version || 0,
+      },
     };
   });
 }
@@ -150,6 +247,54 @@ function findPlayerTable(pseudo) {
     if (idx !== -1) return { table: t, seatIndex: idx };
   }
   return null;
+}
+function getSeatedPlayersInOrder(table) {
+  if (!table) return [];
+  return table.seats
+    .map((pseudo, seatIndex) => ({ pseudo, seatIndex }))
+    .filter((entry) => !!entry.pseudo);
+}
+
+function buildTeamsFromSeats(table) {
+  if (!table) {
+    return { nous: [], eux: [] };
+  }
+
+  return {
+    nous: [table.seats[0], table.seats[2]].filter(Boolean),
+    eux: [table.seats[1], table.seats[3]].filter(Boolean),
+  };
+}
+
+function refreshServerGameForTable(table) {
+  if (!table) return;
+ syncBotsForTable(table);
+  const seated = getSeatedPlayersInOrder(table);
+  const count = seated.length;
+
+  if (count < 4) {
+    table.game = {
+      ...createEmptyServerGame(),
+      version: (table.game?.version || 0) + 1,
+    };
+    return;
+  }
+
+  table.game = {
+    ...(table.game || createEmptyServerGame()),
+    status: "READY",
+    players: seated.map((entry) => entry.pseudo),
+    teams: buildTeamsFromSeats(table),
+    dealerSeatIndex:
+      typeof table.game?.dealerSeatIndex === "number"
+        ? table.game.dealerSeatIndex
+        : 0,
+    currentTurnSeatIndex:
+      table.game?.currentTurnSeatIndex != null
+        ? table.game.currentTurnSeatIndex
+        : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
+    version: (table.game?.version || 0) + 1,
+  };
 }
 function isPlayerInTable(tableId, pseudo) {
   const t = tablesMap.get(Number(tableId));
@@ -310,10 +455,13 @@ if (msg.type === "join_table") {
     return;
   }
 
+  // place libre OU place occupée par un bot remplaçable
   const freeIdx = t.seats.findIndex((s) => !s);
+  const botIdx = t.seats.findIndex((s) => isBotPseudo(s));
+  const targetIdx = freeIdx !== -1 ? freeIdx : botIdx;
 
-  // table pleine
-  if (freeIdx === -1) {
+  // vraiment pleine = 4 humains
+  if (targetIdx === -1) {
     ws.send(
       JSON.stringify({
         type: "join_table_denied",
@@ -331,10 +479,16 @@ if (msg.type === "join_table") {
     prev.table.seats[prev.seatIndex] = null;
   }
 
-  // rattachement + auto-seat temporaire
-  ws.tableId = t.id;
-  t.seats[freeIdx] = pseudo;
+  if (prev && Number(prev.table.id) !== Number(t.id)) {
+    refreshServerGameForTable(prev.table);
+  }
 
+  const replacedBot = isBotPseudo(t.seats[targetIdx]) ? t.seats[targetIdx] : null;
+
+  // rattachement + installation dans la table
+  ws.tableId = t.id;
+  t.seats[targetIdx] = pseudo;
+  refreshServerGameForTable(t);
   broadcastTables();
 
   if (oldTableId && Number(oldTableId) !== Number(t.id)) {
@@ -348,7 +502,9 @@ if (msg.type === "join_table") {
   broadcastToTable(t.id, {
     type: "table_system",
     tableId: t.id,
-    text: `${pseudo} a pris la place ${freeIdx + 1}`,
+    text: replacedBot
+      ? `${pseudo} a remplacé un bot à la place ${targetIdx + 1}`
+      : `${pseudo} a pris la place ${targetIdx + 1}`,
   });
 
   ws.send(
@@ -361,6 +517,8 @@ if (msg.type === "join_table") {
 
   return;
 }
+
+
 if (msg.type === "choose_seat") {
   const tableId =
     msg.tableId != null
@@ -372,7 +530,11 @@ if (msg.type === "choose_seat") {
 
   const seatIndex = Number(msg.seatIndex);
 
-  if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex >= t.seats.length) {
+  if (
+    !Number.isInteger(seatIndex) ||
+    seatIndex < 0 ||
+    seatIndex >= t.seats.length
+  ) {
     ws.send(
       JSON.stringify({
         type: "choose_seat_denied",
@@ -414,8 +576,11 @@ if (msg.type === "choose_seat") {
     return;
   }
 
-  // place prise
-  if (t.seats[seatIndex]) {
+  const targetSeat = t.seats[seatIndex];
+  const targetIsBot = isBotPseudo(targetSeat);
+
+  // place prise par un humain
+  if (targetSeat && !targetIsBot) {
     ws.send(
       JSON.stringify({
         type: "choose_seat_denied",
@@ -431,7 +596,7 @@ if (msg.type === "choose_seat") {
   // déplacement interne à la même table
   t.seats[currentSeatIndex] = null;
   t.seats[seatIndex] = pseudo;
-
+  refreshServerGameForTable(t);
   broadcastTables();
 
   ws.send(
@@ -445,12 +610,18 @@ if (msg.type === "choose_seat") {
   broadcastToTable(t.id, {
     type: "table_system",
     tableId: t.id,
-    text: `${pseudo} a pris la place ${seatIndex + 1}`,
+    text: targetIsBot
+      ? `${pseudo} a remplacé un bot à la place ${seatIndex + 1}`
+      : `${pseudo} a pris la place ${seatIndex + 1}`,
   });
 
   const targetCountAfter = t.seats.filter(Boolean).length;
 
-  if (!wasAlreadySeatedHere && targetCountBefore === 3 && targetCountAfter === 4) {
+  if (
+    !wasAlreadySeatedHere &&
+    targetCountBefore === 3 &&
+    targetCountAfter === 4
+  ) {
     broadcastToTable(t.id, {
       type: "table_system",
       tableId: t.id,
@@ -471,7 +642,7 @@ if (msg.type === "choose_seat") {
         const idx = t.seats.findIndex((p) => p === pseudo);
         if (idx !== -1) {
           t.seats[idx] = null;
-
+         refreshServerGameForTable(t);
           if (Number(ws.tableId) === Number(t.id)) {
             ws.tableId = null;
           }
@@ -492,7 +663,10 @@ if (msg.type === "choose_seat") {
         if (Number(ws.tableId) === Number(left)) {
           ws.tableId = null;
         }
-
+       const leftTable = tablesMap.get(left);
+if (leftTable) {
+  refreshServerGameForTable(leftTable);
+}
         broadcastTables();
 
         broadcastToTable(left, {
@@ -519,7 +693,10 @@ if (msg.type === "choose_seat") {
       playersMap.delete(pseudo);
 
       const leftTableId = removePlayerFromAnyTable(pseudo);
-
+      const leftTable = tablesMap.get(leftTableId);
+      if (leftTable) {
+        refreshServerGameForTable(leftTable);
+      }
       broadcastPlayers();
       broadcastTables();
 
