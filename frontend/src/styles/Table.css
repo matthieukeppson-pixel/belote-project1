@@ -393,12 +393,12 @@
   width: 14px;
   height: 14px;
 
-  background: #ffd76a;
+  background: #c62828;
   border-radius: 50%;
 
   box-shadow:
-    0 0 0 2px rgba(40, 20, 0, 0.9),
-    0 0 12px rgba(255, 215, 120, 0.9);
+    0 0 0 2px rgba(60, 0, 0, 0.9),
+    0 0 12px rgba(198, 40, 40, 0.75);
 
   z-index: 10;
 }

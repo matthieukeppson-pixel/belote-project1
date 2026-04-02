@@ -74,13 +74,7 @@ function makeBotName(tableId, seatIndex) {
 }
 
 function makeBotAvatar(seatIndex) {
-  const avatars = [
-    "/avatar_blue.png",
-    "/avatar_red.png",
-    "/avatar_green.png",
-    "/avatar_yellow.png",
-  ];
-  return avatars[seatIndex % avatars.length] || "/avatar_blue.png";
+  return "/avatar_red.png";
 }
 
 function buildBotSeat(tableId, seatIndex) {
