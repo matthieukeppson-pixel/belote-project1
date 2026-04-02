@@ -241,14 +241,28 @@ return () => {
 
           <div className="tables-list">
             {tables.map((t) => {
-              const count = t.count ?? (t.seats ? t.seats.filter(Boolean).length : 0);
-              const isFull = count >= 4;
+             const humanCount =
+  typeof t.count === "number"
+    ? t.count
+    : Array.isArray(t.seatsInfo)
+      ? t.seatsInfo.filter((seat) => seat?.name && !seat?.isBot).length
+      : 0;
+
+const isHumanFull = humanCount >= 4;
+const isReadyWithBots =
+  t.game?.status === "READY" && humanCount > 0 && humanCount < 4;
+
+const statusText = isHumanFull
+  ? "Complète"
+  : isReadyWithBots
+    ? "Jouable"
+    : "En attente";
 
               return (
                 <div key={t.id} className="table-card">
                   <div className="table-title">Table {t.id}</div>
-                  <div className="table-info">Joueurs : {count} / 4</div>
-                  <div className="table-info">Statut : {isFull ? "Complète" : "En attente"}</div>
+                <div className="table-info">Joueurs : {humanCount} / 4</div>
+<div className="table-info">Statut : {statusText}</div>
                   <div className="table-seated-players">
   {(t.seatsInfo || [])
     .filter((seat) => seat?.name)
@@ -281,15 +295,15 @@ return () => {
                     </div>
                   </div>
 
-                  <button
-                    className="btn-join"
-                    disabled={isFull}
-                    onClick={() => {
-  navigate(`/table/${t.id}`, { state: { mode: t.mode } });
-}}
-                  >
-                    {isFull ? "Table complète" : "Rejoindre"}
-                  </button>
+                 <button
+  className="btn-join"
+  disabled={isHumanFull}
+  onClick={() => {
+    navigate(`/table/${t.id}`, { state: { mode: t.mode } });
+  }}
+>
+  {isHumanFull ? "Table complète" : "Rejoindre"}
+</button>
                 </div>
               );
             })}
