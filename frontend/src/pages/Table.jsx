@@ -285,6 +285,14 @@ function seatNameForPosition(position) {
 
   return seat?.name || "Place libre";
 }
+function canChoosePosition(position) {
+  const idx = seatIndexForPosition(position);
+  if (idx == null) return false;
+  if (idx === mySeatIndex) return false;
+
+  const seat = seatForPosition(position);
+  return !seat?.name || seat?.isBot;
+}
   useEffect(() => {
 
     if (!tableId) return;
@@ -1148,18 +1156,15 @@ style={{
              <div
   key={player}
   className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
-  onClick={
-    !seatForPosition(position)?.name && seatIndexForPosition(position) != null
-      ? () => _chooseSeat(seatIndexForPosition(position))
-      : undefined
-  }
-  style={{
-    cursor:
-      !seatForPosition(position)?.name && seatIndexForPosition(position) != null
-        ? "pointer"
-        : "default",
-    opacity: seatForPosition(position)?.name ? 1 : 0.92,
-  }}
+onClick={
+  canChoosePosition(position)
+    ? () => _chooseSeat(seatIndexForPosition(position))
+    : undefined
+}
+style={{
+  cursor: canChoosePosition(position) ? "pointer" : "default",
+  opacity: seatForPosition(position)?.name ? 1 : 0.92,
+}}
 >
               
 <img
