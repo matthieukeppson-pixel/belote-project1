@@ -240,6 +240,7 @@ const mySeatIndex = seatsInfo.findIndex(
   (seat) => seat?.name === pseudo
 );
 const handPhase = _tableSnapshot?.game?.hand?.phase || "UNKNOWN";
+const isServerBiddingPhase = handPhase === "BIDDING";
 function seatIndexForPosition(position) {
   const fixedMap = {
     top: 0,
@@ -424,7 +425,8 @@ console.log("TABLE HAND", _tableSnapshot?.game?.hand);
 
     return g;
   });
-
+const showServerBiddingHint =
+  (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
   // ============================================
   // UI STATES
   // ============================================
@@ -869,7 +871,7 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-  Phase serveur : {handPhase}
+ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
 </div>
 
 
@@ -1296,7 +1298,8 @@ const inwardBase =
 )}
 
             {(mode === "classic" || mode === "moderne") &&
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && (
+              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && 
+                showServerBiddingHint && (
                 <div className="atout-panel atout-panel--glass">
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
