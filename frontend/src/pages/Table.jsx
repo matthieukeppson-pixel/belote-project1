@@ -361,25 +361,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
 
   if (wsTableRef.current === ws) wsTableRef.current = null;
 };
-  }, [tableId, pseudo, avatar]);console.log("TABLE SNAPSHOT", _tableSnapshot);
-
-   useEffect(() => {
-  
-    if (!import.meta.env.DEV) return;
-    if (!_tableSnapshot) return;
-
-   console.log("TABLE SNAPSHOT", {
-  id: _tableSnapshot?.id,
-  count: _tableSnapshot?.count,
-  seats: _tableSnapshot?.seats,
-  seatsInfo: _tableSnapshot?.seatsInfo,
-  game: _tableSnapshot?.game,
-  hand: _tableSnapshot?.game?.hand,
-});
-console.log("TABLE GAME", _tableSnapshot?.game);
-console.log("TABLE HAND", _tableSnapshot?.game?.hand);
-
-  }, [_tableSnapshot]);
+ }, [tableId, pseudo, avatar]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
