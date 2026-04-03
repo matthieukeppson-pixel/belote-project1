@@ -945,7 +945,7 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
         : (!game.currentBid || actorTeam === preneurTeam ? 0.55 : 1),
   }}
   onClick={handleContre}
-  disabled={!game.currentBid || mult !== 1 || actorTeam === preneurTeam}
+ disabled={!isServerBiddingPhase || !game.currentBid || mult !== 1 || actorTeam === preneurTeam}
 >
   Contrer
 </button>
