@@ -676,8 +676,9 @@ const [announcementFading, setAnnouncementFading] = useState(false);
 }
 
   function handleSurContre() {
-    setGame((g) => dispatch(g, { type: "SURCONTRE" }));
-  }
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "SURCONTRE" }));
+}
 
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
