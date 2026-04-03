@@ -1021,9 +1021,13 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
         </button>
       ))}
 
-      <button className="atout-btn pass" onClick={handlePass}>
-        Passer
-      </button>
+     <button
+  className="atout-btn pass"
+  onClick={handlePass}
+  disabled={!isServerBiddingPhase}
+>
+  Passer
+</button>
     </div>
   </div>
 )}
