@@ -103,7 +103,27 @@ function syncBotsForTable(table) {
     return buildBotSeat(table.id, seatIndex);
   });
 }
+function createEmptyHandState() {
+  return {
+    phase: "IDLE", // IDLE | DEALING | BIDDING | PLAYING | SCORING
+    roundNumber: 0,
+    trickNumber: 0,
+
+    trumpSuit: null,
+    currentBid: null,
+    takerSeatIndex: null,
+
+    leadingSeatIndex: null,
+    trickCards: [null, null, null, null],
+
+    scores: {
+      nous: 0,
+      eux: 0,
+    },
+  };
+}
 function createEmptyServerGame() {
+
   return {
     status: "WAITING_FOR_PLAYERS", // WAITING_FOR_PLAYERS | READY
     players: [],
@@ -182,20 +202,21 @@ function tablesArray() {
       seats,
       seatsInfo,
       count,
-      game: {
-        status: t.game?.status || "WAITING_FOR_PLAYERS",
-        players: t.game?.players || [],
-        teams: t.game?.teams || { nous: [], eux: [] },
-        dealerSeatIndex:
-          typeof t.game?.dealerSeatIndex === "number"
-            ? t.game.dealerSeatIndex
-            : 0,
-        currentTurnSeatIndex:
-          t.game?.currentTurnSeatIndex != null
-            ? t.game.currentTurnSeatIndex
-            : null,
-        version: t.game?.version || 0,
-      },
+game: {
+  status: t.game?.status || "WAITING_FOR_PLAYERS",
+  players: t.game?.players || [],
+  teams: t.game?.teams || { nous: [], eux: [] },
+  dealerSeatIndex:
+    typeof t.game?.dealerSeatIndex === "number"
+      ? t.game.dealerSeatIndex
+      : 0,
+  currentTurnSeatIndex:
+    t.game?.currentTurnSeatIndex != null
+      ? t.game.currentTurnSeatIndex
+      : null,
+  version: t.game?.version || 0,
+  hand: t.game?.hand || createEmptyHandState(),
+},
     };
   });
 }
@@ -274,21 +295,25 @@ function refreshServerGameForTable(table) {
     return;
   }
 
-  table.game = {
-    ...(table.game || createEmptyServerGame()),
-    status: "READY",
-    players: seated.map((entry) => entry.pseudo),
-    teams: buildTeamsFromSeats(table),
-    dealerSeatIndex:
-      typeof table.game?.dealerSeatIndex === "number"
-        ? table.game.dealerSeatIndex
-        : 0,
-    currentTurnSeatIndex:
-      table.game?.currentTurnSeatIndex != null
-        ? table.game.currentTurnSeatIndex
-        : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
-    version: (table.game?.version || 0) + 1,
-  };
+table.game = {
+  ...(table.game || createEmptyServerGame()),
+  status: "READY",
+  players: seated.map((entry) => entry.pseudo),
+  teams: buildTeamsFromSeats(table),
+  dealerSeatIndex:
+    typeof table.game?.dealerSeatIndex === "number"
+      ? table.game.dealerSeatIndex
+      : 0,
+  currentTurnSeatIndex:
+    table.game?.currentTurnSeatIndex != null
+      ? table.game.currentTurnSeatIndex
+      : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
+  version: (table.game?.version || 0) + 1,
+  hand: {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  },
+};
 }
 function isPlayerInTable(tableId, pseudo) {
   const t = tablesMap.get(Number(tableId));
