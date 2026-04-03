@@ -1354,8 +1354,9 @@ const inwardBase =
               )}
 
             {(mode === "classic" || mode === "moderne") &&
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
-              game.atoutPropose && (
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+  showServerBiddingHint &&
+  game.atoutPropose && (
                 <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
                   <div className="atout-title">Choisir l’atout</div>
 
