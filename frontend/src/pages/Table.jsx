@@ -1072,21 +1072,23 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
         gap: 10,
       }}
     >
-      <button
-        className="atout-btn take"
-        style={{ minWidth: 96, padding: "8px 12px" }}
-        onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
-      >
-        Annonce
-      </button>
+     <button
+  className="atout-btn take"
+  style={{ minWidth: 96, padding: "8px 12px" }}
+  onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
+  disabled={!isServerBiddingPhase}
+>
+  Annonce
+</button>
 
-      <button
-        className="atout-btn pass"
-        style={{ minWidth: 96, padding: "8px 12px" }}
-        onClick={handlePassAnnouncement}
-      >
-        Passer
-      </button>
+     <button
+  className="atout-btn pass"
+  style={{ minWidth: 96, padding: "8px 12px" }}
+  onClick={handlePassAnnouncement}
+  disabled={!isServerBiddingPhase}
+>
+  Passer
+</button>
     </div>
   </div>
 )}
