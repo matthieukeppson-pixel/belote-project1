@@ -969,7 +969,7 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
         : (!game.currentBid || actorTeam !== preneurTeam ? 0.55 : 1),
   }}
   onClick={handleSurContre}
-  disabled={!game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
+ disabled={!isServerBiddingPhase || !game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
 >
   Surcontrer
 </button>
