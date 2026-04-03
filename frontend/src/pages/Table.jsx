@@ -659,17 +659,18 @@ const [announcementFading, setAnnouncementFading] = useState(false);
 }
 
   function handleDeclareAnnouncement(announcement) {
-    if (!announcement) return;
+  if (!isServerBiddingPhase) return;
+  if (!announcement) return;
 
-    setGame((g) =>
-      dispatch(g, {
-        type: "DECLARE_ANNOUNCEMENT",
-        announcementType: announcement.type,
-        highRank: announcement.highRank,
-        suit: announcement.suit || null,
-      })
-    );
-  }
+  setGame((g) =>
+    dispatch(g, {
+      type: "DECLARE_ANNOUNCEMENT",
+      announcementType: announcement.type,
+      highRank: announcement.highRank,
+      suit: announcement.suit || null,
+    })
+  );
+}
 
  function handleContre() {
   if (!isServerBiddingPhase) return;
