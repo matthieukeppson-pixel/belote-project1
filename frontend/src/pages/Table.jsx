@@ -882,7 +882,9 @@ useEffect(() => {
               </div>
             )}
 
-{mode === "contree" && game.state === STATES.ENCHERES && (
+  {mode === "contree" &&
+  game.state === STATES.ENCHERES &&
+  showServerBiddingHint && (
   <div
     className="atout-panel"
     style={{
