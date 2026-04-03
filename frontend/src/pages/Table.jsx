@@ -1008,15 +1008,15 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
       style={{ marginTop: 10, justifyContent: "center", gap: 10, flexWrap: "wrap" }}
     >
       {ALL_SUITS.map((suit) => (
-        <button
-          key={suit}
-          className="atout-btn take atout-suit-btn"
-
-          onClick={() => {
-  if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
-}}
-        >
+<button
+  key={suit}
+  className="atout-btn take atout-suit-btn"
+  onClick={() =>
+    setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
+  }
+  disabled={!isServerBiddingPhase}
+>
+        
           <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
         </button>
       ))}
