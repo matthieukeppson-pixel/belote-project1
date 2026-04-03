@@ -712,6 +712,7 @@ const bestValidatedAnnouncement =
 const showModernAnnouncementPanel =
   mode === "moderne" &&
   game.state === STATES.ANNONCES_MODERNE &&
+  isServerBiddingPhase &&
   activePlayer === "joueur1" &&
   currentAnnouncements.length > 0;
 useEffect(() => {
