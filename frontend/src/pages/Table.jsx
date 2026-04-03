@@ -644,8 +644,9 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   // ACTIONS
   // ============================================
   function handleTakeAtout() {
-    setGame((g) => dispatch(g, { type: "TAKE_ATOUT" }));
-  }
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "TAKE_ATOUT" }));
+}
 
   function handlePass() {
     setGame((g) => dispatch(g, { type: "PASS" }));
