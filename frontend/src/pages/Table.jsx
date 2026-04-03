@@ -239,7 +239,7 @@ const seatsInfo =
 const mySeatIndex = seatsInfo.findIndex(
   (seat) => seat?.name === pseudo
 );
-
+const handPhase = _tableSnapshot?.game?.hand?.phase || "UNKNOWN";
 function seatIndexForPosition(position) {
   const fixedMap = {
     top: 0,
@@ -367,12 +367,17 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
     if (!import.meta.env.DEV) return;
     if (!_tableSnapshot) return;
 
-    console.log("TABLE SNAPSHOT", {
-      id: _tableSnapshot?.id,
-      count: _tableSnapshot?.count,
-      seats: _tableSnapshot?.seats,
-      seatsInfo: _tableSnapshot?.seatsInfo,
-    });
+   console.log("TABLE SNAPSHOT", {
+  id: _tableSnapshot?.id,
+  count: _tableSnapshot?.count,
+  seats: _tableSnapshot?.seats,
+  seatsInfo: _tableSnapshot?.seatsInfo,
+  game: _tableSnapshot?.game,
+  hand: _tableSnapshot?.game?.hand,
+});
+console.log("TABLE GAME", _tableSnapshot?.game);
+console.log("TABLE HAND", _tableSnapshot?.game?.hand);
+
   }, [_tableSnapshot]);
 
   const [bidValue, setBidValue] = useState(80);
@@ -851,6 +856,21 @@ useEffect(() => {
         ← Retour au salon
       </button>
 <div className="table-mode-pill">Mode : {modeLabel}</div>
+<div
+  style={{
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 30,
+    background: "rgba(0,0,0,0.55)",
+    color: "#fff",
+    padding: "6px 10px",
+    borderRadius: 10,
+    fontWeight: 700,
+  }}
+>
+  Phase serveur : {handPhase}
+</div>
 
 
       <div className="table-layout">
