@@ -309,10 +309,14 @@ table.game = {
       ? table.game.currentTurnSeatIndex
       : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
   version: (table.game?.version || 0) + 1,
-  hand: {
-    ...createEmptyHandState(),
-    ...(table.game?.hand || {}),
-  },
+ hand: {
+  ...createEmptyHandState(),
+  ...(table.game?.hand || {}),
+  phase:
+    table.game?.hand?.phase && table.game.hand.phase !== "IDLE"
+      ? table.game.hand.phase
+      : "BIDDING",
+},
 };
 }
 function isPlayerInTable(tableId, pseudo) {
@@ -463,16 +467,19 @@ if (msg.type === "join_table") {
 
   // déjà assis dans cette table : on rattache juste le socket
   if (wasAlreadyInTargetTable) {
-    ws.tableId = t.id;
-    ws.send(
-      JSON.stringify({
-        type: "joined_table",
-        tableId: t.id,
-        mode: t.mode,
-      })
-    );
-    return;
-  }
+  ws.tableId = t.id;
+  refreshServerGameForTable(t);
+  broadcastTables();
+
+  ws.send(
+    JSON.stringify({
+      type: "joined_table",
+      tableId: t.id,
+      mode: t.mode,
+    })
+  );
+  return;
+}
 
   // place libre OU place occupée par un bot remplaçable
   const freeIdx = t.seats.findIndex((s) => !s);
