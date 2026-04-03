@@ -855,7 +855,7 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
- Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
+Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
 </div>
 
 
@@ -884,9 +884,9 @@ useEffect(() => {
               </div>
             )}
 
-  {mode === "contree" &&
+ {mode === "contree" &&
   game.state === STATES.ENCHERES &&
-  showServerBiddingHint && (
+  isServerBiddingPhase && (
   <div
     className="atout-panel"
     style={{
@@ -1009,9 +1009,11 @@ useEffect(() => {
         <button
           key={suit}
           className="atout-btn take atout-suit-btn"
-          onClick={() =>
-            setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
-          }
+
+          onClick={() => {
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
+}}
         >
           <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
         </button>
