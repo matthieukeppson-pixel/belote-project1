@@ -670,9 +670,10 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     );
   }
 
-  function handleContre() {
-    setGame((g) => dispatch(g, { type: "CONTRE" }));
-  }
+ function handleContre() {
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "CONTRE" }));
+}
 
   function handleSurContre() {
     setGame((g) => dispatch(g, { type: "SURCONTRE" }));
