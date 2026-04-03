@@ -1293,9 +1293,13 @@ const inwardBase =
                 <div className="atout-panel atout-panel--glass">
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
-                    <button className="atout-btn take" onClick={handleTakeAtout}>
-                      Prendre
-                    </button>
+                    <button
+  className="atout-btn take"
+  onClick={handleTakeAtout}
+  disabled={!isServerBiddingPhase}
+>
+  Prendre
+</button>
 
                     {mode === "moderne" && (
                       <>
