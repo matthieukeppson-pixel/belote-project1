@@ -1102,7 +1102,7 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
   </div>
 )}
 
-{mode === "moderne" && visibleAnnouncement && (
+{mode === "moderne" && isServerBiddingPhase && visibleAnnouncement && (
   <div
 style={{
   position: "absolute",
