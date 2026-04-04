@@ -682,7 +682,10 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   if (!isServerBiddingPhase) return;
   setGame((g) => dispatch(g, { type: "SURCONTRE" }));
 }
-
+function handleBidSuit(suit) {
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
+}
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
     setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
@@ -1023,9 +1026,7 @@ Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddin
 <button
   key={suit}
   className="atout-btn take atout-suit-btn"
-  onClick={() =>
-    setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }))
-  }
+  onClick={() => handleBidSuit(suit)}
   disabled={!isServerBiddingPhase}
 >
         
