@@ -716,13 +716,19 @@ const showModernAnnouncementPanel =
   activePlayer === "joueur1" &&
   currentAnnouncements.length > 0;
 useEffect(() => {
-  if (mode !== "moderne") {
-    setVisibleAnnouncement(null);
-    setAnnouncementFading(false);
-    return;
-  }
+ if (mode !== "moderne") {
+  setVisibleAnnouncement(null);
+  setAnnouncementFading(false);
+  return;
+}
 
-  if (!bestValidatedAnnouncement) return;
+if (!isServerBiddingPhase) {
+  setVisibleAnnouncement(null);
+  setAnnouncementFading(false);
+  return;
+}
+
+if (!bestValidatedAnnouncement) return;
 
   setVisibleAnnouncement(bestValidatedAnnouncement);
   setAnnouncementFading(false);
@@ -740,7 +746,7 @@ useEffect(() => {
     clearTimeout(fadeTimer);
     clearTimeout(hideTimer);
   };
-}, [mode, bestValidatedAnnouncement]);
+}, [mode, isServerBiddingPhase, bestValidatedAnnouncement]);
 
 useEffect(() => {
   if (mode !== "moderne") return;
