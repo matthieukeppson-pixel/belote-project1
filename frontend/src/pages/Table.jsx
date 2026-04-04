@@ -453,13 +453,14 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     setGame(g);
   }
 
-  useEffect(() => {
-    if (mode !== "contree") return;
-    if (game.state !== STATES.ENCHERES) return;
-    if (game.currentBid) return;
+ useEffect(() => {
+  if (mode !== "contree") return;
+  if (!isServerBiddingPhase) return;
+  if (game.state !== STATES.ENCHERES) return;
+  if (game.currentBid) return;
 
-    setBidValue(80);
-  }, [mode, game.state, game.currentBid]);
+  setBidValue(80);
+}, [mode, isServerBiddingPhase, game.state, game.currentBid]);
 
   useEffect(() => {
     const s = game?.belote?.state;
