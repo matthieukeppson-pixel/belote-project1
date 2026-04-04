@@ -741,8 +741,10 @@ useEffect(() => {
     clearTimeout(hideTimer);
   };
 }, [mode, bestValidatedAnnouncement]);
+
 useEffect(() => {
   if (mode !== "moderne") return;
+   if (!isServerBiddingPhase) return;
   if (game.state !== STATES.ANNONCES_MODERNE) return;
 
   const timer = setTimeout(() => {
@@ -784,7 +786,7 @@ useEffect(() => {
   }, 350);
 
   return () => clearTimeout(timer);
-}, [mode, game.state, game.currentPlayerIndex, game.modernAnnouncements, game.atout]);
+}, [mode, isServerBiddingPhase, game.state, game.currentPlayerIndex, game.modernAnnouncements, game.atout]);
 
 useEffect(() => {
   if (!import.meta.env.DEV) return;
