@@ -686,6 +686,10 @@ function handleBidSuit(suit) {
   if (!isServerBiddingPhase) return;
   setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
 }
+function handleTakeAtoutSuit(suit) {
+  if (!isServerBiddingPhase) return;
+  setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }));
+}
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
     setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
@@ -1324,18 +1328,14 @@ const inwardBase =
                       <>
                         <button
                           className="atout-btn take"
-                          onClick={() =>
-                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
-                          }
+                         onClick={() => handleTakeAtoutSuit("SA")}
                           title="Sans Atout"
                         >
                           SA
                         </button>
                         <button
                           className="atout-btn take"
-                          onClick={() =>
-                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
-                          }
+                          onClick={() => handleTakeAtoutSuit("TA")}
                           title="Tout Atout"
                         >
                           TA
@@ -1382,34 +1382,30 @@ const inwardBase =
                       <button
                         key={suit}
                         className="atout-btn take atout-suit-btn"
-                        onClick={() => setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }))}
+                        onClick={() => handleTakeAtoutSuit(suit)}
                       >
                         <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
                       </button>
                     ))}
 
                     {mode === "moderne" && (
-                      <>
-                        <button
-                          className="atout-btn take"
-                          onClick={() =>
-                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "SA" }))
-                          }
-                          title="Sans Atout"
-                        >
-                          SA
-                        </button>
-                        <button
-                          className="atout-btn take"
-                          onClick={() =>
-                            setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit: "TA" }))
-                          }
-                          title="Tout Atout"
-                        >
-                          TA
-                        </button>
-                      </>
-                    )}
+  <>
+    <button
+      className="atout-btn take"
+      onClick={() => handleTakeAtoutSuit("SA")}
+      title="Sans Atout"
+    >
+      SA
+    </button>
+    <button
+      className="atout-btn take"
+      onClick={() => handleTakeAtoutSuit("TA")}
+      title="Tout Atout"
+    >
+      TA
+    </button>
+  </>
+)}
 
                     <button
   className="atout-btn pass atout-pass-inline"
