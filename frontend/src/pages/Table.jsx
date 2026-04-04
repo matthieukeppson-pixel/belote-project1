@@ -1409,9 +1409,13 @@ const inwardBase =
                       </>
                     )}
 
-                    <button className="atout-btn pass atout-pass-inline" onClick={handlePass}>
-                      Passer
-                    </button>
+                    <button
+  className="atout-btn pass atout-pass-inline"
+  onClick={handlePass}
+  disabled={!isServerBiddingPhase}
+>
+  Passer
+</button>
                   </div>
                 </div>
               )}
