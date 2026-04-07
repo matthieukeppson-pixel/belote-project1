@@ -239,12 +239,8 @@ const seatsInfo =
 const mySeatIndex = seatsInfo.findIndex(
   (seat) => seat?.name === pseudo
 );
-const handPhase = _tableSnapshot?.game?.hand?.phase || "UNKNOWN";
-const isServerBiddingPhase =
-  game.state === STATES.ENCHERES ||
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
-  game.state === STATES.ANNONCES_MODERNE;
+
+
 
 function seatIndexForPosition(position) {
   const fixedMap = {
@@ -412,8 +408,15 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
 
     return g;
   });
+  const localPhaseLabel = game?.state || "UNKNOWN";
+const isServerBiddingPhase =
+  game?.state === STATES.ENCHERES ||
+  game?.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+  game?.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
+  game?.state === STATES.ANNONCES_MODERNE;
 const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
+
   // ============================================
   // UI STATES
   // ============================================
@@ -881,7 +884,7 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-Phase serveur : {handPhase}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
+Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
 </div>
 
 
