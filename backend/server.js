@@ -309,14 +309,10 @@ table.game = {
       ? table.game.currentTurnSeatIndex
       : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
   version: (table.game?.version || 0) + 1,
- hand: {
-  ...createEmptyHandState(),
-  ...(table.game?.hand || {}),
-  phase:
-    table.game?.hand?.phase && table.game.hand.phase !== "IDLE"
-      ? table.game.hand.phase
-      : "BIDDING",
-},
+  hand: {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  },
 };
 }
 function isPlayerInTable(tableId, pseudo) {
