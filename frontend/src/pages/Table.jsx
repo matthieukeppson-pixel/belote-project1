@@ -240,7 +240,12 @@ const mySeatIndex = seatsInfo.findIndex(
   (seat) => seat?.name === pseudo
 );
 const handPhase = _tableSnapshot?.game?.hand?.phase || "UNKNOWN";
-const isServerBiddingPhase = handPhase === "BIDDING";
+const isServerBiddingPhase =
+  game.state === STATES.ENCHERES ||
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
+  game.state === STATES.ANNONCES_MODERNE;
+
 function seatIndexForPosition(position) {
   const fixedMap = {
     top: 0,
