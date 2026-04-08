@@ -264,7 +264,10 @@ const mySeatIndex = seatsInfo.findIndex(
 );
 
 
-
+// POSITION DE RENDU LOCALE
+// - bottom / left / top / right = vue du joueur local
+// - ce n'est pas le siège réel serveur
+// - le joueur local reste toujours affiché en bas
 function seatIndexForPosition(position) {
   const fixedMap = {
     top: 0,
