@@ -136,11 +136,21 @@ const TABLE_CHAT_EMOJIS = {
   ":sourire:": "/emojis/sourire.png",
 };
 const LOCAL_PLAYER_ID = "joueur1";
-const LOCAL_TABLE_PLAYERS = [LOCAL_PLAYER_ID, "joueur4", "joueur2", "joueur3"];
+const LEFT_PLAYER_ID = "joueur4";
+const TOP_PLAYER_ID = "joueur2";
+const RIGHT_PLAYER_ID = "joueur3";
+
+const LOCAL_TABLE_PLAYERS = [
+  LOCAL_PLAYER_ID,
+  LEFT_PLAYER_ID,
+  TOP_PLAYER_ID,
+  RIGHT_PLAYER_ID,
+];
+
 const POSITION_TO_LOGICAL_PLAYER = {
-  top: "joueur2",
-  left: "joueur4",
-  right: "joueur3",
+  top: TOP_PLAYER_ID,
+  left: LEFT_PLAYER_ID,
+  right: RIGHT_PLAYER_ID,
   bottom: LOCAL_PLAYER_ID,
 };
 
