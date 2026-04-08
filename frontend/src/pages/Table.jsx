@@ -1215,22 +1215,25 @@ style={{
               )}
 
             {TABLE_POSITIONS.map((position) => {
-              const player = logicalPlayerForPosition(position);
+  const player = logicalPlayerForPosition(position);
+  const canChooseSeat = canChoosePosition(position);
+  const displayedSeat = seatForPosition(position);
 
-              return (
-                <div
-                  key={player}
-                  className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
-                  onClick={
-                    canChoosePosition(position)
-                      ? () => _chooseSeat(seatIndexForPosition(position))
-                      : undefined
-                  }
-                  style={{
-                    cursor: canChoosePosition(position) ? "pointer" : "default",
-                    opacity: seatForPosition(position)?.name ? 1 : 0.92,
-                  }}
-                >
+  return (
+    <div
+      key={player}
+      className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
+      onClick={
+        canChooseSeat
+          ? () => _chooseSeat(seatIndexForPosition(position))
+          : undefined
+      }
+      style={{
+        cursor: canChooseSeat ? "pointer" : "default",
+        opacity: displayedSeat?.name ? 1 : 0.92,
+      }}
+    >
+                
                   <img
                     src={seatAvatarForPosition(position)}
                     alt={player === LOCAL_PLAYER_ID ? pseudo || "Avatar" : "Avatar"}
@@ -1307,7 +1310,7 @@ style={{
   <div className="player-bottom">
     {sortHandForDisplay(localHand).map((card, index) => {
   const total = localHand.length;
-  
+
       const center = (total - 1) / 2;
       const offset = index - center;
 
