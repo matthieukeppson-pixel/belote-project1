@@ -136,7 +136,7 @@ const TABLE_CHAT_EMOJIS = {
   ":sourire:": "/emojis/sourire.png",
 };
 const LOCAL_PLAYER_ID = "joueur1";
-
+const LOCAL_TABLE_PLAYERS = [LOCAL_PLAYER_ID, "joueur4", "joueur2", "joueur3"];
 const POSITION_TO_LOGICAL_PLAYER = {
   top: "joueur2",
   left: "joueur4",
@@ -394,7 +394,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
       const targetScore = mode === "contree" ? 1500 : 500;
 
       partieRef.current = new Partie({
-        players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+       players: [...LOCAL_TABLE_PLAYERS],
         targetScore,
       });
     }
@@ -412,7 +412,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
       ruleset: mode,
       contratMultiplicateur: 1,
       contratValeur: null,
-      players: ["joueur1", "joueur4", "joueur2", "joueur3"],
+      players: [...LOCAL_TABLE_PLAYERS],
     };
 
     g = dispatch(g, { type: "TABLE_READY" });
@@ -458,13 +458,13 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     setScorePartie({ nous: 0, eux: 0 });
     setPartieTerminee(false);
 
-    let g = createInitialGameState();
+       let g = createInitialGameState();
     g = {
       ...g,
       ruleset: mode,
       contratMultiplicateur: 1,
       contratValeur: null,
-      players: game.players,
+      players: [...LOCAL_TABLE_PLAYERS],
     };
 
     g = dispatch(g, { type: "TABLE_READY" });
@@ -624,14 +624,14 @@ const [announcementFading, setAnnouncementFading] = useState(false);
       finDeMancheCompteeRef.current = false;
       finDeMancheRef.current = null;
 
-      let g = createInitialGameState();
+           let g = createInitialGameState();
 
       g = {
         ...g,
         ruleset: mode,
         contratMultiplicateur: 1,
         contratValeur: null,
-        players: game.players,
+        players: [...LOCAL_TABLE_PLAYERS],
         dealerIndex: next.dealerIndex,
         currentPlayerIndex: next.startingPlayerIndex,
       };
