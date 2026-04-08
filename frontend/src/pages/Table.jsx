@@ -735,7 +735,7 @@ function handleTakeAtoutSuit(suit) {
 
   const scoreUI = scorePartie;
   const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
-
+const localHand = game.hands[LOCAL_PLAYER_ID] || [];
   const actorId = game.players[game.currentPlayerIndex];
   const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
@@ -1303,10 +1303,11 @@ style={{
               );
             })}
 
-                {game.hands[LOCAL_PLAYER_ID] && (
+               {localHand.length > 0 && (
   <div className="player-bottom">
-    {sortHandForDisplay(game.hands[LOCAL_PLAYER_ID] || []).map((card, index) => {
-      const total = game.hands[LOCAL_PLAYER_ID].length;
+    {sortHandForDisplay(localHand).map((card, index) => {
+  const total = localHand.length;
+  
       const center = (total - 1) / 2;
       const offset = index - center;
 
