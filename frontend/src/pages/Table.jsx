@@ -155,7 +155,12 @@ const POSITION_TO_LOGICAL_PLAYER = {
 };
 
 const TABLE_POSITIONS = ["top", "left", "right", "bottom"];
-
+const UNSEATED_POSITION_TO_SEAT_INDEX = {
+  top: 0,
+  left: 1,
+  right: 2,
+  bottom: 3,
+};
 function logicalPlayerForPosition(position) {
   return POSITION_TO_LOGICAL_PLAYER[position] || null;
 }
@@ -269,15 +274,8 @@ const mySeatIndex = seatsInfo.findIndex(
 // - ce n'est pas le siège réel serveur
 // - le joueur local reste toujours affiché en bas
 function seatIndexForPosition(position) {
-  const fixedMap = {
-    top: 0,
-    left: 1,
-    right: 2,
-    bottom: 3,
-  };
-
-  if (mySeatIndex === -1) {
-    return fixedMap[position] ?? null;
+   if (mySeatIndex === -1) {
+    return UNSEATED_POSITION_TO_SEAT_INDEX[position] ?? null;
   }
 
   if (position === "bottom") return mySeatIndex;
