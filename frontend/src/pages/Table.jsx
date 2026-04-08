@@ -135,7 +135,20 @@ const TABLE_CHAT_EMOJIS = {
   ":reflexion:": "/emojis/reflexion.png",
   ":sourire:": "/emojis/sourire.png",
 };
+const LOCAL_PLAYER_ID = "joueur1";
 
+const POSITION_TO_LOGICAL_PLAYER = {
+  top: "joueur2",
+  left: "joueur4",
+  right: "joueur3",
+  bottom: LOCAL_PLAYER_ID,
+};
+
+const TABLE_POSITIONS = ["top", "left", "right", "bottom"];
+
+function logicalPlayerForPosition(position) {
+  return POSITION_TO_LOGICAL_PLAYER[position] || null;
+}
 function _getTableChatEmojiSrc(text) {
   const clean = String(text || "").trim().toLowerCase();
   return TABLE_CHAT_EMOJIS[clean] || null;
@@ -703,8 +716,8 @@ function handleTakeAtoutSuit(suit) {
     setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
 
-  const activePlayer = game.players[game.currentPlayerIndex];
-  const isMyTurn = activePlayer === "joueur1";
+   const activePlayer = game.players[game.currentPlayerIndex];
+  const isLocalTurn = activePlayer === LOCAL_PLAYER_ID;
   const currentAnnouncements =
     game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
  
@@ -785,7 +798,7 @@ useEffect(() => {
       const detected =
         g.modernAnnouncements?.detectedByPlayer?.[active] || [];
 
-      if (active === "joueur1") {
+       if (active === LOCAL_PLAYER_ID) {
         if (detected.length > 0) return g;
         return dispatch(g, { type: "PASS_ANNOUNCEMENT" });
       }
@@ -813,7 +826,7 @@ useEffect(() => {
 useEffect(() => {
   if (!import.meta.env.DEV) return;
   if (game.state !== STATES.PLI_EN_COURS) return;
-  if (activePlayer === "joueur1") return;
+    if (activePlayer === LOCAL_PLAYER_ID) return;
   if (visibleAnnouncement) return;
 
   const timer = setTimeout(() => {
@@ -821,7 +834,7 @@ useEffect(() => {
       if (g.state !== STATES.PLI_EN_COURS) return g;
 
       const active = g.players[g.currentPlayerIndex];
-      if (active === "joueur1") return g;
+           if (active === LOCAL_PLAYER_ID) return g;
 
       const hand = g.hands[active];
       if (!hand || hand.length === 0) return g;
@@ -1190,112 +1203,107 @@ style={{
                 ) : null
               )}
 
-            {[
-              ["joueur2", "top"],
-              ["joueur4", "left"],
-              ["joueur3", "right"],
-              ["joueur1", "bottom"],
-            ].map(([player, position]) => (
-             <div
-  key={player}
-  className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
-onClick={
-  canChoosePosition(position)
-    ? () => _chooseSeat(seatIndexForPosition(position))
-    : undefined
-}
-style={{
-  cursor: canChoosePosition(position) ? "pointer" : "default",
-  opacity: seatForPosition(position)?.name ? 1 : 0.92,
-}}
->
-              
-<img
- src={seatAvatarForPosition(position)}
-  alt={player === "joueur1" ? pseudo || "Avatar" : "Avatar"}
-  className="player-avatar"
-/>
+            {TABLE_POSITIONS.map((position) => {
+              const player = logicalPlayerForPosition(position);
 
-<div
-  style={{
-    position: "absolute",
-    left: "50%",
-    top: position === "bottom" ? "100%" : "calc(100% + 6px)",
-    transform: "translateX(-50%)",
-    padding: "4px 10px",
-    borderRadius: 999,
-    background: "rgba(40, 8, 18, 0.78)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: 700,
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    pointerEvents: "none",
-    zIndex: 6,
-    boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
-  }}
->
- {seatNameForPosition(position)}
-</div>
+              return (
+                <div
+                  key={player}
+                  className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
+                  onClick={
+                    canChoosePosition(position)
+                      ? () => _chooseSeat(seatIndexForPosition(position))
+                      : undefined
+                  }
+                  style={{
+                    cursor: canChoosePosition(position) ? "pointer" : "default",
+                    opacity: seatForPosition(position)?.name ? 1 : 0.92,
+                  }}
+                >
+                  <img
+                    src={seatAvatarForPosition(position)}
+                    alt={player === LOCAL_PLAYER_ID ? pseudo || "Avatar" : "Avatar"}
+                    className="player-avatar"
+                  />
 
-
-{player !== "joueur1" && (
-  <div className={`back-cards back-cards-${position}`}>
-    {(() => {
-      const n = game.hands[player]?.length ?? 0;
-      const visible = Math.min(2, n);
-
-     const overlapStep =
-  position === "left" || position === "right" ? 6 : 10;
-
-const inwardBase =
-  position === "left" ? -14 : position === "right" ? 14 : 0;
-
-      return (
-        <div className="back-stack">
-          {Array.from({ length: visible }).map((_, i) => (
-            <img
-              key={i}
-              src="/card_back.png"
-              alt="Dos"
-              className="card-back"
-              style={{
-                transform: `translateX(${inwardBase + i * overlapStep}px) rotate(${i * 2}deg)`,
-              }}
-              draggable={false}
-            />
-          ))}
-        </div>
-      );
-    })()}
-  </div>
-)}
-
-                {activePlayer === player && <div className="active-dot" />}
-
-                
-
-                {game.atout && game.players[game.preneur] === player && (
-                  <div className={`atout-indicator ${position} ${game.atout}`}>
-                    {atoutSymbol(game.atout)}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: position === "bottom" ? "100%" : "calc(100% + 6px)",
+                      transform: "translateX(-50%)",
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      background: "rgba(40, 8, 18, 0.78)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      zIndex: 6,
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
+                    }}
+                  >
+                    {seatNameForPosition(position)}
                   </div>
-                )}
-              </div>
-            ))}
 
-         {game.hands["joueur1"] && (
+                  {player !== LOCAL_PLAYER_ID && (
+                    <div className={`back-cards back-cards-${position}`}>
+                      {(() => {
+                        const n = game.hands[player]?.length ?? 0;
+                        const visible = Math.min(2, n);
+
+                        const overlapStep =
+                          position === "left" || position === "right" ? 6 : 10;
+
+                        const inwardBase =
+                          position === "left" ? -14 : position === "right" ? 14 : 0;
+
+                        return (
+                          <div className="back-stack">
+                            {Array.from({ length: visible }).map((_, i) => (
+                              <img
+                                key={i}
+                                src="/card_back.png"
+                                alt="Dos"
+                                className="card-back"
+                                style={{
+                                  transform: `translateX(${inwardBase + i * overlapStep}px) rotate(${i * 2}deg)`,
+                                }}
+                                draggable={false}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {activePlayer === player && <div className="active-dot" />}
+
+                  {game.atout && game.players[game.preneur] === player && (
+                    <div className={`atout-indicator ${position} ${game.atout}`}>
+                      {atoutSymbol(game.atout)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+                {game.hands[LOCAL_PLAYER_ID] && (
   <div className="player-bottom">
-    {sortHandForDisplay(game.hands["joueur1"] || []).map((card, index) => {
-      const total = game.hands["joueur1"].length;
+    {sortHandForDisplay(game.hands[LOCAL_PLAYER_ID] || []).map((card, index) => {
+      const total = game.hands[LOCAL_PLAYER_ID].length;
       const center = (total - 1) / 2;
       const offset = index - center;
 
       return (
         <div
           key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
-          className={`card ${isMyTurn ? "clickable" : "disabled"}`}
-          onClick={isMyTurn ? () => handlePlayCard(card) : undefined}
+          className={`card ${isLocalTurn ? "clickable" : "disabled"}`}
+          onClick={isLocalTurn ? () => handlePlayCard(card) : undefined}
           style={{
             transform: `
               translateX(${offset * -28}px)
