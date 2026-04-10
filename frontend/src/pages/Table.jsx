@@ -1277,26 +1277,20 @@ style={{
 
                  {!isLocalDisplayedPlayer && (
                     <div className={`back-cards back-cards-${position}`}>
-{(() => {
-  const visible = visibleBackCards;
-
-  return (
-    <div className="back-stack">
-      {Array.from({ length: visible }).map((_, i) => (
-        <img
-          key={i}
-          src="/card_back.png"
-          alt="Dos"
-          className="card-back"
-          style={{
-            transform: `translateX(${backCardInwardBase + i * backCardOverlapStep}px) rotate(${i * 2}deg)`,
-          }}
-          draggable={false}
-        />
-      ))}
-    </div>
-  );
-})()}
+<div className="back-stack">
+  {Array.from({ length: visibleBackCards }).map((_, i) => (
+    <img
+      key={i}
+      src="/card_back.png"
+      alt="Dos"
+      className="card-back"
+      style={{
+        transform: `translateX(${backCardInwardBase + i * backCardOverlapStep}px) rotate(${i * 2}deg)`,
+      }}
+      draggable={false}
+    />
+  ))}
+</div>
                     </div>
                   )}
 
