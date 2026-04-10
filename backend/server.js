@@ -111,6 +111,7 @@ function createEmptyHandState() {
 
     roundId: null,
     createdAt: null,
+    dealSeed: null,
 
     trumpSuit: null,
     currentBid: null,
@@ -302,13 +303,21 @@ function refreshServerGameForTable(table) {
     ...(table.game?.hand || {}),
   };
 
-  const sharedHand = existingHand.roundId
-    ? existingHand
-    : {
-        ...existingHand,
-        roundId: `table-${table.id}-round-${Date.now()}`,
-        createdAt: Date.now(),
-      };
+const now = Date.now();
+
+const sharedHand = existingHand.roundId
+  ? {
+      ...existingHand,
+      createdAt: existingHand.createdAt || now,
+      dealSeed: existingHand.dealSeed || `${table.id}-${now}-${Math.random()}`,
+    }
+  : {
+      ...existingHand,
+      roundId: `table-${table.id}-round-${now}`,
+      createdAt: now,
+      dealSeed: `${table.id}-${now}-${Math.random()}`,
+    };
+
 table.game = {
   ...(table.game || createEmptyServerGame()),
   status: "READY",

@@ -442,6 +442,7 @@ const isServerBiddingPhase =
 const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
 const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
+const sharedDealSeed = _tableSnapshot?.game?.hand?.dealSeed || "none";
   // ============================================
   // UI STATES
   // ============================================
@@ -909,7 +910,7 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""} · round {sharedRoundId}
+Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""} · round {sharedRoundId} · seed {sharedDealSeed}
 </div>
 
 
