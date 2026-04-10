@@ -1223,6 +1223,10 @@ style={{
   const displayedSeatName = seatNameForPosition(position);
   const displayedHandCount = game.hands[player]?.length ?? 0;
   const visibleBackCards = Math.min(2, displayedHandCount);
+  const backCardOverlapStep =
+    position === "left" || position === "right" ? 6 : 10;
+  const backCardInwardBase =
+    position === "left" ? -14 : position === "right" ? 14 : 0;
   const isLocalDisplayedPlayer = player === LOCAL_PLAYER_ID;
   const isActiveDisplayedPlayer = activePlayer === player;
   const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
@@ -1273,32 +1277,26 @@ style={{
 
                  {!isLocalDisplayedPlayer && (
                     <div className={`back-cards back-cards-${position}`}>
- {(() => {
+{(() => {
   const visible = visibleBackCards;
 
-                        const overlapStep =
-                          position === "left" || position === "right" ? 6 : 10;
-
-                        const inwardBase =
-                          position === "left" ? -14 : position === "right" ? 14 : 0;
-
-                        return (
-                          <div className="back-stack">
-                            {Array.from({ length: visible }).map((_, i) => (
-                              <img
-                                key={i}
-                                src="/card_back.png"
-                                alt="Dos"
-                                className="card-back"
-                                style={{
-                                  transform: `translateX(${inwardBase + i * overlapStep}px) rotate(${i * 2}deg)`,
-                                }}
-                                draggable={false}
-                              />
-                            ))}
-                          </div>
-                        );
-                      })()}
+  return (
+    <div className="back-stack">
+      {Array.from({ length: visible }).map((_, i) => (
+        <img
+          key={i}
+          src="/card_back.png"
+          alt="Dos"
+          className="card-back"
+          style={{
+            transform: `translateX(${backCardInwardBase + i * backCardOverlapStep}px) rotate(${i * 2}deg)`,
+          }}
+          draggable={false}
+        />
+      ))}
+    </div>
+  );
+})()}
                     </div>
                   )}
 
