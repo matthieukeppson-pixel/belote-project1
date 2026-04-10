@@ -1214,12 +1214,14 @@ style={{
                 ) : null
               )}
 
-      {TABLE_POSITIONS.map((position) => {
+  {TABLE_POSITIONS.map((position) => {
   const player = logicalPlayerForPosition(position);
   const canChooseSeat = canChoosePosition(position);
+  const displayedSeatIndex = seatIndexForPosition(position);
   const displayedSeat = seatForPosition(position);
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
+  const isLocalDisplayedPlayer = player === LOCAL_PLAYER_ID;
 
   return (
     <div
@@ -1227,7 +1229,7 @@ style={{
       className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
       onClick={
         canChooseSeat
-          ? () => _chooseSeat(seatIndexForPosition(position))
+         ? () => _chooseSeat(displayedSeatIndex)
           : undefined
       }
       style={{
@@ -1238,7 +1240,7 @@ style={{
                 
                   <img
                    src={displayedSeatAvatar}
-                    alt={player === LOCAL_PLAYER_ID ? pseudo || "Avatar" : "Avatar"}
+                    alt={isLocalDisplayedPlayer ? pseudo || "Avatar" : "Avatar"}
                     className="player-avatar"
                   />
 
@@ -1265,7 +1267,7 @@ style={{
                    {displayedSeatName}
                   </div>
 
-                  {player !== LOCAL_PLAYER_ID && (
+                 {!isLocalDisplayedPlayer && (
                     <div className={`back-cards back-cards-${position}`}>
                       {(() => {
                         const n = game.hands[player]?.length ?? 0;
