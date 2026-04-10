@@ -109,6 +109,9 @@ function createEmptyHandState() {
     roundNumber: 0,
     trickNumber: 0,
 
+    roundId: null,
+    createdAt: null,
+
     trumpSuit: null,
     currentBid: null,
     takerSeatIndex: null,
@@ -294,7 +297,18 @@ function refreshServerGameForTable(table) {
     };
     return;
   }
+  const existingHand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
 
+  const sharedHand = existingHand.roundId
+    ? existingHand
+    : {
+        ...existingHand,
+        roundId: `table-${table.id}-round-${Date.now()}`,
+        createdAt: Date.now(),
+      };
 table.game = {
   ...(table.game || createEmptyServerGame()),
   status: "READY",
@@ -309,10 +323,7 @@ table.game = {
       ? table.game.currentTurnSeatIndex
       : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
   version: (table.game?.version || 0) + 1,
-  hand: {
-    ...createEmptyHandState(),
-    ...(table.game?.hand || {}),
-  },
+   hand: sharedHand,
 };
 }
 function isPlayerInTable(tableId, pseudo) {
