@@ -147,12 +147,12 @@ const LOCAL_TABLE_PLAYERS = [
   RIGHT_PLAYER_ID,
 ];
 
-const POSITION_TO_LOGICAL_PLAYER = {
-  top: TOP_PLAYER_ID,
-  left: LEFT_PLAYER_ID,
-  right: RIGHT_PLAYER_ID,
-  bottom: LOCAL_PLAYER_ID,
-};
+const SEAT_INDEX_TO_LOGICAL_PLAYER = [
+  TOP_PLAYER_ID,
+  LEFT_PLAYER_ID,
+  RIGHT_PLAYER_ID,
+  LOCAL_PLAYER_ID,
+];
 
 const TABLE_POSITIONS = ["top", "left", "right", "bottom"];
 const UNSEATED_POSITION_TO_SEAT_INDEX = {
@@ -161,9 +161,8 @@ const UNSEATED_POSITION_TO_SEAT_INDEX = {
   right: 2,
   bottom: 3,
 };
-function logicalPlayerForPosition(position) {
-  return POSITION_TO_LOGICAL_PLAYER[position] || null;
-}
+
+
 function _getTableChatEmojiSrc(text) {
   const clean = String(text || "").trim().toLowerCase();
   return TABLE_CHAT_EMOJIS[clean] || null;
@@ -274,7 +273,7 @@ const mySeatIndex = seatsInfo.findIndex(
 // - ce n'est pas le siège réel serveur
 // - le joueur local reste toujours affiché en bas
 function seatIndexForPosition(position) {
-   if (mySeatIndex === -1) {
+  if (mySeatIndex === -1) {
     return UNSEATED_POSITION_TO_SEAT_INDEX[position] ?? null;
   }
 
@@ -284,6 +283,15 @@ function seatIndexForPosition(position) {
   if (position === "right") return (mySeatIndex + 3) % 4;
 
   return null;
+}
+
+function displayedPlayerIdForSeatIndex(seatIndex) {
+  if (seatIndex == null) return null;
+  return SEAT_INDEX_TO_LOGICAL_PLAYER[seatIndex] || null;
+}
+
+function displayedPlayerIdForPosition(position) {
+  return displayedPlayerIdForSeatIndex(seatIndexForPosition(position));
 }
 
 function seatForPosition(position) {
@@ -311,6 +319,7 @@ function seatNameForPosition(position) {
 
   return seat?.name || "Place libre";
 }
+
 function canChoosePosition(position) {
   const idx = seatIndexForPosition(position);
   if (idx == null) return false;
@@ -728,17 +737,19 @@ function handleTakeAtoutSuit(suit) {
     setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
 
-   const activePlayer = game.players[game.currentPlayerIndex];
-  const isLocalTurn = activePlayer === LOCAL_PLAYER_ID;
-  const currentAnnouncements =
-    game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
+  const activePlayer = game.players[game.currentPlayerIndex];
+const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
+const isLocalTurn = activePlayer === localDisplayedPlayerId;
+const currentAnnouncements =
+  game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
  
 
-  const scoreUI = scorePartie;
-  const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
-const localHand = game.hands[LOCAL_PLAYER_ID] || [];
-  const actorId = game.players[game.currentPlayerIndex];
-  const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
+ const scoreUI = scorePartie;
+const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+const localHand =
+  (localDisplayedPlayerId && game.hands[localDisplayedPlayerId]) || [];
+const actorId = game.players[game.currentPlayerIndex];
+const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
   const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
   const preneurTeam = preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
@@ -1216,7 +1227,7 @@ style={{
               )}
 
 {TABLE_POSITIONS.map((position) => {
-  const player = logicalPlayerForPosition(position);
+  const player = displayedPlayerIdForPosition(position);
   const canChooseSeat = canChoosePosition(position);
   const displayedSeatIndex = seatIndexForPosition(position);
   const displayedSeat = seatForPosition(position);
@@ -1229,7 +1240,7 @@ style={{
     position === "left" || position === "right" ? 6 : 10;
   const backCardInwardBase =
     position === "left" ? -14 : position === "right" ? 14 : 0;
-  const isLocalDisplayedPlayer = player === LOCAL_PLAYER_ID;
+  const isLocalDisplayedPlayer = position === "bottom";
   const isActiveDisplayedPlayer = activePlayer === player;
   const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
 
