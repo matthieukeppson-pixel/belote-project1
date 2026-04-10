@@ -1214,10 +1214,12 @@ style={{
                 ) : null
               )}
 
-            {TABLE_POSITIONS.map((position) => {
+      {TABLE_POSITIONS.map((position) => {
   const player = logicalPlayerForPosition(position);
   const canChooseSeat = canChoosePosition(position);
   const displayedSeat = seatForPosition(position);
+  const displayedSeatAvatar = seatAvatarForPosition(position);
+  const displayedSeatName = seatNameForPosition(position);
 
   return (
     <div
@@ -1235,7 +1237,7 @@ style={{
     >
                 
                   <img
-                    src={seatAvatarForPosition(position)}
+                   src={displayedSeatAvatar}
                     alt={player === LOCAL_PLAYER_ID ? pseudo || "Avatar" : "Avatar"}
                     className="player-avatar"
                   />
@@ -1260,7 +1262,7 @@ style={{
                       boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
                     }}
                   >
-                    {seatNameForPosition(position)}
+                   {displayedSeatName}
                   </div>
 
                   {player !== LOCAL_PLAYER_ID && (
