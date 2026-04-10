@@ -1214,19 +1214,22 @@ style={{
                 ) : null
               )}
 
-  {TABLE_POSITIONS.map((position) => {
+ {TABLE_POSITIONS.map((position) => {
   const player = logicalPlayerForPosition(position);
   const canChooseSeat = canChoosePosition(position);
   const displayedSeatIndex = seatIndexForPosition(position);
   const displayedSeat = seatForPosition(position);
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
+  const displayedHandCount = game.hands[player]?.length ?? 0;
   const isLocalDisplayedPlayer = player === LOCAL_PLAYER_ID;
+  const isActiveDisplayedPlayer = activePlayer === player;
+  const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
 
   return (
     <div
       key={player}
-      className={`player-seat ${position} ${activePlayer === player ? "active" : ""}`}
+      className={`player-seat ${position} ${isActiveDisplayedPlayer ? "active" : ""}`}
       onClick={
         canChooseSeat
          ? () => _chooseSeat(displayedSeatIndex)
@@ -1269,9 +1272,8 @@ style={{
 
                  {!isLocalDisplayedPlayer && (
                     <div className={`back-cards back-cards-${position}`}>
-                      {(() => {
-                        const n = game.hands[player]?.length ?? 0;
-                        const visible = Math.min(2, n);
+                     {(() => {
+  const visible = Math.min(2, displayedHandCount);
 
                         const overlapStep =
                           position === "left" || position === "right" ? 6 : 10;
@@ -1299,9 +1301,9 @@ style={{
                     </div>
                   )}
 
-                  {activePlayer === player && <div className="active-dot" />}
+                 {isActiveDisplayedPlayer && <div className="active-dot" />}
 
-                  {game.atout && game.players[game.preneur] === player && (
+                  {isDisplayedTaker && (
                     <div className={`atout-indicator ${position} ${game.atout}`}>
                       {atoutSymbol(game.atout)}
                     </div>
