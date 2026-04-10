@@ -432,6 +432,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
 
     return g;
   });
+
   const localPhaseLabel = game?.state || "UNKNOWN";
 const isServerBiddingPhase =
   game?.state === STATES.ENCHERES ||
@@ -440,7 +441,7 @@ const isServerBiddingPhase =
   game?.state === STATES.ANNONCES_MODERNE;
 const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
-
+const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
   // ============================================
   // UI STATES
   // ============================================
@@ -908,7 +909,7 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""}
+Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""} · round {sharedRoundId}
 </div>
 
 
