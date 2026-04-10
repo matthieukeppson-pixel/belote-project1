@@ -415,7 +415,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
   // ============================================
   // GAME STATE
   // ============================================
-  const [game, setGame] = useState(() => {
+  function buildFreshLocalGame(overrides = {}) {
     let g = createInitialGameState();
 
     g = {
@@ -424,6 +424,7 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
       contratMultiplicateur: 1,
       contratValeur: null,
       players: [...LOCAL_TABLE_PLAYERS],
+      ...overrides,
     };
 
     g = dispatch(g, { type: "TABLE_READY" });
@@ -431,7 +432,9 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
     g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
 
     return g;
-  });
+  }
+
+const [game, setGame] = useState(() => buildFreshLocalGame());
 
   const localPhaseLabel = game?.state || "UNKNOWN";
 const isServerBiddingPhase =
@@ -443,6 +446,7 @@ const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
 const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
 const sharedDealSeed = _tableSnapshot?.game?.hand?.dealSeed || "none";
+
   // ============================================
   // UI STATES
   // ============================================
@@ -471,20 +475,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     setScorePartie({ nous: 0, eux: 0 });
     setPartieTerminee(false);
 
-       let g = createInitialGameState();
-    g = {
-      ...g,
-      ruleset: mode,
-      contratMultiplicateur: 1,
-      contratValeur: null,
-      players: [...LOCAL_TABLE_PLAYERS],
-    };
-
-    g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-
-    setGame(g);
+      setGame(buildFreshLocalGame());
   }
 
  useEffect(() => {
@@ -637,23 +628,12 @@ const [announcementFading, setAnnouncementFading] = useState(false);
       finDeMancheCompteeRef.current = false;
       finDeMancheRef.current = null;
 
-           let g = createInitialGameState();
-
-      g = {
-        ...g,
-        ruleset: mode,
-        contratMultiplicateur: 1,
-        contratValeur: null,
-        players: [...LOCAL_TABLE_PLAYERS],
-        dealerIndex: next.dealerIndex,
-        currentPlayerIndex: next.startingPlayerIndex,
-      };
-
-      g = dispatch(g, { type: "TABLE_READY" });
-      g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-      g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-
-      setGame(g);
+           setGame(
+        buildFreshLocalGame({
+          dealerIndex: next.dealerIndex,
+          currentPlayerIndex: next.startingPlayerIndex,
+        })
+      );
     }, 1600);
 
     return () => clearTimeout(timer);
