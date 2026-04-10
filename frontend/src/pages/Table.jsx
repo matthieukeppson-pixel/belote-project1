@@ -1221,6 +1221,7 @@ style={{
   const displayedSeat = seatForPosition(position);
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
+  const hasDisplayedSeat = !!displayedSeat?.name;
   const displayedHandCount = game.hands[player]?.length ?? 0;
   const visibleBackCards = Math.min(2, displayedHandCount);
   const backCardOverlapStep =
@@ -1242,7 +1243,7 @@ style={{
       }
       style={{
         cursor: canChooseSeat ? "pointer" : "default",
-        opacity: displayedSeat?.name ? 1 : 0.92,
+        opacity: hasDisplayedSeat ? 1 : 0.92,
       }}
     >
                 
