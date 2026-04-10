@@ -1214,7 +1214,7 @@ style={{
                 ) : null
               )}
 
- {TABLE_POSITIONS.map((position) => {
+{TABLE_POSITIONS.map((position) => {
   const player = logicalPlayerForPosition(position);
   const canChooseSeat = canChoosePosition(position);
   const displayedSeatIndex = seatIndexForPosition(position);
@@ -1222,6 +1222,7 @@ style={{
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
   const displayedHandCount = game.hands[player]?.length ?? 0;
+  const visibleBackCards = Math.min(2, displayedHandCount);
   const isLocalDisplayedPlayer = player === LOCAL_PLAYER_ID;
   const isActiveDisplayedPlayer = activePlayer === player;
   const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
@@ -1272,8 +1273,8 @@ style={{
 
                  {!isLocalDisplayedPlayer && (
                     <div className={`back-cards back-cards-${position}`}>
-                     {(() => {
-  const visible = Math.min(2, displayedHandCount);
+ {(() => {
+  const visible = visibleBackCards;
 
                         const overlapStep =
                           position === "left" || position === "right" ? 6 : 10;
