@@ -72,7 +72,7 @@ export function createInitialGameState() {
     players: [],
     hands: {},
     deck: [],
-
+    dealSeed: null,
     teams: {
       nous: ["joueur1", "joueur2"],
       eux: ["joueur3", "joueur4"]

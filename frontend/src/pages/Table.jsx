@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
@@ -415,26 +415,28 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
   // ============================================
   // GAME STATE
   // ============================================
-  function buildFreshLocalGame(overrides = {}) {
-    let g = createInitialGameState();
+const buildFreshLocalGame = useCallback((overrides = {}) => {
+  let g = createInitialGameState();
 
-    g = {
-      ...g,
-      ruleset: mode,
-      contratMultiplicateur: 1,
-      contratValeur: null,
-      players: [...LOCAL_TABLE_PLAYERS],
-      ...overrides,
-    };
+  g = {
+    ...g,
+    ruleset: mode,
+    contratMultiplicateur: 1,
+    contratValeur: null,
+    players: [...LOCAL_TABLE_PLAYERS],
+    dealSeed: _tableSnapshot?.game?.hand?.dealSeed || null,
+    ...overrides,
+  };
 
-    g = dispatch(g, { type: "TABLE_READY" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
-    g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+  g = dispatch(g, { type: "TABLE_READY" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
+  g = dispatch(g, { type: "DISTRIBUTE_CARDS" });
 
-    return g;
-  }
+  return g;
+}, [mode, _tableSnapshot?.game?.hand?.dealSeed]);
 
 const [game, setGame] = useState(() => buildFreshLocalGame());
+
 
   const localPhaseLabel = game?.state || "UNKNOWN";
 const isServerBiddingPhase =
@@ -446,7 +448,24 @@ const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
 const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
 const sharedDealSeed = _tableSnapshot?.game?.hand?.dealSeed || "none";
+useEffect(() => {
+  if (!sharedDealSeed || sharedDealSeed === "none") return;
+  if (game.dealSeed === sharedDealSeed) return;
 
+  setDisplayPli([]);
+  setHideLastPli(false);
+
+  finDeMancheCompteeRef.current = false;
+  finDeMancheRef.current = null;
+
+  setGame((currentGame) => {
+    if (currentGame.dealSeed === sharedDealSeed) return currentGame;
+
+    return buildFreshLocalGame({
+      dealSeed: sharedDealSeed,
+    });
+  });
+}, [sharedDealSeed, game.dealSeed, buildFreshLocalGame]);
   // ============================================
   // UI STATES
   // ============================================

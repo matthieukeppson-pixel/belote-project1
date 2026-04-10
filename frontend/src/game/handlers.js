@@ -198,10 +198,38 @@ function createDeck() {
   return deck;
 }
 
-function shuffle(deck) {
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+function createSeededRandom(seedString) {
+  const seedFactory = xmur3(String(seedString || ""));
+  let a = seedFactory();
+
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle(deck, randomFn = Math.random) {
   const shuffled = [...deck];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(randomFn() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
@@ -392,8 +420,13 @@ export function handleDistribution(game, event, count) {
   if (!event || event.type !== "DISTRIBUTE_CARDS") return game;
 
   // init deck si nécessaire
+   const randomFn =
+    game.dealSeed != null ? createSeededRandom(game.dealSeed) : Math.random;
+
   let deck =
-    game.deck && game.deck.length > 0 ? [...game.deck] : shuffle(createDeck());
+    game.deck && game.deck.length > 0
+      ? [...game.deck]
+      : shuffle(createDeck(), randomFn);
 
   const hands = { ...game.hands };
   for (const player of game.players) {
