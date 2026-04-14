@@ -762,9 +762,9 @@ function handleTakeAtoutSuit(suit) {
   setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }));
 }
   function handlePlayCard(card) {
-    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-    setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
-  }
+  const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+  sendTableGameAction({ type: "PLAY_CARD", cardKey });
+}
 
   const activePlayer = game.players[game.currentPlayerIndex];
 const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
