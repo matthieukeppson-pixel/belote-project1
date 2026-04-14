@@ -192,7 +192,7 @@ const avatar =
 
 const wsTableRef = useRef(null);
 const systemTimersRef = useRef(new Map());
-
+const sharedRoundIdRef = useRef("none");
 const [_tableSnapshot, setTableSnapshot] = useState(null);
 const [tableChatMessages, setTableChatMessages] = useState([]);
 
@@ -207,6 +207,23 @@ function sendTableMessage(text) {
     JSON.stringify({
       type: "table_message",
       text: clean,
+    })
+  );
+}
+function sendTableGameAction(action) {
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (!tableId) return;
+
+  const roundId = sharedRoundIdRef.current;
+  if (!roundId || roundId === "none") return;
+
+  ws.send(
+    JSON.stringify({
+      type: "table_game_action",
+      tableId,
+      roundId,
+      action,
     })
   );
 }
@@ -378,6 +395,13 @@ if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)
       ]);
       return;
     }
+    if (msg.type === "table_game_action" && Number(msg.tableId) === Number(tableId)) {
+  if (msg.roundId !== sharedRoundIdRef.current) return;
+  if (!msg.action?.type) return;
+
+  setGame((g) => dispatch(g, msg.action));
+  return;
+}
   } catch (e) {
     if (import.meta.env.DEV) console.warn("WS message parse error", e);
   }
@@ -457,6 +481,11 @@ const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
 const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
 const sharedDealSeed = _tableSnapshot?.game?.hand?.dealSeed || "none";
+
+useEffect(() => {
+  sharedRoundIdRef.current = sharedRoundId;
+}, [sharedRoundId]);
+
 useEffect(() => {
   if (!sharedDealSeed || sharedDealSeed === "none") return;
   if (game.dealSeed === sharedDealSeed) return;
@@ -686,14 +715,14 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   // ============================================
   // ACTIONS
   // ============================================
-  function handleTakeAtout() {
+function handleTakeAtout() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "TAKE_ATOUT" }));
+  sendTableGameAction({ type: "TAKE_ATOUT" });
 }
 
- function handlePass() {
+function handlePass() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "PASS" }));
+  sendTableGameAction({ type: "PASS" });
 }
 
  function handlePassAnnouncement() {

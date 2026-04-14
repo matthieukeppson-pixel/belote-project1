@@ -401,7 +401,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    if (msg.type === "table_message") {
+if (msg.type === "table_message") {
   const text = String(msg.text || "").trim();
   if (!text) return;
   if (!ws.tableId) return;
@@ -418,18 +418,40 @@ wss.on("connection", (ws) => {
   return;
 }
 
-    if (msg.type === "update_avatar") {
-      const avatar = String(msg.avatar || "").trim();
-      if (!avatar) return;
+if (msg.type === "table_game_action") {
+  const tableId = normalizeTableId(msg.tableId);
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
 
-      const p = playersMap.get(pseudo);
-      if (p) {
-        p.avatar = avatar;
-        broadcastPlayers();
-        broadcastTables();
-      }
-      return;
-    }
+  if (!isPlayerInTable(t.id, pseudo)) return;
+
+  const roundId = String(msg.roundId || "").trim();
+  const currentRoundId = String(t.game?.hand?.roundId || "").trim();
+  if (!roundId || !currentRoundId || roundId !== currentRoundId) return;
+
+  if (!msg.action?.type) return;
+
+  broadcastToTable(t.id, {
+    type: "table_game_action",
+    tableId: t.id,
+    roundId,
+    action: msg.action,
+  });
+  return;
+}
+
+if (msg.type === "update_avatar") {
+  const avatar = String(msg.avatar || "").trim();
+  if (!avatar) return;
+
+  const p = playersMap.get(pseudo);
+  if (p) {
+    p.avatar = avatar;
+    broadcastPlayers();
+    broadcastTables();
+  }
+  return;
+}
 
     if (msg.type === "get_players") {
       ws.send(JSON.stringify({ type: "players", players: playersArray() }));
