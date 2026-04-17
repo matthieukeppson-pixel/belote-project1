@@ -417,7 +417,35 @@ wss.on("connection", (ws) => {
   });
   return;
 }
+if (msg.type === "table_game_action") {
+  const tableId =
+    msg.tableId != null
+      ? normalizeTableId(msg.tableId)
+      : normalizeTableId(ws.tableId);
 
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
+
+  if (!isPlayerInTable(t.id, pseudo)) return;
+
+  const roundId = String(msg.roundId || "");
+  const expectedRoundId = String(t.game?.hand?.roundId || "");
+  if (!roundId || roundId !== expectedRoundId) return;
+
+  const action = msg.action;
+  if (!action || typeof action !== "object" || typeof action.type !== "string") {
+    return;
+  }
+
+  broadcastToTable(t.id, {
+    type: "table_game_action",
+    tableId: t.id,
+    roundId,
+    action,
+    actor: pseudo,
+  });
+  return;
+}
     if (msg.type === "update_avatar") {
       const avatar = String(msg.avatar || "").trim();
       if (!avatar) return;

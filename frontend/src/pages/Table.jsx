@@ -350,7 +350,12 @@ ws.onmessage = (event) => {
       setTableSnapshot(found);
       return;
     }
+if (msg.type === "table_game_action" && Number(msg.tableId) === Number(tableId)) {
+  if (!msg.action || typeof msg.action.type !== "string") return;
 
+  setGame((g) => dispatch(g, msg.action));
+  return;
+}
   if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
   pushTemporarySystemMessage(msg.text);
   return;
@@ -686,9 +691,25 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   // ============================================
   // ACTIONS
   // ============================================
-  function handleTakeAtout() {
+const sendTableGameAction = useCallback((action) => {
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (!tableId) return;
+  if (!sharedRoundId) return;
+
+  ws.send(
+    JSON.stringify({
+      type: "table_game_action",
+      tableId,
+      roundId: sharedRoundId,
+      action,
+    })
+  );
+}, [tableId, sharedRoundId]);
+
+function handleTakeAtout() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "TAKE_ATOUT" }));
+  sendTableGameAction({ type: "TAKE_ATOUT" });
 }
 
  function handlePass() {
@@ -849,7 +870,8 @@ useEffect(() => {
 useEffect(() => {
   if (!import.meta.env.DEV) return;
   if (game.state !== STATES.PLI_EN_COURS) return;
-    if (activePlayer === LOCAL_PLAYER_ID) return;
+  if (!localDisplayedPlayerId) return;
+  if (activePlayer === localDisplayedPlayerId) return;
   if (visibleAnnouncement) return;
 
   const timer = setTimeout(() => {
@@ -857,7 +879,7 @@ useEffect(() => {
       if (g.state !== STATES.PLI_EN_COURS) return g;
 
       const active = g.players[g.currentPlayerIndex];
-           if (active === LOCAL_PLAYER_ID) return g;
+      if (active === localDisplayedPlayerId) return g;
 
       const hand = g.hands[active];
       if (!hand || hand.length === 0) return g;
@@ -866,7 +888,10 @@ useEffect(() => {
         const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
         const next = dispatch(g, { type: "PLAY_CARD", cardKey });
 
-        if (next !== g) return next;
+        if (next !== g) {
+          sendTableGameAction({ type: "PLAY_CARD", cardKey });
+          return g;
+        }
       }
 
       return g;
@@ -880,6 +905,8 @@ useEffect(() => {
   game.players,
   game.currentPlayerIndex,
   visibleAnnouncement,
+  localDisplayedPlayerId,
+  sendTableGameAction,
 ]);
 
   
