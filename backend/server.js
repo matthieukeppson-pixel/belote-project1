@@ -437,6 +437,24 @@ if (msg.type === "table_game_action") {
     return;
   }
 
+  if (action.type === "RESET_ROUND") {
+    const now = Date.now();
+
+    t.game = {
+      ...(t.game || createEmptyServerGame()),
+      hand: {
+        ...createEmptyHandState(),
+        ...(t.game?.hand || {}),
+        roundId: `table-${t.id}-round-${now}`,
+        createdAt: now,
+        dealSeed: `${t.id}-${now}-${Math.random()}`,
+      },
+    };
+
+    broadcastTables();
+    return;
+  }
+
   broadcastToTable(t.id, {
     type: "table_game_action",
     tableId: t.id,

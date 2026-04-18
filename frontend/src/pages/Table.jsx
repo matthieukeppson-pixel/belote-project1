@@ -192,6 +192,7 @@ const avatar =
 
 const wsTableRef = useRef(null);
 const systemTimersRef = useRef(new Map());
+const previousBiddingStateRef = useRef(null);
 
 const [_tableSnapshot, setTableSnapshot] = useState(null);
 const [tableChatMessages, setTableChatMessages] = useState([]);
@@ -266,7 +267,14 @@ const seatsInfo =
 const mySeatIndex = seatsInfo.findIndex(
   (seat) => seat?.name === pseudo
 );
+const humanSeatIndices = seatsInfo.reduce((acc, seat, index) => {
+  if (seat?.name && !seat?.isBot) acc.push(index);
+  return acc;
+}, []);
 
+const primaryHumanSeatIndex = humanSeatIndices[0] ?? -1;
+const isPrimaryTableDriver =
+  mySeatIndex !== -1 && mySeatIndex === primaryHumanSeatIndex;
 
 // POSITION DE RENDU LOCALE
 // - bottom / left / top / right = vue du joueur local
@@ -293,7 +301,23 @@ function displayedPlayerIdForSeatIndex(seatIndex) {
 function displayedPlayerIdForPosition(position) {
   return displayedPlayerIdForSeatIndex(seatIndexForPosition(position));
 }
+function seatInfoForLogicalPlayerId(playerId) {
+  const seatIndex = seatsInfo.findIndex(
+    (_seat, index) => displayedPlayerIdForSeatIndex(index) === playerId
+  );
+  if (seatIndex === -1) return null;
+  return seatsInfo[seatIndex] || null;
+}
+function pliClassForPlayerId(playerId) {
+  if (!playerId) return "";
 
+  if (playerId === displayedPlayerIdForPosition("bottom")) return "pli-joueur1";
+  if (playerId === displayedPlayerIdForPosition("top")) return "pli-joueur2";
+  if (playerId === displayedPlayerIdForPosition("right")) return "pli-joueur3";
+  if (playerId === displayedPlayerIdForPosition("left")) return "pli-joueur4";
+
+  return "";
+}
 function seatForPosition(position) {
   const idx = seatIndexForPosition(position);
   if (idx == null) return null;
@@ -328,79 +352,99 @@ function canChoosePosition(position) {
   const seat = seatForPosition(position);
   return !seat?.name || seat?.isBot;
 }
-  useEffect(() => {
+useEffect(() => {
+  if (!tableId) return;
 
-    if (!tableId) return;
+  setTableChatMessages([]);
 
-    setTableChatMessages([]);
+  let isCancelled = false;
 
-    const ws = new WebSocket("ws://localhost:4000");
-    wsTableRef.current = ws;
+  const ws = new WebSocket("ws://localhost:4000");
+  wsTableRef.current = ws;
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
-      ws.send(JSON.stringify({ type: "join_table", tableId }));
-    };
-ws.onmessage = (event) => {
+  ws.onopen = () => {
+   if (isCancelled) {
   try {
-    const msg = JSON.parse(event.data);
-
-    if (msg.type === "tables" && Array.isArray(msg.tables)) {
-      const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
-      setTableSnapshot(found);
-      return;
-    }
-if (msg.type === "table_game_action" && Number(msg.tableId) === Number(tableId)) {
-  if (!msg.action || typeof msg.action.type !== "string") return;
-
-  setGame((g) => dispatch(g, msg.action));
-  return;
-}
-  if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
-  pushTemporarySystemMessage(msg.text);
-  return;
-}
-if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)) {
-  if (msg.reason === "SEAT_TAKEN") {
-    pushTemporarySystemMessage("Cette place est déjà prise");
-  } else if (msg.reason === "INVALID_SEAT") {
-    pushTemporarySystemMessage("Place invalide");
-  } else {
-    pushTemporarySystemMessage("Impossible de choisir cette place");
-  }
-  return;
-}
-    if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
-      setTableChatMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          type: "chat",
-          author: msg.user,
-          text: msg.text,
-          from: msg.user === pseudo ? "me" : "other",
-        },
-      ]);
-      return;
-    }
+    ws.close(1000, "cancelled");
   } catch (e) {
-    if (import.meta.env.DEV) console.warn("WS message parse error", e);
+    if (import.meta.env.DEV) console.warn("WS cancelled close error", e);
   }
-};
-    return () => {
-  try {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close(1000, "cleanup");
-    } else {
-      ws.close(1000, "cleanup");
-    }
-  } catch (e) {
-    if (import.meta.env.DEV) console.warn("WS cleanup error", e);
-  }
+  return;
+}
 
-  if (wsTableRef.current === ws) wsTableRef.current = null;
-};
- }, [tableId, pseudo, avatar]);
+    ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
+    ws.send(JSON.stringify({ type: "join_table", tableId }));
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "tables" && Array.isArray(msg.tables)) {
+        const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
+        setTableSnapshot(found);
+        return;
+      }
+
+      if (msg.type === "table_game_action" && Number(msg.tableId) === Number(tableId)) {
+        if (!msg.action || typeof msg.action.type !== "string") return;
+
+        setGame((g) => dispatch(g, msg.action));
+        return;
+      }
+
+      if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
+        pushTemporarySystemMessage(msg.text);
+        return;
+      }
+
+      if (msg.type === "choose_seat_denied" && Number(msg.tableId) === Number(tableId)) {
+        if (msg.reason === "SEAT_TAKEN") {
+          pushTemporarySystemMessage("Cette place est déjà prise");
+        } else if (msg.reason === "INVALID_SEAT") {
+          pushTemporarySystemMessage("Place invalide");
+        } else {
+          pushTemporarySystemMessage("Impossible de choisir cette place");
+        }
+        return;
+      }
+
+      if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
+        setTableChatMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random()}`,
+            type: "chat",
+            author: msg.user,
+            text: msg.text,
+            from: msg.user === pseudo ? "me" : "other",
+          },
+        ]);
+      }
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn("WS message parse error", e);
+    }
+  };
+
+  return () => {
+    isCancelled = true;
+
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onerror = null;
+    ws.onclose = null;
+
+    try {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, "cleanup");
+      }
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn("WS cleanup error", e);
+    }
+
+    if (wsTableRef.current === ws) wsTableRef.current = null;
+  };
+}, [tableId, pseudo, avatar]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
@@ -709,12 +753,14 @@ const sendTableGameAction = useCallback((action) => {
 
 function handleTakeAtout() {
   if (!isServerBiddingPhase) return;
+  if (!isLocalTurn) return;
   sendTableGameAction({ type: "TAKE_ATOUT" });
 }
 
- function handlePass() {
+function handlePass() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "PASS" }));
+  if (!isLocalTurn) return;
+  sendTableGameAction({ type: "PASS" });
 }
 
  function handlePassAnnouncement() {
@@ -751,19 +797,22 @@ function handleBidSuit(suit) {
 }
 function handleTakeAtoutSuit(suit) {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "TAKE_ATOUT", suit }));
+  if (!isLocalTurn) return;
+  sendTableGameAction({ type: "TAKE_ATOUT", suit });
 }
   function handlePlayCard(card) {
     const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
     setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
   }
 
-  const activePlayer = game.players[game.currentPlayerIndex];
+const activePlayer = game.players[game.currentPlayerIndex];
 const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
 const isLocalTurn = activePlayer === localDisplayedPlayerId;
+const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
+const isActiveBot = !!activeSeatInfo?.isBot;
 const currentAnnouncements =
   game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
- 
+
 
  const scoreUI = scorePartie;
 const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
@@ -866,7 +915,48 @@ useEffect(() => {
 
   return () => clearTimeout(timer);
 }, [mode, isServerBiddingPhase, game.state, game.currentPlayerIndex, game.modernAnnouncements, game.atout]);
+useEffect(() => {
+  const previousState = previousBiddingStateRef.current;
 
+  if (
+    isPrimaryTableDriver &&
+    previousState === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+    game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 &&
+    sharedDealSeed === game.dealSeed
+  ) {
+    sendTableGameAction({ type: "RESET_ROUND" });
+  }
+
+  previousBiddingStateRef.current = game.state;
+}, [
+  game.state,
+  game.dealSeed,
+  sharedDealSeed,
+  isPrimaryTableDriver,
+  sendTableGameAction,
+]);
+useEffect(() => {
+  if (!isPrimaryTableDriver) return;
+  if (!isServerBiddingPhase) return;
+  if (
+    game.state !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
+    game.state !== STATES.ANNOUNCE_ATOUT_TOUR_2
+  ) return;
+  if (!isActiveBot) return;
+
+  const timer = setTimeout(() => {
+    sendTableGameAction({ type: "PASS" });
+  }, 500);
+
+  return () => clearTimeout(timer);
+}, [
+  game.state,
+  game.currentPlayerIndex,
+  isServerBiddingPhase,
+  isPrimaryTableDriver,
+  isActiveBot,
+  sendTableGameAction,
+]);
 useEffect(() => {
   if (!import.meta.env.DEV) return;
   if (game.state !== STATES.PLI_EN_COURS) return;
@@ -1242,7 +1332,7 @@ style={{
             {shouldShowPli &&
               displayPli.map((play, index) =>
                 play?.card ? (
-                  <div key={index} className={`pli-card pli-${play.playerId}`}>
+                  <div key={index} className={`pli-card ${pliClassForPlayerId(play.playerId)}`}>
                     <img
                       src={cardImgSrc(play.card)}
                       alt={`${play.card.value} ${play.card.suit}`}
