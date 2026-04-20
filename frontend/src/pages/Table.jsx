@@ -496,16 +496,30 @@ const buildFreshLocalGame = useCallback((overrides = {}) => {
 const [game, setGame] = useState(() => buildFreshLocalGame());
 
 
-  const localPhaseLabel = game?.state || "UNKNOWN";
+const serverHand = _tableSnapshot?.game?.hand || null;
+
+const localPhaseLabel = game?.state || "UNKNOWN";
+const serverPhaseLabel = serverHand?.phase || "none";
+
+const serverTurnSeatIndex =
+  typeof serverHand?.currentTurnSeatIndex === "number"
+    ? serverHand.currentTurnSeatIndex
+    : null;
+
+const serverTurnPlayerId = displayedPlayerIdForSeatIndex(serverTurnSeatIndex);
+
 const isServerBiddingPhase =
   game?.state === STATES.ENCHERES ||
   game?.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
   game?.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
   game?.state === STATES.ANNONCES_MODERNE;
+
 const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
-const sharedRoundId = _tableSnapshot?.game?.hand?.roundId || "none";
-const sharedDealSeed = _tableSnapshot?.game?.hand?.dealSeed || "none";
+
+const sharedRoundId = serverHand?.roundId || "none";
+const sharedDealSeed = serverHand?.dealSeed || "none";
+
 useEffect(() => {
   if (!sharedDealSeed || sharedDealSeed === "none") return;
   if (game.dealSeed === sharedDealSeed) return;
@@ -753,13 +767,13 @@ const sendTableGameAction = useCallback((action) => {
 
 function handleTakeAtout() {
   if (!isServerBiddingPhase) return;
-  if (!isLocalTurn) return;
+  if (!isServerLocalTurn) return;
   sendTableGameAction({ type: "TAKE_ATOUT" });
 }
 
 function handlePass() {
   if (!isServerBiddingPhase) return;
-  if (!isLocalTurn) return;
+  if (!isServerLocalTurn) return;
   sendTableGameAction({ type: "PASS" });
 }
 
@@ -808,6 +822,10 @@ function handleTakeAtoutSuit(suit) {
 const activePlayer = game.players[game.currentPlayerIndex];
 const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
 const isLocalTurn = activePlayer === localDisplayedPlayerId;
+const isServerLocalTurn =
+  serverTurnSeatIndex != null
+    ? mySeatIndex === serverTurnSeatIndex
+    : isLocalTurn;
 const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
 const isActiveBot = !!activeSeatInfo?.isBot;
 const currentAnnouncements =
@@ -1037,8 +1055,20 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-Phase table : {localPhaseLabel}{isServerBiddingPhase ? " ✅" : ""}{showServerBiddingHint ? " · enchères" : ""} · round {sharedRoundId} · seed {sharedDealSeed}
+  <div>Phase locale : {localPhaseLabel}</div>
+  <div>Phase serveur : {serverPhaseLabel}</div>
+  <div>Ma place : {mySeatIndex === -1 ? "none" : mySeatIndex + 1}</div>
+  <div>Tour serveur : {serverTurnSeatIndex == null ? "none" : serverTurnSeatIndex + 1}</div>
+  <div>Joueur serveur : {serverTurnPlayerId || "none"}</div>
+  <div>Top seat : {seatIndexForPosition("top") == null ? "none" : seatIndexForPosition("top") + 1}</div>
+<div>Left seat : {seatIndexForPosition("left") == null ? "none" : seatIndexForPosition("left") + 1}</div>
+<div>Right seat : {seatIndexForPosition("right") == null ? "none" : seatIndexForPosition("right") + 1}</div>
+<div>Bottom seat : {seatIndexForPosition("bottom") == null ? "none" : seatIndexForPosition("bottom") + 1}</div>
+  <div>Round : {sharedRoundId}</div>
+  <div>Seed : {sharedDealSeed}</div>
 </div>
+
+
 
 
       <div className="table-layout">
@@ -1358,7 +1388,10 @@ style={{
   const backCardInwardBase =
     position === "left" ? -14 : position === "right" ? 14 : 0;
   const isLocalDisplayedPlayer = position === "bottom";
-  const isActiveDisplayedPlayer = activePlayer === player;
+ const isActiveDisplayedPlayer =
+  serverTurnSeatIndex != null
+    ? displayedSeatIndex === serverTurnSeatIndex
+    : activePlayer === player;
   const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
 
   return (

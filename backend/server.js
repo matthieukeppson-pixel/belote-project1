@@ -80,7 +80,92 @@ function makeBotAvatar(seatIndex) {
 function buildBotSeat(tableId, seatIndex) {
   return makeBotPseudo(tableId, seatIndex);
 }
+function nextSeatIndex(seatIndex) {
+  return (seatIndex + 1) % 4;
+}
 
+function seatTeamKey(seatIndex) {
+  return seatIndex === 0 || seatIndex === 2 ? "nous" : "eux";
+}
+
+const SUITS = ["hearts", "diamonds", "clubs", "spades"];
+const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
+
+function createDeck() {
+  const deck = [];
+  for (const suit of SUITS) {
+    for (const value of VALUES) {
+      deck.push({ suit, value });
+    }
+  }
+  return deck;
+}
+
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+function createSeededRandom(seedString) {
+  const seedFactory = xmur3(String(seedString || ""));
+  let a = seedFactory();
+
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle(deck, randomFn = Math.random) {
+  const shuffled = [...deck];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(randomFn() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function computeTurnedCardFromSeed(dealSeed, dealerSeatIndex) {
+  const randomFn = createSeededRandom(dealSeed);
+  const deck = shuffle(createDeck(), randomFn);
+
+  let cursorSeat = nextSeatIndex(dealerSeatIndex);
+
+  // distribution 3
+  for (let r = 0; r < 3; r++) {
+    for (let i = 0; i < 4; i++) {
+      deck.shift();
+      cursorSeat = nextSeatIndex(cursorSeat);
+    }
+  }
+
+  // distribution 2
+  for (let r = 0; r < 2; r++) {
+    for (let i = 0; i < 4; i++) {
+      deck.shift();
+      cursorSeat = nextSeatIndex(cursorSeat);
+    }
+  }
+
+  return deck[0] || null;
+}
+
+function getInitialHandPhase(mode) {
+  return mode === "contree" ? "ENCHERES" : "ANNOUNCE_ATOUT_TOUR_1";
+}
 function getHumanSeatCount(table) {
   if (!table) return 0;
   return table.seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
@@ -105,7 +190,7 @@ function syncBotsForTable(table) {
 }
 function createEmptyHandState() {
   return {
-    phase: "IDLE", // IDLE | DEALING | BIDDING | PLAYING | SCORING
+    phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS
     roundNumber: 0,
     trickNumber: 0,
 
@@ -113,9 +198,18 @@ function createEmptyHandState() {
     createdAt: null,
     dealSeed: null,
 
-    trumpSuit: null,
+    dealerSeatIndex: 0,
+    currentTurnSeatIndex: null,
+
+    atoutPropose: null,
+    atout: null,
     currentBid: null,
     takerSeatIndex: null,
+
+    contratValeur: null,
+    contratMultiplicateur: 1,
+    passes: 0,
+    passesAfterBid: 0,
 
     leadingSeatIndex: null,
     trickCards: [null, null, null, null],
@@ -284,56 +378,296 @@ function buildTeamsFromSeats(table) {
     eux: [table.seats[1], table.seats[3]].filter(Boolean),
   };
 }
+function buildFreshAuthoritativeHand(table, dealerSeatIndex = 0) {
+  const now = Date.now();
+  const dealSeed = `${table.id}-${now}-${Math.random()}`;
 
+  return {
+    ...createEmptyHandState(),
+    phase: getInitialHandPhase(table.mode),
+    roundId: `table-${table.id}-round-${now}`,
+    createdAt: now,
+    dealSeed,
+    dealerSeatIndex,
+    currentTurnSeatIndex: nextSeatIndex(dealerSeatIndex),
+    atoutPropose:
+      table.mode === "contree"
+        ? null
+        : computeTurnedCardFromSeed(dealSeed, dealerSeatIndex),
+  };
+}
+
+function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) {
+  const startSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
+  const nextTurnSeatIndex = nextSeatIndex(hand.currentTurnSeatIndex);
+
+  if (
+    hand.phase !== "ANNOUNCE_ATOUT_TOUR_1" &&
+    hand.phase !== "ANNOUNCE_ATOUT_TOUR_2"
+  ) {
+    return hand;
+  }
+
+  if (action.type === "PASS") {
+    if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
+      if (nextTurnSeatIndex === startSeatIndex) {
+        return {
+          ...hand,
+          phase: "ANNOUNCE_ATOUT_TOUR_2",
+          currentTurnSeatIndex: startSeatIndex,
+        };
+      }
+
+      return {
+        ...hand,
+        currentTurnSeatIndex: nextTurnSeatIndex,
+      };
+    }
+
+    if (hand.phase === "ANNOUNCE_ATOUT_TOUR_2") {
+      if (nextTurnSeatIndex === startSeatIndex) {
+        const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
+        return buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+      }
+
+      return {
+        ...hand,
+        currentTurnSeatIndex: nextTurnSeatIndex,
+      };
+    }
+
+    return hand;
+  }
+
+  if (action.type === "TAKE_ATOUT") {
+    if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
+      const chosenSuit =
+        table.mode === "moderne" && (action.suit === "SA" || action.suit === "TA")
+          ? action.suit
+          : hand.atoutPropose?.suit || null;
+
+      if (!chosenSuit) return hand;
+
+      return {
+        ...hand,
+        phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
+        atout: chosenSuit,
+        takerSeatIndex: actorSeatIndex,
+        contratMultiplicateur: 1,
+        currentTurnSeatIndex: startSeatIndex,
+        passes: 0,
+        passesAfterBid: 0,
+      };
+    }
+
+    if (hand.phase === "ANNOUNCE_ATOUT_TOUR_2") {
+      if (!action.suit) return hand;
+      if (hand.atoutPropose && action.suit === hand.atoutPropose.suit) return hand;
+
+      return {
+        ...hand,
+        phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
+        atout: action.suit,
+        takerSeatIndex: actorSeatIndex,
+        contratMultiplicateur: 1,
+        currentTurnSeatIndex: startSeatIndex,
+        passes: 0,
+        passesAfterBid: 0,
+      };
+    }
+
+    return hand;
+  }
+
+  return hand;
+}
+
+function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
+  if (hand.phase !== "ENCHERES") return hand;
+
+  const nextTurnSeatIndex = nextSeatIndex(hand.currentTurnSeatIndex);
+  const startSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
+  const currentBid = hand.currentBid || null;
+
+  if (action.type === "PASS") {
+    if (currentBid) {
+      const newPassesAfterBid = (hand.passesAfterBid || 0) + 1;
+
+      if (newPassesAfterBid >= 3) {
+        return {
+          ...hand,
+          phase: "PLI_EN_COURS",
+          atout: currentBid.suit,
+          takerSeatIndex: currentBid.seatIndex,
+          contratValeur: currentBid.value,
+          currentTurnSeatIndex: startSeatIndex,
+          passes: 0,
+          passesAfterBid: 0,
+        };
+      }
+
+      return {
+        ...hand,
+        passesAfterBid: newPassesAfterBid,
+        currentTurnSeatIndex: nextTurnSeatIndex,
+      };
+    }
+
+    const newPasses = (hand.passes || 0) + 1;
+
+    if (newPasses >= 4) {
+      const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
+      return buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+    }
+
+    return {
+      ...hand,
+      passes: newPasses,
+      currentTurnSeatIndex: nextTurnSeatIndex,
+    };
+  }
+
+  if (action.type === "BID") {
+    if (!action.suit || typeof action.value !== "number") return hand;
+    if (currentBid && action.value <= currentBid.value) return hand;
+
+    return {
+      ...hand,
+      currentBid: {
+        value: action.value,
+        suit: action.suit,
+        seatIndex: actorSeatIndex,
+      },
+      contratValeur: action.value,
+      passes: 0,
+      passesAfterBid: 0,
+      currentTurnSeatIndex: nextTurnSeatIndex,
+    };
+  }
+
+  if (action.type === "CONTRE") {
+    if (!currentBid) return hand;
+    if ((hand.contratMultiplicateur || 1) !== 1) return hand;
+
+    const takerTeam = seatTeamKey(currentBid.seatIndex);
+    const actorTeam = seatTeamKey(actorSeatIndex);
+
+    if (actorTeam === takerTeam) return hand;
+
+    return {
+      ...hand,
+      contratMultiplicateur: 2,
+      passesAfterBid: 0,
+      currentTurnSeatIndex: nextTurnSeatIndex,
+    };
+  }
+
+  if (action.type === "SURCONTRE") {
+    if (!currentBid) return hand;
+    if ((hand.contratMultiplicateur || 1) !== 2) return hand;
+
+    const takerTeam = seatTeamKey(currentBid.seatIndex);
+    const actorTeam = seatTeamKey(actorSeatIndex);
+
+    if (actorTeam !== takerTeam) return hand;
+
+    return {
+      ...hand,
+      contratMultiplicateur: 4,
+      passesAfterBid: 0,
+      currentTurnSeatIndex: nextTurnSeatIndex,
+    };
+  }
+
+  return hand;
+}
+
+function applyTableGameActionToHand(table, hand, actorSeatIndex, action) {
+  if (
+    hand.currentTurnSeatIndex == null ||
+    actorSeatIndex !== hand.currentTurnSeatIndex
+  ) {
+    return hand;
+  }
+
+  if (table.mode === "contree") {
+    return applyContreeBiddingAction(table, hand, actorSeatIndex, action);
+  }
+
+  return applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action);
+}
 function refreshServerGameForTable(table) {
   if (!table) return;
- syncBotsForTable(table);
+
+  syncBotsForTable(table);
+
   const seated = getSeatedPlayersInOrder(table);
   const count = seated.length;
 
   if (count < 4) {
     table.game = {
       ...createEmptyServerGame(),
+      dealerSeatIndex:
+        typeof table.game?.dealerSeatIndex === "number"
+          ? table.game.dealerSeatIndex
+          : 0,
       version: (table.game?.version || 0) + 1,
     };
     return;
   }
+
+  const dealerSeatIndex =
+    typeof table.game?.dealerSeatIndex === "number"
+      ? table.game.dealerSeatIndex
+      : 0;
+
   const existingHand = {
     ...createEmptyHandState(),
     ...(table.game?.hand || {}),
   };
 
-const now = Date.now();
+  let sharedHand;
 
-const sharedHand = existingHand.roundId
-  ? {
+  if (existingHand.roundId) {
+    const safeDealSeed = existingHand.dealSeed || `${table.id}-${Date.now()}-${Math.random()}`;
+    const safeDealerSeatIndex =
+      typeof existingHand.dealerSeatIndex === "number"
+        ? existingHand.dealerSeatIndex
+        : dealerSeatIndex;
+
+    sharedHand = {
       ...existingHand,
-      createdAt: existingHand.createdAt || now,
-      dealSeed: existingHand.dealSeed || `${table.id}-${now}-${Math.random()}`,
-    }
-  : {
-      ...existingHand,
-      roundId: `table-${table.id}-round-${now}`,
-      createdAt: now,
-      dealSeed: `${table.id}-${now}-${Math.random()}`,
+      createdAt: existingHand.createdAt || Date.now(),
+      dealSeed: safeDealSeed,
+      dealerSeatIndex: safeDealerSeatIndex,
+      currentTurnSeatIndex:
+        existingHand.currentTurnSeatIndex != null
+          ? existingHand.currentTurnSeatIndex
+          : nextSeatIndex(safeDealerSeatIndex),
+      phase: existingHand.phase || getInitialHandPhase(table.mode),
+      atoutPropose:
+        existingHand.atoutPropose ||
+        (table.mode === "contree"
+          ? null
+          : computeTurnedCardFromSeed(safeDealSeed, safeDealerSeatIndex)),
     };
+  } else {
+    sharedHand = buildFreshAuthoritativeHand(table, dealerSeatIndex);
+  }
 
-table.game = {
-  ...(table.game || createEmptyServerGame()),
-  status: "READY",
-  players: seated.map((entry) => entry.pseudo),
-  teams: buildTeamsFromSeats(table),
-  dealerSeatIndex:
-    typeof table.game?.dealerSeatIndex === "number"
-      ? table.game.dealerSeatIndex
-      : 0,
-  currentTurnSeatIndex:
-    table.game?.currentTurnSeatIndex != null
-      ? table.game.currentTurnSeatIndex
-      : ((table.game?.dealerSeatIndex ?? 0) + 1) % 4,
-  version: (table.game?.version || 0) + 1,
-   hand: sharedHand,
-};
+  table.game = {
+    ...(table.game || createEmptyServerGame()),
+    status: "READY",
+    players: seated.map((entry) => entry.pseudo),
+    teams: buildTeamsFromSeats(table),
+    dealerSeatIndex: sharedHand.dealerSeatIndex,
+    currentTurnSeatIndex:
+      sharedHand.currentTurnSeatIndex != null
+        ? sharedHand.currentTurnSeatIndex
+        : null,
+    version: (table.game?.version || 0) + 1,
+    hand: sharedHand,
+  };
 }
 function isPlayerInTable(tableId, pseudo) {
   const t = tablesMap.get(Number(tableId));
@@ -438,30 +772,81 @@ if (msg.type === "table_game_action") {
   }
 
   if (action.type === "RESET_ROUND") {
-    const now = Date.now();
+    const nextHand = buildFreshAuthoritativeHand(
+      t,
+      typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
+    );
 
     t.game = {
       ...(t.game || createEmptyServerGame()),
-      hand: {
-        ...createEmptyHandState(),
-        ...(t.game?.hand || {}),
-        roundId: `table-${t.id}-round-${now}`,
-        createdAt: now,
-        dealSeed: `${t.id}-${now}-${Math.random()}`,
-      },
+      dealerSeatIndex: nextHand.dealerSeatIndex,
+      currentTurnSeatIndex: nextHand.currentTurnSeatIndex,
+      hand: nextHand,
+      version: (t.game?.version || 0) + 1,
     };
 
     broadcastTables();
     return;
   }
 
+  const currentHand = {
+    ...createEmptyHandState(),
+    ...(t.game?.hand || {}),
+  };
+
+  const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
+  if (actorSeatIndex === -1) return;
+
+  const activeSeatIndex = currentHand.currentTurnSeatIndex;
+  const activeSeatPseudo =
+    activeSeatIndex != null ? t.seats[activeSeatIndex] : null;
+
+  let effectiveSeatIndex = actorSeatIndex;
+
+  if (actorSeatIndex !== activeSeatIndex) {
+    const actorIsHuman = !isBotPseudo(pseudo);
+    const activeIsBot = isBotPseudo(activeSeatPseudo);
+    const canProxyBotPass = actorIsHuman && activeIsBot && action.type === "PASS";
+
+    if (!canProxyBotPass) return;
+
+    effectiveSeatIndex = activeSeatIndex;
+  }
+
+  const nextHand = applyTableGameActionToHand(
+    t,
+    currentHand,
+    effectiveSeatIndex,
+    action
+  );
+
+  if (nextHand === currentHand) return;
+
+  t.game = {
+    ...(t.game || createEmptyServerGame()),
+    dealerSeatIndex:
+      typeof nextHand.dealerSeatIndex === "number"
+        ? nextHand.dealerSeatIndex
+        : (t.game?.dealerSeatIndex || 0),
+    currentTurnSeatIndex:
+      nextHand.currentTurnSeatIndex != null
+        ? nextHand.currentTurnSeatIndex
+        : null,
+    hand: nextHand,
+    version: (t.game?.version || 0) + 1,
+  };
+
+  broadcastTables();
+
+  // on garde le rebroadcast pour ne pas casser le frontend actuel
   broadcastToTable(t.id, {
     type: "table_game_action",
     tableId: t.id,
-    roundId,
+    roundId: String(nextHand.roundId || roundId),
     action,
     actor: pseudo,
   });
+
   return;
 }
     if (msg.type === "update_avatar") {
