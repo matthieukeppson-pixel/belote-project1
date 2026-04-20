@@ -1517,7 +1517,7 @@ style={{
                     <button
   className="atout-btn take"
   onClick={handleTakeAtout}
-  disabled={!isServerBiddingPhase}
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
   Prendre
 </button>
@@ -1544,7 +1544,7 @@ style={{
                     <button
   className="atout-btn pass"
   onClick={handlePass}
-  disabled={!isServerBiddingPhase}
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
   Passer
 </button>
