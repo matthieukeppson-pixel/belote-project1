@@ -507,7 +507,10 @@ const serverTurnSeatIndex =
     : null;
 
 const serverTurnPlayerId = displayedPlayerIdForSeatIndex(serverTurnSeatIndex);
+const serverTurnSeatInfo =
+  serverTurnSeatIndex != null ? seatsInfo[serverTurnSeatIndex] || null : null;
 
+const isServerTurnBot = !!serverTurnSeatInfo?.isBot;
 const isServerBiddingPhase =
   game?.state === STATES.ENCHERES ||
   game?.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
@@ -827,7 +830,7 @@ const isServerLocalTurn =
     ? mySeatIndex === serverTurnSeatIndex
     : isLocalTurn;
 const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
-const isActiveBot = !!activeSeatInfo?.isBot;
+const _isActiveBot = !!activeSeatInfo?.isBot;
 const currentAnnouncements =
   game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
 
@@ -953,14 +956,14 @@ useEffect(() => {
   isPrimaryTableDriver,
   sendTableGameAction,
 ]);
+
 useEffect(() => {
   if (!isPrimaryTableDriver) return;
-  if (!isServerBiddingPhase) return;
   if (
-    game.state !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
-    game.state !== STATES.ANNOUNCE_ATOUT_TOUR_2
+    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
+    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2
   ) return;
-  if (!isActiveBot) return;
+  if (!isServerTurnBot) return;
 
   const timer = setTimeout(() => {
     sendTableGameAction({ type: "PASS" });
@@ -968,13 +971,13 @@ useEffect(() => {
 
   return () => clearTimeout(timer);
 }, [
-  game.state,
-  game.currentPlayerIndex,
-  isServerBiddingPhase,
   isPrimaryTableDriver,
-  isActiveBot,
+  serverPhaseLabel,
+  serverTurnSeatIndex,
+  isServerTurnBot,
   sendTableGameAction,
 ]);
+
 useEffect(() => {
   if (!import.meta.env.DEV) return;
   if (game.state !== STATES.PLI_EN_COURS) return;
@@ -1060,6 +1063,8 @@ useEffect(() => {
   <div>Ma place : {mySeatIndex === -1 ? "none" : mySeatIndex + 1}</div>
   <div>Tour serveur : {serverTurnSeatIndex == null ? "none" : serverTurnSeatIndex + 1}</div>
   <div>Joueur serveur : {serverTurnPlayerId || "none"}</div>
+  <div>Primary driver : {isPrimaryTableDriver ? "yes" : "no"}</div>
+<div>Server turn bot : {isServerTurnBot ? "yes" : "no"}</div>
   <div>Top seat : {seatIndexForPosition("top") == null ? "none" : seatIndexForPosition("top") + 1}</div>
 <div>Left seat : {seatIndexForPosition("left") == null ? "none" : seatIndexForPosition("left") + 1}</div>
 <div>Right seat : {seatIndexForPosition("right") == null ? "none" : seatIndexForPosition("right") + 1}</div>
@@ -1504,8 +1509,8 @@ style={{
 )}
 
             {(mode === "classic" || mode === "moderne") &&
-              game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 && 
-                showServerBiddingHint && (
+  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 &&
+    showServerBiddingHint && (
                 <div className="atout-panel atout-panel--glass">
                   <div className="atout-title">Choisir l’atout</div>
                   <div className="atout-actions">
@@ -1563,8 +1568,8 @@ style={{
                 </div>
               )}
 
-            {(mode === "classic" || mode === "moderne") &&
-  game.state === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+           {(mode === "classic" || mode === "moderne") &&
+  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
   showServerBiddingHint &&
   game.atoutPropose && (
                 <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
