@@ -505,8 +505,18 @@ const serverTurnSeatIndex =
   typeof serverHand?.currentTurnSeatIndex === "number"
     ? serverHand.currentTurnSeatIndex
     : null;
-
 const serverTurnPlayerId = displayedPlayerIdForSeatIndex(serverTurnSeatIndex);
+const authoritativeAtout = serverHand?.atout || game.atout || null;
+
+const authoritativeTakerSeatIndex =
+  typeof serverHand?.takerSeatIndex === "number"
+    ? serverHand.takerSeatIndex
+    : null;
+
+const authoritativeTakerPlayerId =
+  authoritativeTakerSeatIndex != null
+    ? displayedPlayerIdForSeatIndex(authoritativeTakerSeatIndex)
+    : (game.preneur != null ? game.players[game.preneur] : null);
 const serverTurnSeatInfo =
   serverTurnSeatIndex != null ? seatsInfo[serverTurnSeatIndex] || null : null;
 
@@ -785,7 +795,7 @@ function handlePass() {
   setGame((g) => dispatch(g, { type: "PASS_ANNOUNCEMENT" }));
 }
 
-  function handleDeclareAnnouncement(announcement) {
+  function _handleDeclareAnnouncement(announcement) {
   if (!isServerBiddingPhase) return;
   if (!announcement) return;
 
@@ -808,13 +818,13 @@ function handlePass() {
   if (!isServerBiddingPhase) return;
   setGame((g) => dispatch(g, { type: "SURCONTRE" }));
 }
-function handleBidSuit(suit) {
+function _handleBidSuit(suit) {
   if (!isServerBiddingPhase) return;
   setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
 }
 function handleTakeAtoutSuit(suit) {
   if (!isServerBiddingPhase) return;
-  if (!isLocalTurn) return;
+   if (!isServerLocalTurn) return;
   sendTableGameAction({ type: "TAKE_ATOUT", suit });
 }
   function handlePlayCard(card) {
@@ -1226,9 +1236,10 @@ useEffect(() => {
 <button
   key={suit}
   className="atout-btn take atout-suit-btn"
-  onClick={() => handleBidSuit(suit)}
-  disabled={!isServerBiddingPhase}
+  onClick={() => handleTakeAtoutSuit(suit)}
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
+
         
           <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
         </button>
@@ -1283,11 +1294,11 @@ useEffect(() => {
         gap: 10,
       }}
     >
-     <button
+<button
   className="atout-btn take"
-  style={{ minWidth: 96, padding: "8px 12px" }}
-  onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
-  disabled={!isServerBiddingPhase}
+  onClick={() => handleTakeAtoutSuit("SA")}
+  title="Sans Atout"
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
   Annonce
 </button>
@@ -1397,7 +1408,8 @@ style={{
   serverTurnSeatIndex != null
     ? displayedSeatIndex === serverTurnSeatIndex
     : activePlayer === player;
-  const isDisplayedTaker = game.atout && game.players[game.preneur] === player;
+  const isDisplayedTaker =
+  !!authoritativeAtout && authoritativeTakerPlayerId === player;
 
   return (
     <div
@@ -1465,9 +1477,9 @@ style={{
                  {isActiveDisplayedPlayer && <div className="active-dot" />}
 
                   {isDisplayedTaker && (
-                    <div className={`atout-indicator ${position} ${game.atout}`}>
-                      {atoutSymbol(game.atout)}
-                    </div>
+                   <div className={`atout-indicator ${position} ${authoritativeAtout}`}>
+  {atoutSymbol(authoritativeAtout)}
+</div>
                   )}
                 </div>
               );
@@ -1532,9 +1544,10 @@ style={{
                           SA
                         </button>
                         <button
-                          className="atout-btn take"
-                          onClick={() => handleTakeAtoutSuit("TA")}
-                          title="Tout Atout"
+  className="atout-btn take"
+  onClick={() => handleTakeAtoutSuit("TA")}
+  title="Tout Atout"
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
                         >
                           TA
                         </button>
