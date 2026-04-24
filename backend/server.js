@@ -15,7 +15,7 @@ import { WebSocketServer } from "ws";
  *   - get_players
  *
  *   - get_tables
- *   - set_table_mode { tableId, mode }    (autorisé seulement si table vide)
+ *   - set_table_mode { tableId, mode }    (autorisÃ© seulement si table vide)
  *   - join_table { tableId }
  *   - choose_seat { tableId, seatIndex }
  *   - leave_table { tableId? }            (si absent -> quitte n'importe quelle table)
@@ -26,7 +26,7 @@ import { WebSocketServer } from "ws";
  *   - tables  { tables: [{ id, mode, seats, count }] }
  *   - message { user, text }
  *   - system  { text }
- *   - joined_table { tableId, mode }      ✅ ACK join
+ *   - joined_table { tableId, mode }      âœ… ACK join
  *   - join_table_denied { tableId, reason }
  *   - seat_chosen { tableId, seatIndex }
  *   - choose_seat_denied { tableId, reason }
@@ -42,7 +42,7 @@ app.use(express.json());
 app.get("/", (_req, res) => res.send("Backend HTTP OK"));
 
 app.listen(HTTP_PORT, () => {
-  console.log(`✅ Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
+  console.log(`âœ… Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
 });
 
 // ===============================
@@ -51,7 +51,7 @@ app.listen(HTTP_PORT, () => {
 const wsServer = http.createServer();
 const wss = new WebSocketServer({ server: wsServer });
 
-console.log(`✅ WebSocket actif sur ws://localhost:${WS_PORT}`);
+console.log(`âœ… WebSocket actif sur ws://localhost:${WS_PORT}`);
 
 // pseudo -> { name, avatar, count }
 const playersMap = new Map();
@@ -142,86 +142,17 @@ function computeTurnedCardFromSeed(dealSeed, dealerSeatIndex) {
   const randomFn = createSeededRandom(dealSeed);
   const deck = shuffle(createDeck(), randomFn);
 
-  let cursorSeat = nextSeatIndex(dealerSeatIndex);
-
-  // distribution 3
-  for (let r = 0; r < 3; r++) {
-    for (let i = 0; i < 4; i++) {
-      deck.shift();
-      cursorSeat = nextSeatIndex(cursorSeat);
-    }
-  }
-function computeTurnedCardFromSeed(dealSeed, dealerSeatIndex) {
-  const randomFn = createSeededRandom(dealSeed);
-  const deck = shuffle(createDeck(), randomFn);
-
-  let cursorSeat = nextSeatIndex(dealerSeatIndex);
-
-  // distribution 3
-  for (let r = 0; r < 3; r++) {
-    for (let i = 0; i < 4; i++) {
-      deck.shift();
-      cursorSeat = nextSeatIndex(cursorSeat);
-    }
-  }
-
-  // distribution 2
-  for (let r = 0; r < 2; r++) {
-    for (let i = 0; i < 4; i++) {
-      deck.shift();
-      cursorSeat = nextSeatIndex(cursorSeat);
-    }
-  }
-
-  return deck[0] || null;
-}
-
-function buildInitialAuthoritativeDealFromSeed(dealSeed, dealerSeatIndex) {
-  const randomFn = createSeededRandom(dealSeed);
-  const deck = shuffle(createDeck(), randomFn);
-
-  const hands = {
-    joueur1: [],
-    joueur2: [],
-    joueur3: [],
-    joueur4: [],
-  };
-
-  let seatIndex = nextSeatIndex(dealerSeatIndex);
-
-  function dealCardsToSeat(count) {
-    const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
-
-    for (let i = 0; i < count; i++) {
-      const card = deck.shift();
-      if (card) hands[playerId].push(card);
-    }
-
-    seatIndex = nextSeatIndex(seatIndex);
-  }
-
-  // distribution 3
+  // distribution 3 cartes à chaque siège
   for (let i = 0; i < 4; i++) {
-    dealCardsToSeat(3);
+    deck.shift();
+    deck.shift();
+    deck.shift();
   }
 
-  // distribution 2
+  // distribution 2 cartes à chaque siège
   for (let i = 0; i < 4; i++) {
-    dealCardsToSeat(2);
-  }
-
-  return {
-    hands,
-    deck,
-    atoutPropose: deck[0] || null,
-  };
-}
-  // distribution 2
-  for (let r = 0; r < 2; r++) {
-    for (let i = 0; i < 4; i++) {
-      deck.shift();
-      cursorSeat = nextSeatIndex(cursorSeat);
-    }
+    deck.shift();
+    deck.shift();
   }
 
   return deck[0] || null;
@@ -477,10 +408,49 @@ function buildTeamsFromSeats(table) {
     eux: [table.seats[1], table.seats[3]].filter(Boolean),
   };
 }
+
+function buildInitialAuthoritativeDealFromSeedSafe(dealSeed, dealerSeatIndex) {
+  const randomFn = createSeededRandom(dealSeed);
+  const deck = shuffle(createDeck(), randomFn);
+
+  const hands = {
+    joueur1: [],
+    joueur2: [],
+    joueur3: [],
+    joueur4: [],
+  };
+
+  let seatIndex = nextSeatIndex(dealerSeatIndex);
+
+  function dealCardsToSeat(count) {
+    const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+
+    for (let i = 0; i < count; i++) {
+      const card = deck.shift();
+      if (card) hands[playerId].push(card);
+    }
+
+    seatIndex = nextSeatIndex(seatIndex);
+  }
+
+  for (let i = 0; i < 4; i++) {
+    dealCardsToSeat(3);
+  }
+
+  for (let i = 0; i < 4; i++) {
+    dealCardsToSeat(2);
+  }
+
+  return {
+    hands,
+    deck,
+    atoutPropose: deck[0] || null,
+  };
+}
 function buildFreshAuthoritativeHand(table, dealerSeatIndex = 0) {
   const now = Date.now();
   const dealSeed = `${table.id}-${now}-${Math.random()}`;
-  const initialDeal = buildInitialAuthoritativeDealFromSeed(dealSeed, dealerSeatIndex);
+  const initialDeal = buildInitialAuthoritativeDealFromSeedSafe(dealSeed, dealerSeatIndex);
 
   return {
     ...createEmptyHandState(),
@@ -787,7 +757,7 @@ wss.on("connection", (ws) => {
   ws.pseudo = null;
   ws.tableId = null;
 
-  // état initial
+  // Ã©tat initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
   ws.send(JSON.stringify({ type: "tables", tables: tablesArray() }));
 
@@ -812,10 +782,10 @@ wss.on("connection", (ws) => {
       const existing = playersMap.get(pseudo);
       if (!existing) {
         playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
-        system(`⭐ Bienvenue ${pseudo} ⭐`);
+        system(`â­ Bienvenue ${pseudo} â­`);
       } else {
         existing.count += 1;
-        // ✅ on ne touche PAS existing.avatar ici
+        // âœ… on ne touche PAS existing.avatar ici
       }
 
       broadcastPlayers();
@@ -823,7 +793,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    // tout le reste nécessite un pseudo
+    // tout le reste nÃ©cessite un pseudo
     const pseudo = String(ws.pseudo || "").trim();
     if (!pseudo) return;
 
@@ -1192,7 +1162,7 @@ if (
     if (msg.type === "create_table") {
       const mode = String(msg.mode || "classic").trim() || "classic";
       const t = createTable(mode);
-      system(`🟢 Table ${t.id} créée (${mode})`);
+      system(`ðŸŸ¢ Table ${t.id} crÃ©Ã©e (${mode})`);
       broadcastTables();
       return;
     }
@@ -1207,12 +1177,12 @@ if (
 
       const count = t.seats.filter(Boolean).length;
       if (count > 0) {
-        system(`⛔ Mode non modifiable: table ${t.id} non vide (${count}/4)`);
+        system(`â›” Mode non modifiable: table ${t.id} non vide (${count}/4)`);
         return;
       }
 
       t.mode = mode;
-      system(`⚙️ Table ${t.id} passe en mode ${mode}`);
+      system(`âš™ï¸ Table ${t.id} passe en mode ${mode}`);
       broadcastTables();
       return;
     }
@@ -1226,7 +1196,7 @@ if (msg.type === "join_table") {
   const wasAlreadyInTargetTable =
     prev && Number(prev.table.id) === Number(t.id);
 
-  // déjà assis dans cette table : on rattache juste le socket
+  // dÃ©jÃ  assis dans cette table : on rattache juste le socket
   if (wasAlreadyInTargetTable) {
   ws.tableId = t.id;
   refreshServerGameForTable(t);
@@ -1242,7 +1212,7 @@ if (msg.type === "join_table") {
   return;
 }
 
-  // place libre OU place occupée par un bot remplaçable
+  // place libre OU place occupÃ©e par un bot remplaÃ§able
   const freeIdx = t.seats.findIndex((s) => !s);
   const botIdx = t.seats.findIndex((s) => isBotPseudo(s));
   const targetIdx = freeIdx !== -1 ? freeIdx : botIdx;
@@ -1259,7 +1229,7 @@ if (msg.type === "join_table") {
     return;
   }
 
-  // s'il était dans une autre table, on libère proprement l'ancienne place
+  // s'il Ã©tait dans une autre table, on libÃ¨re proprement l'ancienne place
   let oldTableId = null;
   if (prev) {
     oldTableId = prev.table.id;
@@ -1282,7 +1252,7 @@ if (msg.type === "join_table") {
     broadcastToTable(oldTableId, {
       type: "table_system",
       tableId: oldTableId,
-      text: `${pseudo} a quitté la table`,
+      text: `${pseudo} a quittÃ© la table`,
     });
   }
 
@@ -1290,7 +1260,7 @@ if (msg.type === "join_table") {
     type: "table_system",
     tableId: t.id,
     text: replacedBot
-      ? `${pseudo} a remplacé un bot à la place ${targetIdx + 1}`
+      ? `${pseudo} a remplacÃ© un bot Ã  la place ${targetIdx + 1}`
       : `${pseudo} a pris la place ${targetIdx + 1}`,
   });
 
@@ -1332,8 +1302,8 @@ if (msg.type === "choose_seat") {
     return;
   }
 
-  // sécurité forte :
-  // le joueur doit déjà être réellement assis dans CETTE table
+  // sÃ©curitÃ© forte :
+  // le joueur doit dÃ©jÃ  Ãªtre rÃ©ellement assis dans CETTE table
   const realSeat = findPlayerTable(pseudo);
   if (!realSeat || Number(realSeat.table.id) !== Number(t.id)) {
     ws.send(
@@ -1380,7 +1350,7 @@ if (msg.type === "choose_seat") {
 
   const targetCountBefore = t.seats.filter(Boolean).length;
 
-  // déplacement interne à la même table
+  // dÃ©placement interne Ã  la mÃªme table
   t.seats[currentSeatIndex] = null;
   t.seats[seatIndex] = pseudo;
   refreshServerGameForTable(t);
@@ -1398,7 +1368,7 @@ if (msg.type === "choose_seat") {
     type: "table_system",
     tableId: t.id,
     text: targetIsBot
-      ? `${pseudo} a remplacé un bot à la place ${seatIndex + 1}`
+      ? `${pseudo} a remplacÃ© un bot Ã  la place ${seatIndex + 1}`
       : `${pseudo} a pris la place ${seatIndex + 1}`,
   });
 
@@ -1412,7 +1382,7 @@ if (msg.type === "choose_seat") {
     broadcastToTable(t.id, {
       type: "table_system",
       tableId: t.id,
-      text: "Table complète (4/4)",
+      text: "Table complÃ¨te (4/4)",
     });
   }
 
@@ -1439,7 +1409,7 @@ if (msg.type === "choose_seat") {
           broadcastToTable(t.id, {
             type: "table_system",
             tableId: t.id,
-            text: `${pseudo} a quitté la table`,
+            text: `${pseudo} a quittÃ© la table`,
           });
         }
         return;
@@ -1459,7 +1429,7 @@ if (leftTable) {
         broadcastToTable(left, {
           type: "table_system",
           tableId: left,
-          text: `${pseudo} a quitté la table`,
+          text: `${pseudo} a quittÃ© la table`,
         });
       }
       return;
@@ -1475,7 +1445,7 @@ if (leftTable) {
 
     p.count -= 1;
 
-    // dernière connexion du pseudo -> on le sort aussi des tables
+    // derniÃ¨re connexion du pseudo -> on le sort aussi des tables
     if (p.count <= 0) {
       playersMap.delete(pseudo);
 
@@ -1491,11 +1461,11 @@ if (leftTable) {
         broadcastToTable(leftTableId, {
           type: "table_system",
           tableId: leftTableId,
-          text: `${pseudo} a quitté la table`,
+          text: `${pseudo} a quittÃ© la table`,
         });
       }
 
-      system(`⭐ À bientôt ${pseudo} ⭐`);
+      system(`â­ Ã€ bientÃ´t ${pseudo} â­`);
       return;
     }
 
@@ -1504,6 +1474,7 @@ if (leftTable) {
 });
 
 wsServer.listen(WS_PORT);
+
 
 
 
