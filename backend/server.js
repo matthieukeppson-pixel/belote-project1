@@ -892,6 +892,193 @@ if (msg.type === "table_game_action") {
   }
 
 if (action.type === "PLAY_CARD") {
+  const currentHand = {
+    ...createEmptyHandState(),
+    ...(t.game?.hand || {}),
+  };
+
+  const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
+  if (actorSeatIndex === -1) return;
+
+  const activeSeatIndex = currentHand.currentTurnSeatIndex;
+  if (activeSeatIndex != null && actorSeatIndex !== activeSeatIndex) return;
+
+  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[actorSeatIndex];
+  const playerHand = Array.isArray(currentHand.hands?.[playerId])
+    ? currentHand.hands[playerId]
+    : [];
+
+  const cardKey = String(
+    action.cardKey || action.card?.key || action.card?.cardKey || ""
+  );
+
+  if (!cardKey) return;
+
+  const normalizeCardKey = (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const getCardSuit = (card) =>
+    card?.suit ?? card?.couleur ?? card?.color ?? null;
+
+  const getCardValue = (card) =>
+    card?.value ?? card?.rank ?? card?.valeur ?? null;
+
+  const buildCardKeyVariants = (card) => {
+    const suit = getCardSuit(card) ?? "";
+    const value = getCardValue(card) ?? "";
+    const key = card?.key ?? card?.cardKey ?? "";
+
+    return [
+      key,
+      `${suit}-${value}`,
+      `${value}-${suit}`,
+      `${suit}_${value}`,
+      `${value}_${suit}`,
+      `${suit}${value}`,
+      `${value}${suit}`,
+    ].map(normalizeCardKey);
+  };
+
+  const normalizedCardKey = normalizeCardKey(cardKey);
+  const cardIndex = playerHand.findIndex((card) =>
+    buildCardKeyVariants(card).includes(normalizedCardKey)
+  );
+
+  if (cardIndex === -1) return;
+
+  const playedCard = playerHand[cardIndex];
+
+  const nextPlayerHand = [
+    ...playerHand.slice(0, cardIndex),
+    ...playerHand.slice(cardIndex + 1),
+  ];
+
+  const nextHands = {
+    ...(currentHand.hands || {}),
+    [playerId]: nextPlayerHand,
+  };
+
+  const nextCouleurDemandee =
+    currentHand.couleurDemandee || getCardSuit(playedCard);
+
+  const currentTrickCards = Array.isArray(currentHand.trickCards)
+    ? currentHand.trickCards
+    : [];
+
+  const currentPli = Array.isArray(currentHand.pli)
+    ? currentHand.pli
+    : [];
+
+  const playedEntry = {
+    seatIndex: actorSeatIndex,
+    playerId,
+    card: playedCard,
+    cardKey,
+  };
+
+  const nextTrickCards = [...currentTrickCards, playedEntry];
+  const nextPli = [...currentPli, playedEntry];
+
+  const atout = currentHand.atout;
+
+  const isTrump = (card) => {
+    if (atout === "TA") return true;
+    if (atout === "SA" || !atout) return false;
+    return getCardSuit(card) === atout;
+  };
+
+  const trumpRank = {
+    J: 8,
+    9: 7,
+    A: 6,
+    10: 5,
+    K: 4,
+    Q: 3,
+    8: 2,
+    7: 1,
+  };
+
+  const normalRank = {
+    A: 8,
+    10: 7,
+    K: 6,
+    Q: 5,
+    J: 4,
+    9: 3,
+    8: 2,
+    7: 1,
+  };
+
+  const getRankValue = (card) => {
+    const value = String(getCardValue(card) ?? "").toUpperCase();
+    return isTrump(card) ? trumpRank[value] || 0 : normalRank[value] || 0;
+  };
+
+  const getBestTrickEntry = (bestEntry, candidateEntry) => {
+    if (!bestEntry) return candidateEntry;
+
+    const bestCard = bestEntry.card;
+    const candidateCard = candidateEntry.card;
+
+    const bestIsTrump = isTrump(bestCard);
+    const candidateIsTrump = isTrump(candidateCard);
+
+    if (candidateIsTrump && !bestIsTrump) return candidateEntry;
+    if (!candidateIsTrump && bestIsTrump) return bestEntry;
+
+    if (candidateIsTrump && bestIsTrump) {
+      return getRankValue(candidateCard) > getRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    const bestFollowsSuit = getCardSuit(bestCard) === nextCouleurDemandee;
+    const candidateFollowsSuit =
+      getCardSuit(candidateCard) === nextCouleurDemandee;
+
+    if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
+    if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+
+    if (candidateFollowsSuit && bestFollowsSuit) {
+      return getRankValue(candidateCard) > getRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    return bestEntry;
+  };
+
+  const trickIsComplete = nextTrickCards.length >= 4;
+
+  const winnerSeatIndex = trickIsComplete
+    ? nextTrickCards.reduce(getBestTrickEntry, null)?.seatIndex ?? actorSeatIndex
+    : null;
+
+  const nextHand = {
+    ...currentHand,
+    phase: trickIsComplete ? "PLI_TERMINE" : "PLI_EN_COURS",
+    hands: nextHands,
+    pli: nextPli,
+    trickCards: nextTrickCards,
+    couleurDemandee: nextCouleurDemandee,
+    winnerIndex: trickIsComplete ? winnerSeatIndex : currentHand.winnerIndex,
+    currentTurnSeatIndex: trickIsComplete
+      ? winnerSeatIndex
+      : nextSeatIndex(actorSeatIndex),
+  };
+
+  t.game = {
+    ...(t.game || createEmptyServerGame()),
+    dealerSeatIndex: nextHand.dealerSeatIndex,
+    currentTurnSeatIndex: nextHand.currentTurnSeatIndex,
+    hand: nextHand,
+    version: (t.game?.version || 0) + 1,
+  };
+
   broadcastToTable(t.id, {
     type: "table_game_action",
     tableId: t.id,
@@ -899,6 +1086,8 @@ if (action.type === "PLAY_CARD") {
     action,
     actor: pseudo,
   });
+
+  broadcastTables();
   return;
 }
 if (
