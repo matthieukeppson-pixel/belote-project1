@@ -90,7 +90,7 @@ function seatTeamKey(seatIndex) {
 
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
-
+const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
 function createDeck() {
   const deck = [];
   for (const suit of SUITS) {
@@ -151,7 +151,71 @@ function computeTurnedCardFromSeed(dealSeed, dealerSeatIndex) {
       cursorSeat = nextSeatIndex(cursorSeat);
     }
   }
+function computeTurnedCardFromSeed(dealSeed, dealerSeatIndex) {
+  const randomFn = createSeededRandom(dealSeed);
+  const deck = shuffle(createDeck(), randomFn);
 
+  let cursorSeat = nextSeatIndex(dealerSeatIndex);
+
+  // distribution 3
+  for (let r = 0; r < 3; r++) {
+    for (let i = 0; i < 4; i++) {
+      deck.shift();
+      cursorSeat = nextSeatIndex(cursorSeat);
+    }
+  }
+
+  // distribution 2
+  for (let r = 0; r < 2; r++) {
+    for (let i = 0; i < 4; i++) {
+      deck.shift();
+      cursorSeat = nextSeatIndex(cursorSeat);
+    }
+  }
+
+  return deck[0] || null;
+}
+
+function buildInitialAuthoritativeDealFromSeed(dealSeed, dealerSeatIndex) {
+  const randomFn = createSeededRandom(dealSeed);
+  const deck = shuffle(createDeck(), randomFn);
+
+  const hands = {
+    joueur1: [],
+    joueur2: [],
+    joueur3: [],
+    joueur4: [],
+  };
+
+  let seatIndex = nextSeatIndex(dealerSeatIndex);
+
+  function dealCardsToSeat(count) {
+    const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+
+    for (let i = 0; i < count; i++) {
+      const card = deck.shift();
+      if (card) hands[playerId].push(card);
+    }
+
+    seatIndex = nextSeatIndex(seatIndex);
+  }
+
+  // distribution 3
+  for (let i = 0; i < 4; i++) {
+    dealCardsToSeat(3);
+  }
+
+  // distribution 2
+  for (let i = 0; i < 4; i++) {
+    dealCardsToSeat(2);
+  }
+
+  return {
+    hands,
+    deck,
+    atoutPropose: deck[0] || null,
+  };
+}
   // distribution 2
   for (let r = 0; r < 2; r++) {
     for (let i = 0; i < 4; i++) {
@@ -190,7 +254,7 @@ function syncBotsForTable(table) {
 }
 function createEmptyHandState() {
   return {
-    phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS
+    phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS | PLI_TERMINE | FIN_DE_MANCHE
     roundNumber: 0,
     trickNumber: 0,
 
@@ -211,12 +275,47 @@ function createEmptyHandState() {
     passes: 0,
     passesAfterBid: 0,
 
+    hands: {
+      joueur1: [],
+      joueur2: [],
+      joueur3: [],
+      joueur4: [],
+    },
+
+    deck: [],
+
+    pli: [],
     leadingSeatIndex: null,
     trickCards: [null, null, null, null],
+    couleurDemandee: null,
+    winnerIndex: null,
 
     scores: {
       nous: 0,
       eux: 0,
+    },
+
+    scoreManche: {
+      nous: 0,
+      eux: 0,
+    },
+
+    finDeManche: null,
+
+    belote: {
+      state: "NONE",
+      joueur: null,
+    },
+
+    modernAnnouncements: {
+      detectedByPlayer: {
+        joueur1: [],
+        joueur2: [],
+        joueur3: [],
+        joueur4: [],
+      },
+      declaredByPlayer: {},
+      validated: [],
     },
   };
 }
@@ -381,6 +480,7 @@ function buildTeamsFromSeats(table) {
 function buildFreshAuthoritativeHand(table, dealerSeatIndex = 0) {
   const now = Date.now();
   const dealSeed = `${table.id}-${now}-${Math.random()}`;
+  const initialDeal = buildInitialAuthoritativeDealFromSeed(dealSeed, dealerSeatIndex);
 
   return {
     ...createEmptyHandState(),
@@ -390,10 +490,12 @@ function buildFreshAuthoritativeHand(table, dealerSeatIndex = 0) {
     dealSeed,
     dealerSeatIndex,
     currentTurnSeatIndex: nextSeatIndex(dealerSeatIndex),
+    hands: initialDeal.hands,
+    deck: initialDeal.deck,
     atoutPropose:
       table.mode === "contree"
         ? null
-        : computeTurnedCardFromSeed(dealSeed, dealerSeatIndex),
+        : initialDeal.atoutPropose,
   };
 }
 
@@ -776,7 +878,7 @@ if (msg.type === "table_game_action") {
       t,
       typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
     );
-
+ 
     t.game = {
       ...(t.game || createEmptyServerGame()),
       dealerSeatIndex: nextHand.dealerSeatIndex,
@@ -789,6 +891,29 @@ if (msg.type === "table_game_action") {
     return;
   }
 
+if (action.type === "PLAY_CARD") {
+  broadcastToTable(t.id, {
+    type: "table_game_action",
+    tableId: t.id,
+    roundId,
+    action,
+    actor: pseudo,
+  });
+  return;
+}
+if (
+  action.type === "PASS_ANNOUNCEMENT" ||
+  action.type === "DECLARE_ANNOUNCEMENT"
+) {
+  broadcastToTable(t.id, {
+    type: "table_game_action",
+    tableId: t.id,
+    roundId,
+    action,
+    actor: pseudo,
+  });
+  return;
+}
   const currentHand = {
     ...createEmptyHandState(),
     ...(t.game?.hand || {}),
