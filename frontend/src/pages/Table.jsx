@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
@@ -169,14 +169,10 @@ function _getTableChatEmojiSrc(text) {
 }
 export default function Table() {
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const mode = location.state?.mode || "classic";
-const modeLabel =
-  mode === "contree" ? "Contrée" :
-  mode === "moderne" ? "Moderne" :
-  "Classique";
-  const { id } = useParams();
+ const navigate = useNavigate();
+const location = useLocation();
+const initialRouteMode = location.state?.mode || null;
+const { id } = useParams();
   const tableId = Number(id);
 
 const pseudo =
@@ -193,8 +189,13 @@ const avatar =
 const wsTableRef = useRef(null);
 const systemTimersRef = useRef(new Map());
 const previousBiddingStateRef = useRef(null);
-
+const modernAnnouncementSentKeyRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
+const mode = _tableSnapshot?.mode || initialRouteMode || "classic";
+const modeLabel =
+  mode === "contree" ? "Contrée" :
+  mode === "moderne" ? "Moderne" :
+  "Classique";
 const [tableChatMessages, setTableChatMessages] = useState([]);
 
 function sendTableMessage(text) {
@@ -250,22 +251,37 @@ function pushTemporarySystemMessage(text) {
 
   systemTimersRef.current.set(id, timer);
 }
-const seatsInfo =
-  Array.isArray(_tableSnapshot?.seatsInfo) && _tableSnapshot.seatsInfo.length > 0
-    ? _tableSnapshot.seatsInfo
-    : Array.isArray(_tableSnapshot?.seats)
-      ? _tableSnapshot.seats.map((name) =>
-          name
-            ? {
-                name,
-                avatar: name === pseudo ? avatar : "/avatar.png",
-              }
-            : null
-        )
-      : [];
+const seatsInfo = useMemo(() => {
+  if (
+    Array.isArray(_tableSnapshot?.seatsInfo) &&
+    _tableSnapshot.seatsInfo.length > 0
+  ) {
+    return _tableSnapshot.seatsInfo;
+  }
 
-const mySeatIndex = seatsInfo.findIndex(
-  (seat) => seat?.name === pseudo
+  if (Array.isArray(_tableSnapshot?.seats)) {
+    return _tableSnapshot.seats.map((name) =>
+      name
+        ? {
+            name,
+            avatar: name === pseudo ? avatar : "/avatar.png",
+          }
+        : null
+    );
+  }
+
+  return [];
+}, [_tableSnapshot, pseudo, avatar]);
+
+const tableSeatPseudos = Array.isArray(_tableSnapshot?.seats)
+  ? _tableSnapshot.seats
+  : [];
+
+const normalizePseudo = (value) =>
+  String(value ?? "").trim();
+
+const mySeatIndex = tableSeatPseudos.findIndex(
+  (seatPseudo) => normalizePseudo(seatPseudo) === normalizePseudo(pseudo)
 );
 const humanSeatIndices = seatsInfo.reduce((acc, seat, index) => {
   if (seat?.name && !seat?.isBot) acc.push(index);
@@ -716,33 +732,14 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     return () => clearTimeout(timer);
   }, [game.state]);
 
-  // ============================================
-  // RELANCE DE MANCHE (APRÈS VISUEL)
-  // ============================================
-  useEffect(() => {
-    if (game.state !== STATES.FIN_DE_MANCHE) return;
-
-    const timer = setTimeout(() => {
-      const next = finDeMancheRef.current;
-      if (!next || next.partieTerminee) return;
-
-      setDisplayPli([]);
-      setHideLastPli(false);
-
-      finDeMancheCompteeRef.current = false;
-      finDeMancheRef.current = null;
-
-           setGame(
-        buildFreshLocalGame({
-          dealerIndex: next.dealerIndex,
-          currentPlayerIndex: next.startingPlayerIndex,
-        })
-      );
-    }, 1600);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.state]);
+// ============================================
+// RELANCE DE MANCHE (APRÈS VISUEL)
+// ============================================
+// Désactivée : la nouvelle manche doit repartir depuis le serveur,
+// pas par une reconstruction locale automatique.
+useEffect(() => {
+  if (game.state !== STATES.FIN_DE_MANCHE) return;
+}, [game.state]);
 
   // ============================================
   // FIN DE PLI
@@ -790,23 +787,21 @@ function handlePass() {
   sendTableGameAction({ type: "PASS" });
 }
 
- function handlePassAnnouncement() {
+function handlePassAnnouncement() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "PASS_ANNOUNCEMENT" }));
+  sendTableGameAction({ type: "PASS_ANNOUNCEMENT" });
 }
 
-  function _handleDeclareAnnouncement(announcement) {
+function handleDeclareAnnouncement(announcement) {
   if (!isServerBiddingPhase) return;
   if (!announcement) return;
 
-  setGame((g) =>
-    dispatch(g, {
-      type: "DECLARE_ANNOUNCEMENT",
-      announcementType: announcement.type,
-      highRank: announcement.highRank,
-      suit: announcement.suit || null,
-    })
-  );
+  sendTableGameAction({
+    type: "DECLARE_ANNOUNCEMENT",
+    announcementType: announcement.type,
+    highRank: announcement.highRank,
+    suit: announcement.suit || null,
+  });
 }
 
  function handleContre() {
@@ -827,22 +822,35 @@ function handleTakeAtoutSuit(suit) {
    if (!isServerLocalTurn) return;
   sendTableGameAction({ type: "TAKE_ATOUT", suit });
 }
-  function handlePlayCard(card) {
-    const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-    setGame((g) => dispatch(g, { type: "PLAY_CARD", cardKey }));
-  }
+ function handlePlayCard(card) {
+  const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
+  sendTableGameAction({ type: "PLAY_CARD", cardKey });
+}
 
-const activePlayer = game.players[game.currentPlayerIndex];
+const localActivePlayer = game.players[game.currentPlayerIndex] || null;
+const serverActivePlayer = serverTurnPlayerId || null;
+
+const isServerControlledTurn =
+  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2;
+
+const activePlayer =
+  isServerControlledTurn && serverActivePlayer
+    ? serverActivePlayer
+    : localActivePlayer;
+
 const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
 const isLocalTurn = activePlayer === localDisplayedPlayerId;
 const isServerLocalTurn =
   serverTurnSeatIndex != null
     ? mySeatIndex === serverTurnSeatIndex
     : isLocalTurn;
+
 const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
 const _isActiveBot = !!activeSeatInfo?.isBot;
+
 const currentAnnouncements =
-  game.modernAnnouncements?.detectedByPlayer?.[activePlayer] || [];
+  game.modernAnnouncements?.detectedByPlayer?.[localDisplayedPlayerId] || [];
 
 
  const scoreUI = scorePartie;
@@ -864,10 +872,10 @@ const bestValidatedAnnouncement =
 
 const showModernAnnouncementPanel =
   mode === "moderne" &&
-  game.state === STATES.ANNONCES_MODERNE &&
-  isServerBiddingPhase &&
-  activePlayer === "joueur1" &&
+  serverPhaseLabel === STATES.ANNONCES_MODERNE &&
+  isServerLocalTurn &&
   currentAnnouncements.length > 0;
+
 useEffect(() => {
  if (mode !== "moderne") {
   setVisibleAnnouncement(null);
@@ -902,50 +910,87 @@ if (!bestValidatedAnnouncement) return;
 }, [mode, isServerBiddingPhase, bestValidatedAnnouncement]);
 
 useEffect(() => {
-  if (mode !== "moderne") return;
-   if (!isServerBiddingPhase) return;
-  if (game.state !== STATES.ANNONCES_MODERNE) return;
+  if (mode !== "moderne") {
+    modernAnnouncementSentKeyRef.current = null;
+    return;
+  }
+
+  if (game.state !== STATES.ANNONCES_MODERNE) {
+    modernAnnouncementSentKeyRef.current = null;
+    return;
+  }
+
+const active = game.players[game.currentPlayerIndex];
+if (!active) return;
+
+const declaredByPlayer = game.modernAnnouncements?.declaredByPlayer || {};
+const alreadyAnswered = Object.prototype.hasOwnProperty.call(
+  declaredByPlayer,
+  active
+);
+
+if (alreadyAnswered) {
+  modernAnnouncementSentKeyRef.current = null;
+  return;
+}
+
+const detected =
+  game.modernAnnouncements?.detectedByPlayer?.[active] || [];
+
+const activeSeatIndex = SEAT_INDEX_TO_LOGICAL_PLAYER.findIndex(
+  (playerId) => playerId === active
+);
+
+const activeSeatInfo =
+  activeSeatIndex !== -1 ? seatsInfo[activeSeatIndex] || null : null;
+
+const activeIsBot = !!activeSeatInfo?.isBot;
+const turnKey = `${sharedRoundId}:${active}`;
 
   const timer = setTimeout(() => {
-    setGame((g) => {
-      if (g.state !== STATES.ANNONCES_MODERNE) return g;
+    if (modernAnnouncementSentKeyRef.current === turnKey) return;
 
-      const active = g.players[g.currentPlayerIndex];
-      const declaredByPlayer = g.modernAnnouncements?.declaredByPlayer || {};
-      const alreadyAnswered = Object.prototype.hasOwnProperty.call(
-        declaredByPlayer,
-        active
-      );
+    if (active === localDisplayedPlayerId) {
+      if (detected.length > 0) return;
 
-      if (alreadyAnswered) return g;
+      modernAnnouncementSentKeyRef.current = turnKey;
+      sendTableGameAction({ type: "PASS_ANNOUNCEMENT" });
+      return;
+    }
 
-      const detected =
-        g.modernAnnouncements?.detectedByPlayer?.[active] || [];
+    if (!activeIsBot) return;
+    if (!isPrimaryTableDriver) return;
 
-       if (active === LOCAL_PLAYER_ID) {
-        if (detected.length > 0) return g;
-        return dispatch(g, { type: "PASS_ANNOUNCEMENT" });
-      }
+    const best = detected[0] || null;
+    modernAnnouncementSentKeyRef.current = turnKey;
 
-      if (!import.meta.env.DEV) return g;
+    if (best) {
+      sendTableGameAction({
+        type: "DECLARE_ANNOUNCEMENT",
+        announcementType: best.type,
+        highRank: best.highRank,
+        suit: best.suit || null,
+      });
+      return;
+    }
 
-      const best = detected[0] || null;
-
-      if (best) {
-        return dispatch(g, {
-          type: "DECLARE_ANNOUNCEMENT",
-          announcementType: best.type,
-          highRank: best.highRank,
-          suit: best.suit || null,
-        });
-      }
-
-      return dispatch(g, { type: "PASS_ANNOUNCEMENT" });
-    });
+    sendTableGameAction({ type: "PASS_ANNOUNCEMENT" });
   }, 350);
 
   return () => clearTimeout(timer);
-}, [mode, isServerBiddingPhase, game.state, game.currentPlayerIndex, game.modernAnnouncements, game.atout]);
+}, [
+  mode,
+  game.state,
+  game.currentPlayerIndex,
+  game.players,
+  game.modernAnnouncements,
+  seatsInfo,
+  localDisplayedPlayerId,
+  isPrimaryTableDriver,
+  sharedRoundId,
+  sendTableGameAction,
+]);
+
 useEffect(() => {
   const previousState = previousBiddingStateRef.current;
 
@@ -1068,19 +1113,28 @@ useEffect(() => {
     fontWeight: 700,
   }}
 >
-  <div>Phase locale : {localPhaseLabel}</div>
-  <div>Phase serveur : {serverPhaseLabel}</div>
-  <div>Ma place : {mySeatIndex === -1 ? "none" : mySeatIndex + 1}</div>
-  <div>Tour serveur : {serverTurnSeatIndex == null ? "none" : serverTurnSeatIndex + 1}</div>
-  <div>Joueur serveur : {serverTurnPlayerId || "none"}</div>
-  <div>Primary driver : {isPrimaryTableDriver ? "yes" : "no"}</div>
+<div>Phase locale : {localPhaseLabel}</div>
+<div>Phase serveur : {serverPhaseLabel}</div>
+<div>Pseudo local : {pseudo}</div>
+<div>Seats bruts : {JSON.stringify(tableSeatPseudos)}</div>
+<div>Ma place : {mySeatIndex === -1 ? "none" : mySeatIndex + 1}</div>
+<div>Tour serveur : {serverTurnSeatIndex == null ? "none" : serverTurnSeatIndex + 1}</div>
+<div>Joueur serveur : {serverTurnPlayerId || "none"}</div>
+<div>Primary driver : {isPrimaryTableDriver ? "yes" : "no"}</div>
 <div>Server turn bot : {isServerTurnBot ? "yes" : "no"}</div>
-  <div>Top seat : {seatIndexForPosition("top") == null ? "none" : seatIndexForPosition("top") + 1}</div>
+<div>Local active : {localActivePlayer || "none"}</div>
+<div>Local active bot : {seatInfoForLogicalPlayerId(localActivePlayer)?.isBot ? "yes" : "no"}</div>
+
+<div>Turn authority : {isServerControlledTurn ? "server" : "local"}</div>
+<div>Effective active : {activePlayer || "none"}</div>
+<div>Effective active name : {seatInfoForLogicalPlayerId(activePlayer)?.name || "none"}</div>
+<div>Effective active bot : {seatInfoForLogicalPlayerId(activePlayer)?.isBot ? "yes" : "no"}</div>
+<div>Top seat : {seatIndexForPosition("top") == null ? "none" : seatIndexForPosition("top") + 1}</div>
 <div>Left seat : {seatIndexForPosition("left") == null ? "none" : seatIndexForPosition("left") + 1}</div>
 <div>Right seat : {seatIndexForPosition("right") == null ? "none" : seatIndexForPosition("right") + 1}</div>
 <div>Bottom seat : {seatIndexForPosition("bottom") == null ? "none" : seatIndexForPosition("bottom") + 1}</div>
-  <div>Round : {sharedRoundId}</div>
-  <div>Seed : {sharedDealSeed}</div>
+<div>Round : {sharedRoundId}</div>
+<div>Seed : {sharedDealSeed}</div>
 </div>
 
 
@@ -1294,23 +1348,23 @@ useEffect(() => {
         gap: 10,
       }}
     >
-<button
-  className="atout-btn take"
-  onClick={() => handleTakeAtoutSuit("SA")}
-  title="Sans Atout"
-  disabled={!isServerBiddingPhase || !isServerLocalTurn}
->
-  Annonce
-</button>
+      <button
+        className="atout-btn take"
+        style={{ minWidth: 96, padding: "8px 12px" }}
+        onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
+        disabled={!isServerBiddingPhase || !isServerLocalTurn}
+      >
+        Annonce
+      </button>
 
-     <button
-  className="atout-btn pass"
-  style={{ minWidth: 96, padding: "8px 12px" }}
-  onClick={handlePassAnnouncement}
-  disabled={!isServerBiddingPhase}
->
-  Passer
-</button>
+      <button
+        className="atout-btn pass"
+        style={{ minWidth: 96, padding: "8px 12px" }}
+        onClick={handlePassAnnouncement}
+        disabled={!isServerBiddingPhase || !isServerLocalTurn}
+      >
+        Passer
+      </button>
     </div>
   </div>
 )}
@@ -1599,7 +1653,7 @@ style={{
                       </button>
                     ))}
 
-                    {mode === "moderne" && (
+{mode === "moderne" && (
   <>
     <button
       className="atout-btn take"
@@ -1618,7 +1672,7 @@ style={{
   </>
 )}
 
-                    <button
+<button
   className="atout-btn pass atout-pass-inline"
   onClick={handlePass}
   disabled={!isServerBiddingPhase}

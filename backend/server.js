@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import http from "http";
 import { WebSocketServer } from "ws";
@@ -668,6 +668,186 @@ function applyTableGameActionToHand(table, hand, actorSeatIndex, action) {
 
   return applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action);
 }
+function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
+  const hand = {
+    ...createEmptyHandState(),
+    ...(currentHand || {}),
+  };
+  if (hand.phase !== "PLI_EN_COURS") return null;
+  const activeSeatIndex = hand.currentTurnSeatIndex;
+  if (activeSeatIndex != null && actorSeatIndex !== activeSeatIndex) return null;
+
+  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[actorSeatIndex];
+  const playerHand = Array.isArray(hand.hands?.[playerId])
+    ? hand.hands[playerId]
+    : [];
+
+  const cardKey = String(
+    action.cardKey || action.card?.key || action.card?.cardKey || ""
+  );
+
+    if (!cardKey) return null;
+  if (playerHand.length === 0) return null;
+
+  const normalizeCardKey = (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const getCardSuit = (card) =>
+    card?.suit ?? card?.couleur ?? card?.color ?? null;
+
+  const getCardValue = (card) =>
+    card?.value ?? card?.rank ?? card?.valeur ?? null;
+
+  const buildCardKeyVariants = (card) => {
+    const suit = getCardSuit(card) ?? "";
+    const value = getCardValue(card) ?? "";
+    const key = card?.key ?? card?.cardKey ?? "";
+
+    return [
+      key,
+      `${suit}-${value}`,
+      `${value}-${suit}`,
+      `${suit}_${value}`,
+      `${value}_${suit}`,
+      `${suit}${value}`,
+      `${value}${suit}`,
+    ].map(normalizeCardKey);
+  };
+
+   const normalizedCardKey = normalizeCardKey(cardKey);
+  const cardIndex = playerHand.findIndex((card) =>
+    buildCardKeyVariants(card).includes(normalizedCardKey)
+  );
+
+  if (cardIndex === -1) return null;
+
+   const playedCard = playerHand[cardIndex];
+
+  const nextPlayerHand = [
+    ...playerHand.slice(0, cardIndex),
+    ...playerHand.slice(cardIndex + 1),
+  ];
+
+  const nextHands = {
+    ...(hand.hands || {}),
+    [playerId]: nextPlayerHand,
+  };
+
+  const nextCouleurDemandee =
+    hand.couleurDemandee || getCardSuit(playedCard);
+
+      const currentTrickCards = Array.isArray(hand.trickCards)
+    ? hand.trickCards.filter((entry) => entry && entry.card)
+    : [];
+
+  if (currentTrickCards.length >= 4) return null;
+
+  const currentPli = Array.isArray(hand.pli)
+    ? hand.pli
+    : [];
+
+  const playedEntry = {
+    seatIndex: actorSeatIndex,
+    playerId,
+    card: playedCard,
+    cardKey,
+  };
+
+  const nextTrickCards = [...currentTrickCards, playedEntry];
+  const nextPli = [...currentPli, playedEntry];
+
+   const atout = hand.atout;
+
+  const isTrump = (card) => {
+    if (atout === "TA") return true;
+    if (atout === "SA" || !atout) return false;
+    return getCardSuit(card) === atout;
+  };
+
+  const trumpRank = {
+    J: 8,
+    9: 7,
+    A: 6,
+    10: 5,
+    K: 4,
+    Q: 3,
+    8: 2,
+    7: 1,
+  };
+
+  const normalRank = {
+    A: 8,
+    10: 7,
+    K: 6,
+    Q: 5,
+    J: 4,
+    9: 3,
+    8: 2,
+    7: 1,
+  };
+
+  const getRankValue = (card) => {
+    const value = String(getCardValue(card) ?? "").toUpperCase();
+    return isTrump(card) ? trumpRank[value] || 0 : normalRank[value] || 0;
+  };
+
+  const getBestTrickEntry = (bestEntry, candidateEntry) => {
+    if (!bestEntry) return candidateEntry;
+
+    const bestCard = bestEntry.card;
+    const candidateCard = candidateEntry.card;
+
+    const bestIsTrump = isTrump(bestCard);
+    const candidateIsTrump = isTrump(candidateCard);
+
+    if (candidateIsTrump && !bestIsTrump) return candidateEntry;
+    if (!candidateIsTrump && bestIsTrump) return bestEntry;
+
+    if (candidateIsTrump && bestIsTrump) {
+      return getRankValue(candidateCard) > getRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    const bestFollowsSuit = getCardSuit(bestCard) === nextCouleurDemandee;
+    const candidateFollowsSuit =
+      getCardSuit(candidateCard) === nextCouleurDemandee;
+
+    if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
+    if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+
+    if (candidateFollowsSuit && bestFollowsSuit) {
+      return getRankValue(candidateCard) > getRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    return bestEntry;
+  };
+
+  const trickIsComplete = nextTrickCards.length >= 4;
+
+  const winnerSeatIndex = trickIsComplete
+    ? nextTrickCards.reduce(getBestTrickEntry, null)?.seatIndex ?? actorSeatIndex
+    : null;
+
+      return {
+    ...hand,
+    phase: trickIsComplete ? "PLI_TERMINE" : "PLI_EN_COURS",
+    hands: nextHands,
+    pli: nextPli,
+    trickCards: nextTrickCards,
+    couleurDemandee: nextCouleurDemandee,
+    winnerIndex: trickIsComplete ? winnerSeatIndex : hand.winnerIndex,
+    currentTurnSeatIndex: trickIsComplete
+      ? winnerSeatIndex
+      : nextSeatIndex(actorSeatIndex),
+  };
+}
 function refreshServerGameForTable(table) {
   if (!table) return;
 
@@ -870,176 +1050,13 @@ if (action.type === "PLAY_CARD") {
   const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
   if (actorSeatIndex === -1) return;
 
-  const activeSeatIndex = currentHand.currentTurnSeatIndex;
-  if (activeSeatIndex != null && actorSeatIndex !== activeSeatIndex) return;
-
-  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[actorSeatIndex];
-  const playerHand = Array.isArray(currentHand.hands?.[playerId])
-    ? currentHand.hands[playerId]
-    : [];
-
-  const cardKey = String(
-    action.cardKey || action.card?.key || action.card?.cardKey || ""
+  const nextHand = applyPlayCardToAuthoritativeHand(
+    currentHand,
+    actorSeatIndex,
+    action
   );
 
-  if (!cardKey) return;
-
-  const normalizeCardKey = (value) =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "")
-      .replace(/[^a-z0-9]/g, "");
-
-  const getCardSuit = (card) =>
-    card?.suit ?? card?.couleur ?? card?.color ?? null;
-
-  const getCardValue = (card) =>
-    card?.value ?? card?.rank ?? card?.valeur ?? null;
-
-  const buildCardKeyVariants = (card) => {
-    const suit = getCardSuit(card) ?? "";
-    const value = getCardValue(card) ?? "";
-    const key = card?.key ?? card?.cardKey ?? "";
-
-    return [
-      key,
-      `${suit}-${value}`,
-      `${value}-${suit}`,
-      `${suit}_${value}`,
-      `${value}_${suit}`,
-      `${suit}${value}`,
-      `${value}${suit}`,
-    ].map(normalizeCardKey);
-  };
-
-  const normalizedCardKey = normalizeCardKey(cardKey);
-  const cardIndex = playerHand.findIndex((card) =>
-    buildCardKeyVariants(card).includes(normalizedCardKey)
-  );
-
-  if (cardIndex === -1) return;
-
-  const playedCard = playerHand[cardIndex];
-
-  const nextPlayerHand = [
-    ...playerHand.slice(0, cardIndex),
-    ...playerHand.slice(cardIndex + 1),
-  ];
-
-  const nextHands = {
-    ...(currentHand.hands || {}),
-    [playerId]: nextPlayerHand,
-  };
-
-  const nextCouleurDemandee =
-    currentHand.couleurDemandee || getCardSuit(playedCard);
-
-  const currentTrickCards = Array.isArray(currentHand.trickCards)
-    ? currentHand.trickCards
-    : [];
-
-  const currentPli = Array.isArray(currentHand.pli)
-    ? currentHand.pli
-    : [];
-
-  const playedEntry = {
-    seatIndex: actorSeatIndex,
-    playerId,
-    card: playedCard,
-    cardKey,
-  };
-
-  const nextTrickCards = [...currentTrickCards, playedEntry];
-  const nextPli = [...currentPli, playedEntry];
-
-  const atout = currentHand.atout;
-
-  const isTrump = (card) => {
-    if (atout === "TA") return true;
-    if (atout === "SA" || !atout) return false;
-    return getCardSuit(card) === atout;
-  };
-
-  const trumpRank = {
-    J: 8,
-    9: 7,
-    A: 6,
-    10: 5,
-    K: 4,
-    Q: 3,
-    8: 2,
-    7: 1,
-  };
-
-  const normalRank = {
-    A: 8,
-    10: 7,
-    K: 6,
-    Q: 5,
-    J: 4,
-    9: 3,
-    8: 2,
-    7: 1,
-  };
-
-  const getRankValue = (card) => {
-    const value = String(getCardValue(card) ?? "").toUpperCase();
-    return isTrump(card) ? trumpRank[value] || 0 : normalRank[value] || 0;
-  };
-
-  const getBestTrickEntry = (bestEntry, candidateEntry) => {
-    if (!bestEntry) return candidateEntry;
-
-    const bestCard = bestEntry.card;
-    const candidateCard = candidateEntry.card;
-
-    const bestIsTrump = isTrump(bestCard);
-    const candidateIsTrump = isTrump(candidateCard);
-
-    if (candidateIsTrump && !bestIsTrump) return candidateEntry;
-    if (!candidateIsTrump && bestIsTrump) return bestEntry;
-
-    if (candidateIsTrump && bestIsTrump) {
-      return getRankValue(candidateCard) > getRankValue(bestCard)
-        ? candidateEntry
-        : bestEntry;
-    }
-
-    const bestFollowsSuit = getCardSuit(bestCard) === nextCouleurDemandee;
-    const candidateFollowsSuit =
-      getCardSuit(candidateCard) === nextCouleurDemandee;
-
-    if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
-    if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
-
-    if (candidateFollowsSuit && bestFollowsSuit) {
-      return getRankValue(candidateCard) > getRankValue(bestCard)
-        ? candidateEntry
-        : bestEntry;
-    }
-
-    return bestEntry;
-  };
-
-  const trickIsComplete = nextTrickCards.length >= 4;
-
-  const winnerSeatIndex = trickIsComplete
-    ? nextTrickCards.reduce(getBestTrickEntry, null)?.seatIndex ?? actorSeatIndex
-    : null;
-
-  const nextHand = {
-    ...currentHand,
-    phase: trickIsComplete ? "PLI_TERMINE" : "PLI_EN_COURS",
-    hands: nextHands,
-    pli: nextPli,
-    trickCards: nextTrickCards,
-    couleurDemandee: nextCouleurDemandee,
-    winnerIndex: trickIsComplete ? winnerSeatIndex : currentHand.winnerIndex,
-    currentTurnSeatIndex: trickIsComplete
-      ? winnerSeatIndex
-      : nextSeatIndex(actorSeatIndex),
-  };
+  if (!nextHand) return;
 
   t.game = {
     ...(t.game || createEmptyServerGame()),
@@ -1060,6 +1077,7 @@ if (action.type === "PLAY_CARD") {
   broadcastTables();
   return;
 }
+
 if (
   action.type === "PASS_ANNOUNCEMENT" ||
   action.type === "DECLARE_ANNOUNCEMENT"
@@ -1474,30 +1492,3 @@ if (leftTable) {
 });
 
 wsServer.listen(WS_PORT);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
