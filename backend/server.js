@@ -469,6 +469,67 @@ function buildFreshAuthoritativeHand(table, dealerSeatIndex = 0) {
   };
 }
 
+function sameCardIdentity(a, b) {
+  if (!a || !b) return false;
+
+  return (
+    a.suit === b.suit &&
+    String(a.value ?? "").toUpperCase() === String(b.value ?? "").toUpperCase()
+  );
+}
+
+function completeAuthoritativeDealToEightAfterTake(hand, takerSeatIndex, takeTurnedCard = true) {
+  const nextHands = {
+    joueur1: [...(hand.hands?.joueur1 || [])],
+    joueur2: [...(hand.hands?.joueur2 || [])],
+    joueur3: [...(hand.hands?.joueur3 || [])],
+    joueur4: [...(hand.hands?.joueur4 || [])],
+  };
+
+  const nextDeck = Array.isArray(hand.deck) ? [...hand.deck] : [];
+  const takerPlayerId = LOGICAL_PLAYER_BY_SEAT_INDEX[takerSeatIndex];
+
+  if (takeTurnedCard && hand.atoutPropose && takerPlayerId) {
+    const turnedCardIndex = nextDeck.findIndex((card) =>
+      sameCardIdentity(card, hand.atoutPropose)
+    );
+
+    const [turnedCard] =
+      turnedCardIndex >= 0
+        ? nextDeck.splice(turnedCardIndex, 1)
+        : [hand.atoutPropose];
+
+    if (turnedCard && nextHands[takerPlayerId].length < 8) {
+      nextHands[takerPlayerId].push(turnedCard);
+    }
+  }
+
+  let safety = 0;
+
+  while (
+    safety < 32 &&
+    nextDeck.length > 0 &&
+    Object.values(nextHands).some((cards) => cards.length < 8)
+  ) {
+    for (let offset = 0; offset < 4; offset++) {
+      const seatIndex = (nextSeatIndex(hand.dealerSeatIndex) + offset) % 4;
+      const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+
+      if (!playerId || nextHands[playerId].length >= 8) continue;
+
+      const card = nextDeck.shift();
+      if (card) nextHands[playerId].push(card);
+    }
+
+    safety++;
+  }
+
+  return {
+    hands: nextHands,
+    deck: nextDeck,
+  };
+}
+
 function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) {
   const startSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
   const nextTurnSeatIndex = nextSeatIndex(hand.currentTurnSeatIndex);
@@ -520,6 +581,12 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
 
       if (!chosenSuit) return hand;
 
+      const completedDeal = completeAuthoritativeDealToEightAfterTake(
+        hand,
+        actorSeatIndex,
+        true
+      );
+
       return {
         ...hand,
         phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
@@ -527,6 +594,12 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         takerSeatIndex: actorSeatIndex,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
+        hands: completedDeal.hands,
+        deck: completedDeal.deck,
+        pli: [],
+        trickCards: [null, null, null, null],
+        couleurDemandee: null,
+        winnerIndex: null,
         passes: 0,
         passesAfterBid: 0,
       };
@@ -737,14 +810,28 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
     [playerId]: nextPlayerHand,
   };
 
-  const nextCouleurDemandee =
-    hand.couleurDemandee || getCardSuit(playedCard);
-
-      const currentTrickCards = Array.isArray(hand.trickCards)
+    const currentTrickCards = Array.isArray(hand.trickCards)
     ? hand.trickCards.filter((entry) => entry && entry.card)
     : [];
 
   if (currentTrickCards.length >= 4) return null;
+
+  const requestedSuit =
+    hand.couleurDemandee ||
+    getCardSuit(currentTrickCards[0]?.card) ||
+    null;
+
+  if (currentTrickCards.length > 0 && requestedSuit) {
+    const hasRequestedSuit = playerHand.some(
+      (card) => getCardSuit(card) === requestedSuit
+    );
+
+    const playedRequestedSuit = getCardSuit(playedCard) === requestedSuit;
+
+    if (hasRequestedSuit && !playedRequestedSuit) return null;
+  }
+
+  const nextCouleurDemandee = requestedSuit || getCardSuit(playedCard);
 
   const currentPli = Array.isArray(hand.pli)
     ? hand.pli
@@ -848,6 +935,198 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
       : nextSeatIndex(actorSeatIndex),
   };
 }
+function buildFirstBotPlayCardAction(table) {
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  if (hand.phase !== "PLI_EN_COURS") return null;
+
+  const activeSeatIndex = hand.currentTurnSeatIndex;
+  if (activeSeatIndex == null) return null;
+
+  const activeSeatPseudo = table.seats?.[activeSeatIndex] || null;
+  if (!isBotPseudo(activeSeatPseudo)) return null;
+
+  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
+  const playerHand = Array.isArray(hand.hands?.[playerId])
+    ? hand.hands[playerId]
+    : [];
+
+   const getBotCardSuit = (card) =>
+    card?.suit ?? card?.couleur ?? card?.color ?? null;
+
+  const currentTrickCards = Array.isArray(hand.trickCards)
+    ? hand.trickCards.filter((entry) => entry && entry.card)
+    : [];
+
+  const requestedSuit =
+    hand.couleurDemandee ||
+    getBotCardSuit(currentTrickCards[0]?.card) ||
+    null;
+
+  const card =
+    requestedSuit
+      ? playerHand.find(
+          (candidate) =>
+            candidate && getBotCardSuit(candidate) === requestedSuit
+        ) || playerHand.find(Boolean)
+      : playerHand.find(Boolean);
+
+  if (!card) return null;
+
+  const suit = card.suit ?? card.couleur ?? card.color ?? "";
+  const value = card.value ?? card.rank ?? card.valeur ?? "";
+  const cardKey = String(card.key || card.cardKey || `${suit}-${value}`);
+
+  if (!cardKey) return null;
+
+  return {
+    type: "PLAY_CARD",
+    cardKey,
+  };
+}
+
+function playOneBotCardIfNeeded(table) {
+  const action = buildFirstBotPlayCardAction(table);
+  if (!action) return false;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  const actorSeatIndex = hand.currentTurnSeatIndex;
+  if (actorSeatIndex == null) return false;
+
+  const actorPseudo = table.seats?.[actorSeatIndex] || null;
+  if (!isBotPseudo(actorPseudo)) return false;
+
+  const nextHand = applyPlayCardToAuthoritativeHand(
+    hand,
+    actorSeatIndex,
+    action
+  );
+
+  if (!nextHand) return false;
+
+  table.game = {
+    ...(table.game || createEmptyServerGame()),
+    dealerSeatIndex:
+      typeof nextHand.dealerSeatIndex === "number"
+        ? nextHand.dealerSeatIndex
+        : table.game?.dealerSeatIndex || 0,
+    currentTurnSeatIndex:
+      nextHand.currentTurnSeatIndex != null
+        ? nextHand.currentTurnSeatIndex
+        : null,
+    hand: nextHand,
+    version: (table.game?.version || 0) + 1,
+  };
+
+  broadcastToTable(table.id, {
+    type: "table_game_action",
+    tableId: table.id,
+    roundId: String(nextHand.roundId || hand.roundId || ""),
+    action,
+    actor: actorPseudo,
+  });
+
+  broadcastTables();
+  scheduleAdvanceCompletedTrick(table);
+  return true;
+}
+
+function playBotCardsUntilHumanTurn(table, maxSteps = 4) {
+  let playedCount = 0;
+
+  for (let i = 0; i < maxSteps; i++) {
+    const played = playOneBotCardIfNeeded(table);
+    if (!played) break;
+    playedCount++;
+  }
+
+  return playedCount;
+}
+
+function getPlayedTrickEntriesFromHand(hand) {
+  return Array.isArray(hand?.trickCards)
+    ? hand.trickCards.filter((entry) => entry && entry.card)
+    : [];
+}
+
+function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
+  if (!table?.game?.hand) return false;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game.hand || {}),
+  };
+
+  if (hand.phase !== "PLI_TERMINE") return false;
+  if (table.nextTrickTimer) return false;
+
+  table.nextTrickTimer = setTimeout(() => {
+    table.nextTrickTimer = null;
+
+    const currentHand = {
+      ...createEmptyHandState(),
+      ...(table.game?.hand || {}),
+    };
+
+    if (currentHand.phase !== "PLI_TERMINE") return;
+
+    const winnerSeatIndex =
+      typeof currentHand.winnerIndex === "number"
+        ? currentHand.winnerIndex
+        : typeof currentHand.currentTurnSeatIndex === "number"
+          ? currentHand.currentTurnSeatIndex
+          : 0;
+
+    const allHandsEmpty = Object.values(currentHand.hands || {}).every(
+      (cards) => Array.isArray(cards) && cards.length === 0
+    );
+
+    const nextHand = {
+      ...currentHand,
+      phase: allHandsEmpty ? "FIN_DE_MANCHE" : "PLI_EN_COURS",
+      trickNumber:
+        typeof currentHand.trickNumber === "number"
+          ? currentHand.trickNumber + 1
+          : 1,
+      leadingSeatIndex: winnerSeatIndex,
+      currentTurnSeatIndex: allHandsEmpty ? null : winnerSeatIndex,
+      pli: [],
+      trickCards: [null, null, null, null],
+      couleurDemandee: null,
+      winnerIndex: null,
+    };
+
+    table.game = {
+      ...(table.game || createEmptyServerGame()),
+      dealerSeatIndex:
+        typeof nextHand.dealerSeatIndex === "number"
+          ? nextHand.dealerSeatIndex
+          : table.game?.dealerSeatIndex || 0,
+      currentTurnSeatIndex:
+        nextHand.currentTurnSeatIndex != null
+          ? nextHand.currentTurnSeatIndex
+          : null,
+      hand: nextHand,
+      version: (table.game?.version || 0) + 1,
+    };
+
+    broadcastTables();
+
+    if (!allHandsEmpty) {
+      playBotCardsUntilHumanTurn(table);
+    }
+  }, delayMs);
+
+  return true;
+}
+
 function refreshServerGameForTable(table) {
   if (!table) return;
 
@@ -1075,6 +1354,9 @@ if (action.type === "PLAY_CARD") {
   });
 
   broadcastTables();
+
+  playBotCardsUntilHumanTurn(t);
+  scheduleAdvanceCompletedTrick(t);
   return;
 }
 
@@ -1141,14 +1423,17 @@ if (
   broadcastTables();
 
   // on garde le rebroadcast pour ne pas casser le frontend actuel
-  broadcastToTable(t.id, {
+    broadcastToTable(t.id, {
     type: "table_game_action",
     tableId: t.id,
-    roundId: String(nextHand.roundId || roundId),
+    roundId,
     action,
     actor: pseudo,
   });
 
+  broadcastTables();
+
+  playBotCardsUntilHumanTurn(t);
   return;
 }
     if (msg.type === "update_avatar") {

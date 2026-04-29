@@ -854,9 +854,25 @@ const currentAnnouncements =
 
 
  const scoreUI = scorePartie;
-const shouldShowPli = !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+const serverDisplayPli = Array.isArray(serverHand?.trickCards)
+  ? serverHand.trickCards.filter((play) => play && play.card)
+  : [];
+
+const effectiveDisplayPli = serverHand ? serverDisplayPli : displayPli;
+
+const shouldShowPli =
+  effectiveDisplayPli.length > 0 &&
+  !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+const serverLocalHand =
+  localDisplayedPlayerId &&
+  Array.isArray(serverHand?.hands?.[localDisplayedPlayerId])
+    ? serverHand.hands[localDisplayedPlayerId]
+    : null;
+
 const localHand =
-  (localDisplayedPlayerId && game.hands[localDisplayedPlayerId]) || [];
+  serverLocalHand ||
+  (localDisplayedPlayerId && game.hands[localDisplayedPlayerId]) ||
+  [];
 const actorId = game.players[game.currentPlayerIndex];
 const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
 
@@ -1430,7 +1446,7 @@ style={{
             )}
 
             {shouldShowPli &&
-              displayPli.map((play, index) =>
+             effectiveDisplayPli.map((play, index) =>
                 play?.card ? (
                   <div key={index} className={`pli-card ${pliClassForPlayerId(play.playerId)}`}>
                     <img
@@ -1548,11 +1564,11 @@ style={{
       const offset = index - center;
 
       return (
-        <div
-          key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
-          className={`card ${isLocalTurn ? "clickable" : "disabled"}`}
-          onClick={isLocalTurn ? () => handlePlayCard(card) : undefined}
-          style={{
+       <div
+  key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+  className={`card ${isServerLocalTurn ? "clickable" : "disabled"}`}
+  onClick={isServerLocalTurn ? () => handlePlayCard(card) : undefined}
+  style={{
             transform: `
               translateX(${offset * -28}px)
               translateY(${-8 + Math.abs(offset) * 2}px)
