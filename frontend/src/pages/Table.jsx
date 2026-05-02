@@ -516,6 +516,7 @@ const serverHand = _tableSnapshot?.game?.hand || null;
 
 const localPhaseLabel = game?.state || "UNKNOWN";
 const serverPhaseLabel = serverHand?.phase || "none";
+const effectivePhaseLabel = serverHand ? serverPhaseLabel : localPhaseLabel;
 
 const serverTurnSeatIndex =
   typeof serverHand?.currentTurnSeatIndex === "number"
@@ -538,10 +539,10 @@ const serverTurnSeatInfo =
 
 const isServerTurnBot = !!serverTurnSeatInfo?.isBot;
 const isServerBiddingPhase =
-  game?.state === STATES.ENCHERES ||
-  game?.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-  game?.state === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
-  game?.state === STATES.ANNONCES_MODERNE;
+  effectivePhaseLabel === STATES.ENCHERES ||
+  effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+  effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
+  effectivePhaseLabel === STATES.ANNONCES_MODERNE;
 
 const showServerBiddingHint =
   (mode === "classic" || mode === "moderne") && isServerBiddingPhase;
