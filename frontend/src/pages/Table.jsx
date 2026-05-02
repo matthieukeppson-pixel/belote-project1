@@ -1051,6 +1051,10 @@ useEffect(() => {
 
 useEffect(() => {
   if (!import.meta.env.DEV) return;
+
+  const legacyLocalAutoPlayEnabled = false;
+  if (!legacyLocalAutoPlayEnabled) return;
+
   if (game.state !== STATES.PLI_EN_COURS) return;
   if (!localDisplayedPlayerId) return;
   if (activePlayer === localDisplayedPlayerId) return;
