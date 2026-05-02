@@ -932,7 +932,28 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
 
     return bestEntry;
   };
+  if (
+    currentTrickCards.length > 0 &&
+    requestedSuit &&
+    atout &&
+    atout !== "SA" &&
+    atout !== "TA"
+  ) {
+    const hasRequestedSuitForCut = playerHand.some(
+      (card) => getCardSuit(card) === requestedSuit
+    );
+    const hasTrump = playerHand.some((card) => isTrump(card));
+    const playedTrump = isTrump(playedCard);
 
+    const currentBestEntry = currentTrickCards.reduce(getBestTrickEntry, null);
+    const partnerIsWinning =
+      currentBestEntry &&
+      seatTeamKey(currentBestEntry.seatIndex) === seatTeamKey(actorSeatIndex);
+
+    if (!hasRequestedSuitForCut && hasTrump && !partnerIsWinning && !playedTrump) {
+      return null;
+    }
+  }
   const trickIsComplete = nextTrickCards.length >= 4;
 
   const winnerSeatIndex = trickIsComplete
@@ -983,13 +1004,27 @@ function buildFirstBotPlayCardAction(table) {
     getBotCardSuit(currentTrickCards[0]?.card) ||
     null;
 
-  const card =
-    requestedSuit
-      ? playerHand.find(
-          (candidate) =>
-            candidate && getBotCardSuit(candidate) === requestedSuit
-        ) || playerHand.find(Boolean)
-      : playerHand.find(Boolean);
+  const atout = hand.atout;
+
+  const isBotTrump = (card) => {
+    if (atout === "TA") return true;
+    if (atout === "SA" || !atout) return false;
+    return getBotCardSuit(card) === atout;
+  };
+
+  const requestedSuitCard = requestedSuit
+    ? playerHand.find(
+        (candidate) =>
+          candidate && getBotCardSuit(candidate) === requestedSuit
+      )
+    : null;
+
+  const trumpFallbackCard =
+    requestedSuit && !requestedSuitCard
+      ? playerHand.find((candidate) => candidate && isBotTrump(candidate))
+      : null;
+
+  const card = requestedSuitCard || trumpFallbackCard || playerHand.find(Boolean);
 
   if (!card) return null;
 
