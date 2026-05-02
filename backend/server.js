@@ -954,6 +954,34 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
       return null;
     }
   }
+
+  if (
+    currentTrickCards.length > 0 &&
+    atout &&
+    atout !== "SA" &&
+    atout !== "TA" &&
+    isTrump(playedCard)
+  ) {
+    const currentBestTrumpEntry = currentTrickCards
+      .filter((entry) => entry?.card && isTrump(entry.card))
+      .reduce((bestEntry, entry) => {
+        if (!bestEntry) return entry;
+
+        return getRankValue(entry.card) > getRankValue(bestEntry.card)
+          ? entry
+          : bestEntry;
+      }, null);
+
+    if (currentBestTrumpEntry) {
+      const bestTrumpRank = getRankValue(currentBestTrumpEntry.card);
+      const playedTrumpRank = getRankValue(playedCard);
+      const hasHigherTrump = playerHand.some(
+        (card) => isTrump(card) && getRankValue(card) > bestTrumpRank
+      );
+
+      if (hasHigherTrump && playedTrumpRank <= bestTrumpRank) return null;
+    }
+  }
   const trickIsComplete = nextTrickCards.length >= 4;
 
   const winnerSeatIndex = trickIsComplete
