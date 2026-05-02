@@ -542,29 +542,34 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
   }
 
   if (action.type === "PASS") {
+    const newPasses = (hand.passes || 0) + 1;
+
     if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
-      if (nextTurnSeatIndex === startSeatIndex) {
+      if (newPasses >= 4) {
         return {
           ...hand,
           phase: "ANNOUNCE_ATOUT_TOUR_2",
+          passes: 0,
           currentTurnSeatIndex: startSeatIndex,
         };
       }
 
       return {
         ...hand,
+        passes: newPasses,
         currentTurnSeatIndex: nextTurnSeatIndex,
       };
     }
 
     if (hand.phase === "ANNOUNCE_ATOUT_TOUR_2") {
-      if (nextTurnSeatIndex === startSeatIndex) {
+      if (newPasses >= 4) {
         const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
         return buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
       }
 
       return {
         ...hand,
+        passes: newPasses,
         currentTurnSeatIndex: nextTurnSeatIndex,
       };
     }
