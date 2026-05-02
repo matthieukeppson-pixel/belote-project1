@@ -1072,7 +1072,7 @@ function getPlayedTrickEntriesFromHand(hand) {
     ? hand.trickCards.filter((entry) => entry && entry.card)
     : [];
 }
-function scheduleStartNextHandAfterEnd(table, delayMs = 3000) {
+function scheduleStartNextHandAfterEnd(table, delayMs = 2000) {
   if (!table?.game?.hand) return false;
 
   const hand = {
