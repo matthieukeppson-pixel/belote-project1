@@ -745,6 +745,9 @@ useEffect(() => {
   // FIN DE PLI
   // ============================================
   useEffect(() => {
+    const legacyLocalNextPliEnabled = false;
+    if (!legacyLocalNextPliEnabled) return;
+
     if (game.state !== STATES.PLI_TERMINE) return;
 
     const timer = setTimeout(() => {
