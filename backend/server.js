@@ -1060,7 +1060,47 @@ function getPlayedTrickEntriesFromHand(hand) {
     ? hand.trickCards.filter((entry) => entry && entry.card)
     : [];
 }
+function scheduleStartNextHandAfterEnd(table, delayMs = 3000) {
+  if (!table?.game?.hand) return false;
 
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game.hand || {}),
+  };
+
+  if (hand.phase !== "FIN_DE_MANCHE") return false;
+  if (table.nextHandTimer) return false;
+
+  const roundId = hand.roundId;
+  const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
+
+  table.nextHandTimer = setTimeout(() => {
+    table.nextHandTimer = null;
+
+    const currentHand = {
+      ...createEmptyHandState(),
+      ...(table.game?.hand || {}),
+    };
+
+    if (currentHand.phase !== "FIN_DE_MANCHE") return;
+    if (currentHand.roundId !== roundId) return;
+    if (getSeatedPlayersInOrder(table).length < 4) return;
+
+    const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+
+    table.game = {
+      ...(table.game || createEmptyServerGame()),
+      dealerSeatIndex: nextHand.dealerSeatIndex,
+      currentTurnSeatIndex: nextHand.currentTurnSeatIndex,
+      hand: nextHand,
+      version: (table.game?.version || 0) + 1,
+    };
+
+    broadcastTables();
+  }, delayMs);
+
+  return true;
+}
 function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
   if (!table?.game?.hand) return false;
 
@@ -1124,7 +1164,9 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
 
     broadcastTables();
 
-    if (!allHandsEmpty) {
+    if (allHandsEmpty) {
+      scheduleStartNextHandAfterEnd(table);
+    } else {
       playBotCardsUntilHumanTurn(table);
     }
   }, delayMs);
