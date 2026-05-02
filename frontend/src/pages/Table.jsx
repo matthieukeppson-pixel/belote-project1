@@ -739,8 +739,8 @@ const [announcementFading, setAnnouncementFading] = useState(false);
 // Désactivée : la nouvelle manche doit repartir depuis le serveur,
 // pas par une reconstruction locale automatique.
 useEffect(() => {
-  if (game.state !== STATES.FIN_DE_MANCHE) return;
-}, [game.state]);
+  if (effectivePhaseLabel !== STATES.FIN_DE_MANCHE) return;
+}, [effectivePhaseLabel]);
 
   // ============================================
   // FIN DE PLI
