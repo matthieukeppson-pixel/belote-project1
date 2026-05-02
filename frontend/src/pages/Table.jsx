@@ -1147,6 +1147,8 @@ useEffect(() => {
 <div>Ma place : {mySeatIndex === -1 ? "none" : mySeatIndex + 1}</div>
 <div>Tour serveur : {serverTurnSeatIndex == null ? "none" : serverTurnSeatIndex + 1}</div>
 <div>Joueur serveur : {serverTurnPlayerId || "none"}</div>
+<div>Donneur serveur : {typeof serverHand?.dealerSeatIndex === "number" ? serverHand.dealerSeatIndex + 1 : "none"}</div>
+<div>Passes serveur : {typeof serverHand?.passes === "number" ? serverHand.passes : "none"}</div>
 <div>Primary driver : {isPrimaryTableDriver ? "yes" : "no"}</div>
 <div>Server turn bot : {isServerTurnBot ? "yes" : "no"}</div>
 <div>Local active : {localActivePlayer || "none"}</div>
