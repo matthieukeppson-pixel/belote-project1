@@ -831,13 +831,16 @@ const localActivePlayer = game.players[game.currentPlayerIndex] || null;
 const serverActivePlayer = serverTurnPlayerId || null;
 
 const isServerControlledTurn =
-  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-  serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2;
+  !!serverHand &&
+  (serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+    serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
+    serverPhaseLabel === STATES.PLI_EN_COURS ||
+    serverPhaseLabel === STATES.PLI_TERMINE ||
+    serverPhaseLabel === STATES.FIN_DE_MANCHE);
 
-const activePlayer =
-  isServerControlledTurn && serverActivePlayer
-    ? serverActivePlayer
-    : localActivePlayer;
+const activePlayer = isServerControlledTurn
+  ? serverActivePlayer
+  : localActivePlayer;
 
 const localDisplayedPlayerId = displayedPlayerIdForPosition("bottom");
 const isLocalTurn = activePlayer === localDisplayedPlayerId;
