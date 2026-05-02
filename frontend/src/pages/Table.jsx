@@ -869,7 +869,7 @@ const effectiveDisplayPli = serverHand ? serverDisplayPli : displayPli;
 
 const shouldShowPli =
   effectiveDisplayPli.length > 0 &&
-  !(game.state === STATES.FIN_DE_MANCHE && hideLastPli);
+  !(effectivePhaseLabel === STATES.FIN_DE_MANCHE && hideLastPli);
 const serverLocalHand =
   localDisplayedPlayerId &&
   Array.isArray(serverHand?.hands?.[localDisplayedPlayerId])
