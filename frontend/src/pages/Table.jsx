@@ -1120,7 +1120,7 @@ useEffect(() => {
     <div
       className="table-page"
       data-mode={mode}
-      data-state={game.state}
+      data-state={effectivePhaseLabel}
       style={{ position: "relative" }}
     >
       <button className="table-back-btn" onClick={backToSalon}>
