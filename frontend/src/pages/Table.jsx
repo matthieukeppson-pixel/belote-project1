@@ -724,14 +724,14 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   // FIN DE MANCHE — VISUEL (dernier pli)
   // ============================================
   useEffect(() => {
-    if (game.state !== STATES.FIN_DE_MANCHE) return;
+    if (effectivePhaseLabel !== STATES.FIN_DE_MANCHE) return;
 
     const timer = setTimeout(() => {
       setHideLastPli(true);
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [game.state]);
+  }, [effectivePhaseLabel]);
 
 // ============================================
 // RELANCE DE MANCHE (APRÈS VISUEL)
