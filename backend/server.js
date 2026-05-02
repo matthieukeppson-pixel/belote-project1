@@ -1713,11 +1713,35 @@ if (msg.type === "join_table") {
   }
 
   const replacedBot = isBotPseudo(t.seats[targetIdx]) ? t.seats[targetIdx] : null;
+  const shouldResetHandAfterReplacingBot =
+    !!replacedBot &&
+    [
+      "ANNOUNCE_ATOUT_TOUR_1",
+      "ANNOUNCE_ATOUT_TOUR_2",
+      "ENCHERES",
+      "ANNONCES_MODERNE",
+    ].includes(t.game?.hand?.phase);
 
   // rattachement + installation dans la table
   ws.tableId = t.id;
   t.seats[targetIdx] = pseudo;
   refreshServerGameForTable(t);
+
+  if (shouldResetHandAfterReplacingBot) {
+    const nextHand = buildFreshAuthoritativeHand(
+      t,
+      typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
+    );
+
+    t.game = {
+      ...(t.game || createEmptyServerGame()),
+      dealerSeatIndex: nextHand.dealerSeatIndex,
+      currentTurnSeatIndex: nextHand.currentTurnSeatIndex,
+      hand: nextHand,
+      version: (t.game?.version || 0) + 1,
+    };
+  }
+
   broadcastTables();
 
   if (oldTableId && Number(oldTableId) !== Number(t.id)) {
