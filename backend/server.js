@@ -614,6 +614,12 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
       if (!action.suit) return hand;
       if (hand.atoutPropose && action.suit === hand.atoutPropose.suit) return hand;
 
+      const completedDeal = completeAuthoritativeDealToEightAfterTake(
+        hand,
+        actorSeatIndex,
+        false
+      );
+
       return {
         ...hand,
         phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
@@ -621,6 +627,12 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         takerSeatIndex: actorSeatIndex,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
+        hands: completedDeal.hands,
+        deck: completedDeal.deck,
+        pli: [],
+        trickCards: [null, null, null, null],
+        couleurDemandee: null,
+        winnerIndex: null,
         passes: 0,
         passesAfterBid: 0,
       };
