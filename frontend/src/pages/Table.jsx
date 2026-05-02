@@ -1647,8 +1647,8 @@ style={{
               )}
 
             {(mode === "classic" || mode === "moderne") &&
-  (game.state === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
-    game.state === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
+  (effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
+    effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
   showServerBiddingHint &&
   game.atoutPropose && (
                 <div className="atout-card">
