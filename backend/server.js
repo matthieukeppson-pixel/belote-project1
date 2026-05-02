@@ -1039,17 +1039,64 @@ function buildFirstBotPlayCardAction(table) {
     if (atout === "SA" || !atout) return false;
     return getBotCardSuit(card) === atout;
   };
+  const getBotCardValue = (card) =>
+    card?.value ?? card?.rank ?? card?.valeur ?? null;
+
+  const botTrumpRank = {
+    J: 8,
+    9: 7,
+    A: 6,
+    10: 5,
+    K: 4,
+    Q: 3,
+    8: 2,
+    7: 1,
+  };
+
+  const getBotTrumpRankValue = (card) => {
+    const value = String(getBotCardValue(card) ?? "").toUpperCase();
+    return botTrumpRank[value] || 0;
+  };
+
+  const currentBestTrumpRank =
+    atout && atout !== "SA" && atout !== "TA"
+      ? currentTrickCards
+          .filter((entry) => entry?.card && isBotTrump(entry.card))
+          .reduce(
+            (bestRank, entry) =>
+              Math.max(bestRank, getBotTrumpRankValue(entry.card)),
+            0
+          )
+      : 0;
+
+  const higherTrumpCard =
+    atout && atout !== "SA" && atout !== "TA"
+      ? playerHand
+          .filter(
+            (candidate) =>
+              candidate &&
+              isBotTrump(candidate) &&
+              getBotTrumpRankValue(candidate) > currentBestTrumpRank
+          )
+          .sort(
+            (a, b) =>
+              getBotTrumpRankValue(a) - getBotTrumpRankValue(b)
+          )[0] || null
+      : null;
 
   const requestedSuitCard = requestedSuit
-    ? playerHand.find(
-        (candidate) =>
-          candidate && getBotCardSuit(candidate) === requestedSuit
-      )
+    ? requestedSuit === atout && higherTrumpCard
+      ? higherTrumpCard
+      : playerHand.find(
+          (candidate) =>
+            candidate && getBotCardSuit(candidate) === requestedSuit
+        )
     : null;
 
   const trumpFallbackCard =
     requestedSuit && !requestedSuitCard
-      ? playerHand.find((candidate) => candidate && isBotTrump(candidate))
+      ? higherTrumpCard ||
+        playerHand.find((candidate) => candidate && isBotTrump(candidate))
       : null;
 
   const card = requestedSuitCard || trumpFallbackCard || playerHand.find(Boolean);
