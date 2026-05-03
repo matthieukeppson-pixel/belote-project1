@@ -140,6 +140,26 @@ function computeTrickPointsByTeam(hand) {
   return result;
 }
 
+function computeClassicContractScores(hand, scoreManche) {
+  const takerTeam =
+    typeof hand?.takerSeatIndex === "number" ? seatTeamKey(hand.takerSeatIndex) : null;
+
+  if (!takerTeam) return scoreManche;
+
+  const defenderTeam = takerTeam === "nous" ? "eux" : "nous";
+  const takerPoints = scoreManche[takerTeam] || 0;
+  const takerSucceeded = takerPoints >= 82;
+
+  if (takerSucceeded) {
+    return scoreManche;
+  }
+
+  return {
+    [takerTeam]: 0,
+    [defenderTeam]: 162,
+  };
+}
+
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
@@ -1405,10 +1425,15 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         trickPointsByTeam.eux +
         (winnerTeamKey === "eux" ? dixDeDerBonus : 0),
     };
+    const nextContractScores =
+      allHandsEmpty && table.mode === "classic"
+        ? computeClassicContractScores(currentHand, nextScoreManche)
+        : nextScoreManche;
+
     const nextScores = allHandsEmpty
       ? {
-          nous: (currentHand.scores?.nous || 0) + nextScoreManche.nous,
-          eux: (currentHand.scores?.eux || 0) + nextScoreManche.eux,
+          nous: (currentHand.scores?.nous || 0) + nextContractScores.nous,
+          eux: (currentHand.scores?.eux || 0) + nextContractScores.eux,
         }
       : currentHand.scores;
     const nextHand = {
