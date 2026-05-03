@@ -1057,7 +1057,59 @@ function buildFirstBotPlayCardAction(table) {
     const value = String(getBotCardValue(card) ?? "").toUpperCase();
     return botTrumpRank[value] || 0;
   };
+  const botNormalRank = {
+    A: 8,
+    10: 7,
+    K: 6,
+    Q: 5,
+    J: 4,
+    9: 3,
+    8: 2,
+    7: 1,
+  };
 
+  const getBotRankValue = (card) => {
+    const value = String(getBotCardValue(card) ?? "").toUpperCase();
+    return isBotTrump(card) ? getBotTrumpRankValue(card) : botNormalRank[value] || 0;
+  };
+
+  const getBotBestTrickEntry = (bestEntry, candidateEntry) => {
+    if (!bestEntry) return candidateEntry;
+
+    const bestCard = bestEntry.card;
+    const candidateCard = candidateEntry.card;
+
+    const bestIsTrump = isBotTrump(bestCard);
+    const candidateIsTrump = isBotTrump(candidateCard);
+
+    if (candidateIsTrump && !bestIsTrump) return candidateEntry;
+    if (!candidateIsTrump && bestIsTrump) return bestEntry;
+
+    if (candidateIsTrump && bestIsTrump) {
+      return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    const bestFollowsSuit = getBotCardSuit(bestCard) === requestedSuit;
+    const candidateFollowsSuit = getBotCardSuit(candidateCard) === requestedSuit;
+
+    if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
+    if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+
+    if (candidateFollowsSuit && bestFollowsSuit) {
+      return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+        ? candidateEntry
+        : bestEntry;
+    }
+
+    return bestEntry;
+  };
+
+  const currentBestEntry = currentTrickCards.reduce(getBotBestTrickEntry, null);
+  const partnerIsWinning =
+    currentBestEntry &&
+    seatTeamKey(currentBestEntry.seatIndex) === seatTeamKey(activeSeatIndex);
   const currentBestTrumpRank =
     atout && atout !== "SA" && atout !== "TA"
       ? currentTrickCards
@@ -1092,14 +1144,21 @@ function buildFirstBotPlayCardAction(table) {
             candidate && getBotCardSuit(candidate) === requestedSuit
         )
     : null;
-
+  const nonTrumpDiscardCard =
+    requestedSuit && !requestedSuitCard && partnerIsWinning
+      ? playerHand.find((candidate) => candidate && !isBotTrump(candidate))
+      : null;
   const trumpFallbackCard =
     requestedSuit && !requestedSuitCard
       ? higherTrumpCard ||
         playerHand.find((candidate) => candidate && isBotTrump(candidate))
       : null;
 
-  const card = requestedSuitCard || trumpFallbackCard || playerHand.find(Boolean);
+  const card =
+    requestedSuitCard ||
+    nonTrumpDiscardCard ||
+    trumpFallbackCard ||
+    playerHand.find(Boolean);
 
   if (!card) return null;
 
