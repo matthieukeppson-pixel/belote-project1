@@ -257,7 +257,7 @@ function syncBotsForTable(table) {
 }
 function createEmptyHandState() {
   return {
-    phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS | PLI_TERMINE | FIN_DE_MANCHE
+    phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS | PLI_TERMINE | FIN_DE_MANCHE | FIN_DE_PARTIE
     roundNumber: 0,
     trickNumber: 0,
 
@@ -304,7 +304,8 @@ function createEmptyHandState() {
     },
 
     finDeManche: null,
-
+    partieTerminee: false,
+    winnerTeam: null,
     belote: {
       state: "NONE",
       joueur: null,
@@ -1436,11 +1437,26 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           eux: (currentHand.scores?.eux || 0) + nextContractScores.eux,
         }
       : currentHand.scores;
+
+    const targetScore = table.mode === "contree" ? 1500 : 500;
+    const winnerTeam =
+      allHandsEmpty && ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
+        ? (nextScores.nous || 0) >= (nextScores.eux || 0)
+          ? "nous"
+          : "eux"
+        : null;
+    const partieTerminee = !!winnerTeam;
     const nextHand = {
       ...currentHand,
-      phase: allHandsEmpty ? "FIN_DE_MANCHE" : "PLI_EN_COURS",
+      phase: partieTerminee
+        ? "FIN_DE_PARTIE"
+        : allHandsEmpty
+          ? "FIN_DE_MANCHE"
+          : "PLI_EN_COURS",
       scoreManche: nextScoreManche,
       scores: nextScores,
+      partieTerminee,
+      winnerTeam,
       trickNumber:
         typeof currentHand.trickNumber === "number"
           ? currentHand.trickNumber + 1
@@ -1468,6 +1484,10 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     };
 
     broadcastTables();
+
+    if (partieTerminee) {
+      return;
+    }
 
     if (allHandsEmpty) {
       scheduleStartNextHandAfterEnd(table);
