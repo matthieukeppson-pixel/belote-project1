@@ -1224,16 +1224,33 @@ function playOneBotCardIfNeeded(table) {
   return true;
 }
 
-function playBotCardsUntilHumanTurn(table, maxSteps = 4) {
+function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
+  if (!table) return 0;
+  if (table.botPlayTimer) return 0;
+
   let playedCount = 0;
 
-  for (let i = 0; i < maxSteps; i++) {
-    const played = playOneBotCardIfNeeded(table);
-    if (!played) break;
-    playedCount++;
-  }
+  const playNextBotCard = () => {
+    table.botPlayTimer = null;
 
-  return playedCount;
+    if (playedCount >= maxSteps) return;
+
+    const played = playOneBotCardIfNeeded(table);
+    if (!played) return;
+
+    playedCount++;
+
+    if (playedCount >= maxSteps) return;
+
+    const nextAction = buildFirstBotPlayCardAction(table);
+    if (!nextAction) return;
+
+    table.botPlayTimer = setTimeout(playNextBotCard, delayMs);
+  };
+
+  table.botPlayTimer = setTimeout(playNextBotCard, delayMs);
+
+  return 0;
 }
 
 function getPlayedTrickEntriesFromHand(hand) {
