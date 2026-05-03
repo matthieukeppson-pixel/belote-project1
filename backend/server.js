@@ -1228,10 +1228,16 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
   if (!table) return 0;
   if (table.botPlayTimer) return 0;
 
+  const scheduledRoundId = table.game?.hand?.roundId || null;
+  if (!scheduledRoundId) return 0;
+
   let playedCount = 0;
 
   const playNextBotCard = () => {
     table.botPlayTimer = null;
+
+    const currentRoundId = table.game?.hand?.roundId || null;
+    if (currentRoundId !== scheduledRoundId) return;
 
     if (playedCount >= maxSteps) return;
 
@@ -1241,6 +1247,9 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
     playedCount++;
 
     if (playedCount >= maxSteps) return;
+
+    const nextRoundId = table.game?.hand?.roundId || null;
+    if (nextRoundId !== scheduledRoundId) return;
 
     const nextAction = buildFirstBotPlayCardAction(table);
     if (!nextAction) return;
