@@ -88,6 +88,58 @@ function seatTeamKey(seatIndex) {
   return seatIndex === 0 || seatIndex === 2 ? "nous" : "eux";
 }
 
+function getServerCardPointValue(card, atout) {
+  if (!card) return 0;
+
+  const value = String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase();
+  const suit = card.suit ?? card.couleur ?? card.color ?? null;
+
+  const trumpPoints = {
+    J: 20,
+    9: 14,
+    A: 11,
+    10: 10,
+    K: 4,
+    Q: 3,
+    8: 0,
+    7: 0,
+  };
+
+  const normalPoints = {
+    A: 11,
+    10: 10,
+    K: 4,
+    Q: 3,
+    J: 2,
+    9: 0,
+    8: 0,
+    7: 0,
+  };
+
+  const isTrump =
+    atout === "TA" ? true : atout === "SA" || !atout ? false : suit === atout;
+
+  return isTrump ? trumpPoints[value] || 0 : normalPoints[value] || 0;
+}
+
+function computeTrickPointsByTeam(hand) {
+  const entries = Array.isArray(hand?.pli)
+    ? hand.pli.filter((entry) => entry && entry.card)
+    : [];
+
+  const result = {
+    nous: 0,
+    eux: 0,
+  };
+
+  for (const entry of entries) {
+    const teamKey = seatTeamKey(entry.seatIndex);
+    result[teamKey] += getServerCardPointValue(entry.card, hand?.atout);
+  }
+
+  return result;
+}
+
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
