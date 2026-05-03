@@ -860,7 +860,11 @@ const currentAnnouncements =
   game.modernAnnouncements?.detectedByPlayer?.[localDisplayedPlayerId] || [];
 
 
- const scoreUI = scorePartie;
+const scoreUI =
+  serverHand?.scores &&
+  ((serverHand.scores.nous || 0) > 0 || (serverHand.scores.eux || 0) > 0)
+    ? serverHand.scores
+    : serverHand?.scoreManche ?? scorePartie;
 const serverDisplayPli = Array.isArray(serverHand?.trickCards)
   ? serverHand.trickCards.filter((play) => play && play.card)
   : [];

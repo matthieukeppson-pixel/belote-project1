@@ -1346,7 +1346,7 @@ function scheduleStartNextHandAfterEnd(table, delayMs = 1000) {
     if (getSeatedPlayersInOrder(table).length < 4) return;
 
     const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
-
+    nextHand.scores = currentHand.scores || { nous: 0, eux: 0 };
     table.game = {
       ...(table.game || createEmptyServerGame()),
       dealerSeatIndex: nextHand.dealerSeatIndex,
@@ -1391,10 +1391,31 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     const allHandsEmpty = Object.values(currentHand.hands || {}).every(
       (cards) => Array.isArray(cards) && cards.length === 0
     );
+    const winnerTeamKey = seatTeamKey(winnerSeatIndex);
+    const trickPointsByTeam = computeTrickPointsByTeam(currentHand);
+    const dixDeDerBonus = allHandsEmpty ? 10 : 0;
 
+    const nextScoreManche = {
+      nous:
+        (currentHand.scoreManche?.nous || 0) +
+        trickPointsByTeam.nous +
+        (winnerTeamKey === "nous" ? dixDeDerBonus : 0),
+      eux:
+        (currentHand.scoreManche?.eux || 0) +
+        trickPointsByTeam.eux +
+        (winnerTeamKey === "eux" ? dixDeDerBonus : 0),
+    };
+    const nextScores = allHandsEmpty
+      ? {
+          nous: (currentHand.scores?.nous || 0) + nextScoreManche.nous,
+          eux: (currentHand.scores?.eux || 0) + nextScoreManche.eux,
+        }
+      : currentHand.scores;
     const nextHand = {
       ...currentHand,
       phase: allHandsEmpty ? "FIN_DE_MANCHE" : "PLI_EN_COURS",
+      scoreManche: nextScoreManche,
+      scores: nextScores,
       trickNumber:
         typeof currentHand.trickNumber === "number"
           ? currentHand.trickNumber + 1
