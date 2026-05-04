@@ -1686,7 +1686,12 @@ if (msg.type === "table_game_action") {
       t,
       typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
     );
- 
+
+    nextHand.scores =
+      t.game?.hand?.phase === "FIN_DE_PARTIE"
+        ? { nous: 0, eux: 0 }
+        : t.game?.hand?.scores || { nous: 0, eux: 0 };
+
     t.game = {
       ...(t.game || createEmptyServerGame()),
       dealerSeatIndex: nextHand.dealerSeatIndex,
@@ -1699,45 +1704,43 @@ if (msg.type === "table_game_action") {
     return;
   }
 
-if (action.type === "PLAY_CARD") {
-  const currentHand = {
-    ...createEmptyHandState(),
-    ...(t.game?.hand || {}),
-  };
+  if (action.type === "PLAY_CARD") {
+    const currentHand = {
+      ...createEmptyHandState(),
+      ...(t.game?.hand || {}),
+    };
 
-  const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
-  if (actorSeatIndex === -1) return;
+    const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
+    if (actorSeatIndex === -1) return;
 
-  const nextHand = applyPlayCardToAuthoritativeHand(
-    currentHand,
-    actorSeatIndex,
-    action
-  );
+    const nextHand = applyPlayCardToAuthoritativeHand(
+      currentHand,
+      actorSeatIndex,
+      action
+    );
 
-  if (!nextHand) return;
+    if (!nextHand) return;
 
-  t.game = {
-    ...(t.game || createEmptyServerGame()),
-    dealerSeatIndex: nextHand.dealerSeatIndex,
-    currentTurnSeatIndex: nextHand.currentTurnSeatIndex,
-    hand: nextHand,
-    version: (t.game?.version || 0) + 1,
-  };
+    t.game = {
+      ...(t.game || createEmptyServerGame()),
+      dealerSeatIndex:
+        typeof nextHand.dealerSeatIndex === "number"
+          ? nextHand.dealerSeatIndex
+          : t.game?.dealerSeatIndex || 0,
+      currentTurnSeatIndex:
+        nextHand.currentTurnSeatIndex != null
+          ? nextHand.currentTurnSeatIndex
+          : null,
+      hand: nextHand,
+      version: (t.game?.version || 0) + 1,
+    };
 
-  broadcastToTable(t.id, {
-    type: "table_game_action",
-    tableId: t.id,
-    roundId,
-    action,
-    actor: pseudo,
-  });
+    broadcastTables();
 
-  broadcastTables();
-
-  playBotCardsUntilHumanTurn(t);
-  scheduleAdvanceCompletedTrick(t);
-  return;
-}
+    playBotCardsUntilHumanTurn(t);
+    scheduleAdvanceCompletedTrick(t);
+    return;
+  }
 
 if (
   action.type === "PASS_ANNOUNCEMENT" ||
