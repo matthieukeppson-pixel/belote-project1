@@ -840,7 +840,8 @@ const isServerControlledTurn =
     serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
     serverPhaseLabel === STATES.PLI_EN_COURS ||
     serverPhaseLabel === STATES.PLI_TERMINE ||
-    serverPhaseLabel === STATES.FIN_DE_MANCHE);
+    serverPhaseLabel === STATES.FIN_DE_MANCHE ||
+    serverPhaseLabel === "FIN_DE_PARTIE");
 
 const activePlayer = isServerControlledTurn
   ? serverActivePlayer
@@ -1464,8 +1465,18 @@ style={{
               </div>
             )}
 
-            {partieTerminee && (
-              <button className="new-game-btn" onClick={handleNouvellePartie}>
+            {(serverHand?.partieTerminee || partieTerminee) && (
+              <button
+                className="new-game-btn"
+                onClick={() => {
+                  if (serverHand?.partieTerminee) {
+                    sendTableGameAction({ type: "RESET_ROUND" });
+                    return;
+                  }
+
+                  handleNouvellePartie();
+                }}
+              >
                 Nouvelle partie
               </button>
             )}
