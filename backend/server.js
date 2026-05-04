@@ -122,7 +122,7 @@ function getServerCardPointValue(card, atout) {
   return isTrump ? trumpPoints[value] || 0 : normalPoints[value] || 0;
 }
 
-function computeTrickPointsByTeam(hand) {
+function computeTrickPointsByTeam(hand, winnerSeatIndex) {
   const entries = Array.isArray(hand?.pli)
     ? hand.pli.filter((entry) => entry && entry.card)
     : [];
@@ -132,10 +132,15 @@ function computeTrickPointsByTeam(hand) {
     eux: 0,
   };
 
-  for (const entry of entries) {
-    const teamKey = seatTeamKey(entry.seatIndex);
-    result[teamKey] += getServerCardPointValue(entry.card, hand?.atout);
-  }
+  if (typeof winnerSeatIndex !== "number") return result;
+
+  const winnerTeamKey = seatTeamKey(winnerSeatIndex);
+  const trickPoints = entries.reduce(
+    (total, entry) => total + getServerCardPointValue(entry.card, hand?.atout),
+    0
+  );
+
+  result[winnerTeamKey] = trickPoints;
 
   return result;
 }
@@ -1415,7 +1420,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       (cards) => Array.isArray(cards) && cards.length === 0
     );
     const winnerTeamKey = seatTeamKey(winnerSeatIndex);
-    const trickPointsByTeam = computeTrickPointsByTeam(currentHand);
+    const trickPointsByTeam = computeTrickPointsByTeam(currentHand, winnerSeatIndex);
     const dixDeDerBonus = allHandsEmpty ? 10 : 0;
 
     const nextScoreManche = {
