@@ -186,6 +186,44 @@ function computeClassicCapotScores(tricksWon) {
   return null;
 }
 
+function computeClassicBeloteRebelote(hands, atout) {
+  if (!hands || !atout || atout === "TA" || atout === "SA") {
+    return {
+      state: "NONE",
+      joueur: null,
+    };
+  }
+
+  for (let seatIndex = 0; seatIndex < 4; seatIndex++) {
+    const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+    const cards = Array.isArray(hands[playerId]) ? hands[playerId] : [];
+
+    const hasKingOfTrump = cards.some(
+      (card) =>
+        (card.suit ?? card.couleur ?? card.color ?? null) === atout &&
+        String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase() === "K"
+    );
+
+    const hasQueenOfTrump = cards.some(
+      (card) =>
+        (card.suit ?? card.couleur ?? card.color ?? null) === atout &&
+        String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase() === "Q"
+    );
+
+    if (hasKingOfTrump && hasQueenOfTrump) {
+      return {
+        state: "REBELOTE",
+        joueur: playerId,
+      };
+    }
+  }
+
+  return {
+    state: "NONE",
+    joueur: null,
+  };
+}
+
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
@@ -702,6 +740,10 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
         atout: chosenSuit,
         takerSeatIndex: actorSeatIndex,
+        belote:
+          table.mode === "classic"
+            ? computeClassicBeloteRebelote(completedDeal.hands, chosenSuit)
+            : hand.belote,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
         hands: completedDeal.hands,
@@ -730,6 +772,10 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         phase: table.mode === "moderne" ? "ANNONCES_MODERNE" : "PLI_EN_COURS",
         atout: action.suit,
         takerSeatIndex: actorSeatIndex,
+        belote:
+          table.mode === "classic"
+            ? computeClassicBeloteRebelote(completedDeal.hands, action.suit)
+            : hand.belote,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
         hands: completedDeal.hands,
@@ -1476,10 +1522,26 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
         : nextScoreManche;
 
+    const beloteTeam =
+      allHandsEmpty &&
+      table.mode === "classic" &&
+      currentHand.belote?.state === "REBELOTE" &&
+      currentHand.belote?.joueur
+        ? seatTeamKey(LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(currentHand.belote.joueur))
+        : null;
+
+    const nextScoreWithBelote =
+      beloteTeam && nextContractScores
+        ? {
+            nous: nextContractScores.nous + (beloteTeam === "nous" ? 20 : 0),
+            eux: nextContractScores.eux + (beloteTeam === "eux" ? 20 : 0),
+          }
+        : nextContractScores;
+
     const nextScores = allHandsEmpty
       ? {
-          nous: (currentHand.scores?.nous || 0) + nextContractScores.nous,
-          eux: (currentHand.scores?.eux || 0) + nextContractScores.eux,
+          nous: (currentHand.scores?.nous || 0) + nextScoreWithBelote.nous,
+          eux: (currentHand.scores?.eux || 0) + nextScoreWithBelote.eux,
         }
       : currentHand.scores;
 
