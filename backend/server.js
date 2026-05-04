@@ -637,7 +637,9 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
     if (hand.phase === "ANNOUNCE_ATOUT_TOUR_2") {
       if (newPasses >= 4) {
         const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
-        return buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+        const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+        nextHand.scores = hand.scores || { nous: 0, eux: 0 };
+        return nextHand;
       }
 
       return {
