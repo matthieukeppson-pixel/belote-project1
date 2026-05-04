@@ -165,6 +165,27 @@ function computeClassicContractScores(hand, scoreManche) {
   };
 }
 
+function computeClassicCapotScores(tricksWon) {
+  const nousTricks = Number(tricksWon?.nous || 0);
+  const euxTricks = Number(tricksWon?.eux || 0);
+
+  if (nousTricks === 8) {
+    return {
+      nous: 252,
+      eux: 0,
+    };
+  }
+
+  if (euxTricks === 8) {
+    return {
+      nous: 0,
+      eux: 252,
+    };
+  }
+
+  return null;
+}
+
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
@@ -265,6 +286,10 @@ function createEmptyHandState() {
     phase: "IDLE", // IDLE | ANNOUNCE_ATOUT_TOUR_1 | ANNOUNCE_ATOUT_TOUR_2 | ENCHERES | ANNONCES_MODERNE | PLI_EN_COURS | PLI_TERMINE | FIN_DE_MANCHE | FIN_DE_PARTIE
     roundNumber: 0,
     trickNumber: 0,
+    tricksWon: {
+      nous: 0,
+      eux: 0,
+    },
 
     roundId: null,
     createdAt: null,
@@ -1422,6 +1447,14 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     const winnerTeamKey = seatTeamKey(winnerSeatIndex);
     const trickPointsByTeam = computeTrickPointsByTeam(currentHand, winnerSeatIndex);
     const dixDeDerBonus = allHandsEmpty ? 10 : 0;
+    const nextTricksWon = {
+      nous:
+        (currentHand.tricksWon?.nous || 0) +
+        (winnerTeamKey === "nous" ? 1 : 0),
+      eux:
+        (currentHand.tricksWon?.eux || 0) +
+        (winnerTeamKey === "eux" ? 1 : 0),
+    };
 
     const nextScoreManche = {
       nous:
@@ -1433,9 +1466,14 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         trickPointsByTeam.eux +
         (winnerTeamKey === "eux" ? dixDeDerBonus : 0),
     };
+    const classicCapotScores =
+      allHandsEmpty && table.mode === "classic"
+        ? computeClassicCapotScores(nextTricksWon)
+        : null;
+
     const nextContractScores =
       allHandsEmpty && table.mode === "classic"
-        ? computeClassicContractScores(currentHand, nextScoreManche)
+        ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
         : nextScoreManche;
 
     const nextScores = allHandsEmpty
@@ -1461,6 +1499,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           ? "FIN_DE_MANCHE"
           : "PLI_EN_COURS",
       scoreManche: nextScoreManche,
+      tricksWon: nextTricksWon,
       scores: nextScores,
       partieTerminee,
       winnerTeam,
