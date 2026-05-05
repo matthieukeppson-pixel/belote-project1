@@ -1129,6 +1129,8 @@ useEffect(() => {
   // ============================================
   // RENDER
   // ============================================
+  const showTableDebug = false;
+
   return (
     <div
       className="table-page"
@@ -1139,20 +1141,21 @@ useEffect(() => {
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
-<div className="table-mode-pill">Mode : {modeLabel}</div>
-<div
-  style={{
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 30,
-    background: "rgba(0,0,0,0.55)",
-    color: "#fff",
-    padding: "6px 10px",
-    borderRadius: 10,
-    fontWeight: 700,
-  }}
->
+      <div className="table-mode-pill">Mode : {modeLabel}</div>
+      {showTableDebug && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 30,
+            background: "rgba(0,0,0,0.55)",
+            color: "#fff",
+            padding: "6px 10px",
+            borderRadius: 10,
+            fontWeight: 700,
+          }}
+        >
 <div>Phase locale : {localPhaseLabel}</div>
 <div>Phase serveur : {serverPhaseLabel}</div>
 <div>Pseudo local : {pseudo}</div>
@@ -1175,12 +1178,10 @@ useEffect(() => {
 <div>Left seat : {seatIndexForPosition("left") == null ? "none" : seatIndexForPosition("left") + 1}</div>
 <div>Right seat : {seatIndexForPosition("right") == null ? "none" : seatIndexForPosition("right") + 1}</div>
 <div>Bottom seat : {seatIndexForPosition("bottom") == null ? "none" : seatIndexForPosition("bottom") + 1}</div>
-<div>Round : {sharedRoundId}</div>
-<div>Seed : {sharedDealSeed}</div>
-</div>
-
-
-
+          <div>Round : {sharedRoundId}</div>
+          <div>Seed : {sharedDealSeed}</div>
+        </div>
+      )}
 
       <div className="table-layout">
         <div className="table-zone">
