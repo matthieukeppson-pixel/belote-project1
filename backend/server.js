@@ -212,8 +212,10 @@ function computeClassicBeloteRebelote(hands, atout) {
 
     if (hasKingOfTrump && hasQueenOfTrump) {
       return {
-        state: "REBELOTE",
+        state: "READY",
         joueur: playerId,
+        firstPlayedValue: null,
+        secondPlayedValue: null,
       };
     }
   }
@@ -221,6 +223,37 @@ function computeClassicBeloteRebelote(hands, atout) {
   return {
     state: "NONE",
     joueur: null,
+  };
+}
+
+function updateClassicBeloteRebeloteOnPlay(belote, playerId, card, atout) {
+  if (!belote || belote.state === "NONE" || !belote.joueur) return belote;
+  if (belote.joueur !== playerId) return belote;
+  if (!card || !atout || atout === "TA" || atout === "SA") return belote;
+
+  const cardSuit = card.suit ?? card.couleur ?? card.color ?? null;
+  const cardValue = String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase();
+
+  if (cardSuit !== atout || (cardValue !== "K" && cardValue !== "Q")) {
+    return belote;
+  }
+
+  if (belote.firstPlayedValue === cardValue || belote.secondPlayedValue === cardValue) {
+    return belote;
+  }
+
+  if (!belote.firstPlayedValue) {
+    return {
+      ...belote,
+      state: "BELOTE",
+      firstPlayedValue: cardValue,
+    };
+  }
+
+  return {
+    ...belote,
+    state: "REBELOTE",
+    secondPlayedValue: cardValue,
   };
 }
 
@@ -1139,10 +1172,18 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
     ? nextTrickCards.reduce(getBestTrickEntry, null)?.seatIndex ?? actorSeatIndex
     : null;
 
-      return {
+  const nextBelote = updateClassicBeloteRebeloteOnPlay(
+    hand.belote,
+    playerId,
+    playedCard,
+    hand.atout
+  );
+
+  return {
     ...hand,
     phase: trickIsComplete ? "PLI_TERMINE" : "PLI_EN_COURS",
     hands: nextHands,
+    belote: nextBelote,
     pli: nextPli,
     trickCards: nextTrickCards,
     couleurDemandee: nextCouleurDemandee,
