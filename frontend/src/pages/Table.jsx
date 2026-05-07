@@ -190,6 +190,8 @@ const wsTableRef = useRef(null);
 const systemTimersRef = useRef(new Map());
 const previousBiddingStateRef = useRef(null);
 const modernAnnouncementSentKeyRef = useRef(null);
+const serverBeloteToastKeyRef = useRef(null);
+const serverBeloteToastTimerRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
 const mode = _tableSnapshot?.mode || initialRouteMode || "classic";
 const modeLabel =
@@ -622,6 +624,56 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     return () => clearTimeout(t);
   }, [game?.belote?.state, game?.belote?.joueur]);
 
+  useEffect(() => {
+    serverBeloteToastKeyRef.current = null;
+
+    if (serverBeloteToastTimerRef.current) {
+      clearTimeout(serverBeloteToastTimerRef.current);
+      serverBeloteToastTimerRef.current = null;
+    }
+
+    setBeloteToast(null);
+  }, [sharedRoundId]);
+
+  useEffect(() => {
+    const state = serverHand?.belote?.state;
+    const playerId = serverHand?.belote?.joueur;
+
+    if (mode !== "classic") return;
+    if (state !== "BELOTE" && state !== "REBELOTE") return;
+    if (!playerId) return;
+
+    const toastKey = `${sharedRoundId}:${state}:${playerId}`;
+    if (serverBeloteToastKeyRef.current === toastKey) return;
+
+    serverBeloteToastKeyRef.current = toastKey;
+
+    const playerSeatIndex = SEAT_INDEX_TO_LOGICAL_PLAYER.indexOf(playerId);
+    const playerName =
+      playerSeatIndex >= 0
+        ? seatsInfo[playerSeatIndex]?.name || playerId
+        : playerId;
+
+    setBeloteToast({
+      text: `${state === "BELOTE" ? "Belote" : "Rebelote"} ! (${playerName})`,
+      ts: Date.now(),
+    });
+
+    if (serverBeloteToastTimerRef.current) {
+      clearTimeout(serverBeloteToastTimerRef.current);
+    }
+
+    serverBeloteToastTimerRef.current = setTimeout(() => {
+      setBeloteToast(null);
+      serverBeloteToastTimerRef.current = null;
+    }, 1400);
+  }, [
+    mode,
+    serverHand?.belote?.state,
+    serverHand?.belote?.joueur,
+    sharedRoundId,
+    seatsInfo,
+  ]);
   // ============================================
   // AFFICHAGE DU PLI
   // ============================================
