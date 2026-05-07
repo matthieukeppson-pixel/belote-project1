@@ -914,17 +914,9 @@ const currentAnnouncements =
 
 
 const serverScores = serverHand?.scores || null;
-const serverScoreManche = serverHand?.scoreManche || null;
-const serverPhaseIsFinalScore =
-  serverPhaseLabel === STATES.FIN_DE_MANCHE || serverPhaseLabel === "FIN_DE_PARTIE";
 
 const scoreUI = serverHand
-  ? serverPhaseIsFinalScore
-    ? serverScores || { nous: 0, eux: 0 }
-    : {
-        nous: (serverScores?.nous || 0) + (serverScoreManche?.nous || 0),
-        eux: (serverScores?.eux || 0) + (serverScoreManche?.eux || 0),
-      }
+  ? serverScores || { nous: 0, eux: 0 }
   : scorePartie;
 const serverDisplayPli = Array.isArray(serverHand?.trickCards)
   ? serverHand.trickCards.filter((play) => play && play.card)
