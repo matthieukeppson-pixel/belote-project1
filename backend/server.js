@@ -260,6 +260,401 @@ function updateClassicBeloteRebeloteOnPlay(belote, playerId, card, atout) {
 const SUITS = ["hearts", "diamonds", "clubs", "spades"];
 const VALUES = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const LOGICAL_PLAYER_BY_SEAT_INDEX = ["joueur2", "joueur4", "joueur3", "joueur1"];
+
+const SERVER_SEQUENCE_ORDER = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+const SERVER_ANNOUNCE_TYPE_STRENGTH = {
+  tierce: 1,
+  cinquante: 2,
+  cent: 3,
+  carre: 4,
+};
+const SERVER_CARRE_POINTS = {
+  J: 200,
+  9: 150,
+  A: 100,
+  "10": 100,
+  K: 100,
+  Q: 100,
+};
+
+function normalizeServerModernValue(value) {
+  return String(value ?? "").toUpperCase();
+}
+
+function getServerSequenceHighRankValue(value) {
+  return SERVER_SEQUENCE_ORDER.indexOf(normalizeServerModernValue(value));
+}
+
+function getServerAnnounceStrength(announcement) {
+  return SERVER_ANNOUNCE_TYPE_STRENGTH[announcement?.type] || 0;
+}
+
+function getServerModernCardKey(card) {
+  if (!card) return "";
+  const suit = card.suit ?? card.couleur ?? card.color ?? "";
+  const value = normalizeServerModernValue(card.value ?? card.rank ?? card.valeur ?? "");
+  return `${suit}:${value}`;
+}
+
+function getServerModernPlayerTeam(playerId) {
+  const seatIndex = LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(playerId);
+  return seatTeamKey(seatIndex);
+}
+
+function detectServerModernCarres(hand, playerId) {
+  const byValue = {};
+
+  for (const card of hand || []) {
+    const value = normalizeServerModernValue(card.value ?? card.rank ?? card.valeur ?? "");
+    if (!byValue[value]) byValue[value] = [];
+    byValue[value].push(card);
+  }
+
+  const annonces = [];
+  const team = getServerModernPlayerTeam(playerId);
+
+  for (const value of Object.keys(byValue)) {
+    if (byValue[value].length !== 4) continue;
+
+    const points = SERVER_CARRE_POINTS[value] || 0;
+    if (!points) continue;
+
+    annonces.push({
+      type: "carre",
+      label: "Carré",
+      points,
+      highRank: value,
+      highRankValue: getServerSequenceHighRankValue(value),
+      suit: null,
+      cards: byValue[value],
+      playerId,
+      team,
+      isTrump: false,
+    });
+  }
+
+  return annonces;
+}
+
+function pushServerModernSequenceAnnouncement(run, annonces, suit, playerId, atout) {
+  if (!Array.isArray(run) || run.length < 3) return;
+
+  const length = run.length;
+  const highCard = run[run.length - 1];
+  const highRank = normalizeServerModernValue(
+    highCard?.value ?? highCard?.rank ?? highCard?.valeur ?? ""
+  );
+  const team = getServerModernPlayerTeam(playerId);
+
+  let type = null;
+  let points = 0;
+
+  if (length >= 5) {
+    type = "cent";
+    points = 100;
+  } else if (length === 4) {
+    type = "cinquante";
+    points = 50;
+  } else if (length === 3) {
+    type = "tierce";
+    points = 20;
+  }
+
+  if (!type) return;
+
+  annonces.push({
+    type,
+    label: type === "cent" ? "Cent" : type === "cinquante" ? "Cinquante" : "Tierce",
+    points,
+    highRank,
+    highRankValue: getServerSequenceHighRankValue(highRank),
+    suit,
+    cards: [...run],
+    playerId,
+    team,
+    isTrump: atout !== "SA" && atout !== "TA" && suit === atout,
+  });
+}
+
+function detectServerModernSequences(hand, playerId, atout) {
+  const bySuit = {};
+
+  for (const card of hand || []) {
+    const suit = card.suit ?? card.couleur ?? card.color ?? null;
+    if (!suit) continue;
+    if (!bySuit[suit]) bySuit[suit] = [];
+    bySuit[suit].push(card);
+  }
+
+  const annonces = [];
+
+  for (const suit of Object.keys(bySuit)) {
+    const cards = [...bySuit[suit]].sort((a, b) => {
+      const av = getServerSequenceHighRankValue(a.value ?? a.rank ?? a.valeur ?? "");
+      const bv = getServerSequenceHighRankValue(b.value ?? b.rank ?? b.valeur ?? "");
+      return av - bv;
+    });
+
+    if (cards.length === 0) continue;
+
+    let run = [cards[0]];
+
+    for (let i = 1; i < cards.length; i++) {
+      const prev = getServerSequenceHighRankValue(
+        cards[i - 1].value ?? cards[i - 1].rank ?? cards[i - 1].valeur ?? ""
+      );
+      const curr = getServerSequenceHighRankValue(
+        cards[i].value ?? cards[i].rank ?? cards[i].valeur ?? ""
+      );
+
+      if (curr === prev + 1) {
+        run.push(cards[i]);
+      } else {
+        pushServerModernSequenceAnnouncement(run, annonces, suit, playerId, atout);
+        run = [cards[i]];
+      }
+    }
+
+    pushServerModernSequenceAnnouncement(run, annonces, suit, playerId, atout);
+  }
+
+  return annonces;
+}
+
+function serverModernCardsOverlap(a, b) {
+  const aKeys = new Set((a?.cards || []).map(getServerModernCardKey));
+  return (b?.cards || []).some((card) => aKeys.has(getServerModernCardKey(card)));
+}
+
+function selectServerModernAnnouncementsWithoutOverlap(allAnnouncements) {
+  const sorted = [...allAnnouncements].sort((a, b) => {
+    const typeDiff = getServerAnnounceStrength(b) - getServerAnnounceStrength(a);
+    if (typeDiff !== 0) return typeDiff;
+
+    const pointsDiff = (b.points || 0) - (a.points || 0);
+    if (pointsDiff !== 0) return pointsDiff;
+
+    return (b.highRankValue || 0) - (a.highRankValue || 0);
+  });
+
+  const selected = [];
+
+  for (const announcement of sorted) {
+    const overlaps = selected.some((selectedAnnouncement) =>
+      serverModernCardsOverlap(selectedAnnouncement, announcement)
+    );
+
+    if (!overlaps) selected.push(announcement);
+  }
+
+  return selected;
+}
+
+function detectServerModernAnnouncementsForPlayer(hand, playerId, atout) {
+  const carres = detectServerModernCarres(hand, playerId);
+  const sequences = detectServerModernSequences(hand, playerId, atout);
+  return selectServerModernAnnouncementsWithoutOverlap([...carres, ...sequences]);
+}
+
+function buildServerModernAnnouncementsState(hands, atout) {
+  const detectedByPlayer = {
+    joueur1: [],
+    joueur2: [],
+    joueur3: [],
+    joueur4: [],
+  };
+
+  for (let seatIndex = 0; seatIndex < 4; seatIndex++) {
+    const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+    const playerHand = Array.isArray(hands?.[playerId]) ? hands[playerId] : [];
+
+    detectedByPlayer[playerId] = detectServerModernAnnouncementsForPlayer(
+      playerHand,
+      playerId,
+      atout
+    );
+  }
+
+  return {
+    detectedByPlayer,
+    declaredByPlayer: {},
+    validated: [],
+    winningTeam: null,
+    resolved: false,
+  };
+}
+function isServerModernAnnouncementTrump(announcement, atout) {
+  if (!announcement || !announcement.suit) return false;
+  if (atout === "SA" || atout === "TA") return false;
+  return announcement.suit === atout;
+}
+
+function compareServerModernAnnouncements(a, b, atout) {
+  if (!a && !b) return 0;
+  if (a && !b) return 1;
+  if (!a && b) return -1;
+
+  const typeDiff = getServerAnnounceStrength(a) - getServerAnnounceStrength(b);
+  if (typeDiff !== 0) return typeDiff > 0 ? 1 : -1;
+
+  const highDiff = (a.highRankValue || 0) - (b.highRankValue || 0);
+  if (highDiff !== 0) return highDiff > 0 ? 1 : -1;
+
+  const aTrump = isServerModernAnnouncementTrump(a, atout);
+  const bTrump = isServerModernAnnouncementTrump(b, atout);
+
+  if (aTrump !== bTrump) return aTrump ? 1 : -1;
+
+  return 0;
+}
+
+function getBestServerModernAnnouncement(announcements, atout) {
+  if (!Array.isArray(announcements) || announcements.length === 0) return null;
+
+  return announcements.reduce((best, current) => {
+    if (!best) return current;
+    return compareServerModernAnnouncements(current, best, atout) > 0
+      ? current
+      : best;
+  }, null);
+}
+
+function createServerModernAnnouncementsStateSnapshot(modernAnnouncements) {
+  return {
+    detectedByPlayer: {
+      joueur1: [],
+      joueur2: [],
+      joueur3: [],
+      joueur4: [],
+      ...(modernAnnouncements?.detectedByPlayer || {}),
+    },
+    declaredByPlayer: {
+      ...(modernAnnouncements?.declaredByPlayer || {}),
+    },
+    validated: Array.isArray(modernAnnouncements?.validated)
+      ? [...modernAnnouncements.validated]
+      : [],
+    winningTeam: modernAnnouncements?.winningTeam || null,
+    resolved: !!modernAnnouncements?.resolved,
+  };
+}
+
+function findServerDeclaredModernAnnouncement(current, playerId, action) {
+  const detected = current.detectedByPlayer?.[playerId] || [];
+
+  return detected.find((announcement) => {
+    return (
+      announcement.type === action.announcementType &&
+      announcement.highRank === action.highRank &&
+      (announcement.suit || null) === (action.suit || null)
+    );
+  }) || null;
+}
+
+function applyServerModernAnnouncementAction(table, currentHand, actorSeatIndex, action) {
+  const hand = {
+    ...createEmptyHandState(),
+    ...(currentHand || {}),
+  };
+
+  if (table?.mode !== "moderne") return null;
+  if (hand.phase !== "ANNONCES_MODERNE") return null;
+
+  if (
+    action?.type !== "PASS_ANNOUNCEMENT" &&
+    action?.type !== "DECLARE_ANNOUNCEMENT"
+  ) {
+    return null;
+  }
+
+  if (
+    hand.currentTurnSeatIndex == null ||
+    actorSeatIndex !== hand.currentTurnSeatIndex
+  ) {
+    return null;
+  }
+
+  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[actorSeatIndex];
+  if (!playerId) return null;
+
+  const current = createServerModernAnnouncementsStateSnapshot(
+    hand.modernAnnouncements
+  );
+
+  if (
+    Object.prototype.hasOwnProperty.call(current.declaredByPlayer, playerId)
+  ) {
+    return null;
+  }
+
+  const declaredByPlayer = {
+    ...current.declaredByPlayer,
+  };
+
+  if (action.type === "PASS_ANNOUNCEMENT") {
+    declaredByPlayer[playerId] = null;
+  }
+
+  if (action.type === "DECLARE_ANNOUNCEMENT") {
+    const chosen = findServerDeclaredModernAnnouncement(current, playerId, action);
+    if (!chosen) return null;
+
+    declaredByPlayer[playerId] = chosen;
+  }
+
+  const everyoneAnswered = LOGICAL_PLAYER_BY_SEAT_INDEX.every((logicalPlayerId) =>
+    Object.prototype.hasOwnProperty.call(declaredByPlayer, logicalPlayerId)
+  );
+
+  if (!everyoneAnswered) {
+    return {
+      ...hand,
+      currentTurnSeatIndex: nextSeatIndex(actorSeatIndex),
+      modernAnnouncements: {
+        ...current,
+        declaredByPlayer,
+      },
+    };
+  }
+
+  const nousAnnouncements = LOGICAL_PLAYER_BY_SEAT_INDEX
+    .filter((logicalPlayerId) => getServerModernPlayerTeam(logicalPlayerId) === "nous")
+    .map((logicalPlayerId) => declaredByPlayer[logicalPlayerId])
+    .filter(Boolean);
+
+  const euxAnnouncements = LOGICAL_PLAYER_BY_SEAT_INDEX
+    .filter((logicalPlayerId) => getServerModernPlayerTeam(logicalPlayerId) === "eux")
+    .map((logicalPlayerId) => declaredByPlayer[logicalPlayerId])
+    .filter(Boolean);
+
+  const bestNous = getBestServerModernAnnouncement(nousAnnouncements, hand.atout);
+  const bestEux = getBestServerModernAnnouncement(euxAnnouncements, hand.atout);
+  const comparison = compareServerModernAnnouncements(bestNous, bestEux, hand.atout);
+
+  let winningTeam = null;
+  let validated = [];
+
+  if (comparison > 0) {
+    winningTeam = "nous";
+    validated = nousAnnouncements;
+  } else if (comparison < 0) {
+    winningTeam = "eux";
+    validated = euxAnnouncements;
+  }
+
+  return {
+    ...hand,
+    phase: "PLI_EN_COURS",
+    currentTurnSeatIndex: nextSeatIndex(hand.dealerSeatIndex),
+    modernAnnouncements: {
+      ...current,
+      declaredByPlayer,
+      validated,
+      winningTeam,
+      resolved: true,
+    },
+  };
+}
 function createDeck() {
   const deck = [];
   for (const suit of SUITS) {
@@ -779,6 +1174,10 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
             : hand.belote,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
+        modernAnnouncements:
+          table.mode === "moderne"
+            ? buildServerModernAnnouncementsState(completedDeal.hands, chosenSuit)
+            : hand.modernAnnouncements,
         hands: completedDeal.hands,
         deck: completedDeal.deck,
         pli: [],
@@ -811,6 +1210,10 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
             : hand.belote,
         contratMultiplicateur: 1,
         currentTurnSeatIndex: startSeatIndex,
+        modernAnnouncements:
+          table.mode === "moderne"
+            ? buildServerModernAnnouncementsState(completedDeal.hands, action.suit)
+            : hand.modernAnnouncements,
         hands: completedDeal.hands,
         deck: completedDeal.deck,
         pli: [],
@@ -1579,10 +1982,39 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           }
         : nextContractScores;
 
+    const modernAnnouncementWinningTeam =
+      allHandsEmpty && table.mode === "moderne"
+        ? currentHand.modernAnnouncements?.winningTeam || null
+        : null;
+
+    const modernAnnouncementPoints =
+      allHandsEmpty &&
+      table.mode === "moderne" &&
+      (modernAnnouncementWinningTeam === "nous" || modernAnnouncementWinningTeam === "eux")
+        ? (currentHand.modernAnnouncements?.validated || []).reduce(
+            (total, announcement) => total + (announcement?.points || 0),
+            0
+          )
+        : 0;
+
+    const nextScoreWithModernAnnouncements =
+      modernAnnouncementPoints > 0
+        ? {
+            nous:
+              nextScoreWithBelote.nous +
+              (modernAnnouncementWinningTeam === "nous" ? modernAnnouncementPoints : 0),
+            eux:
+              nextScoreWithBelote.eux +
+              (modernAnnouncementWinningTeam === "eux" ? modernAnnouncementPoints : 0),
+          }
+        : nextScoreWithBelote;
+
     const nextScores = allHandsEmpty
       ? {
-          nous: (currentHand.scores?.nous || 0) + nextScoreWithBelote.nous,
-          eux: (currentHand.scores?.eux || 0) + nextScoreWithBelote.eux,
+          nous:
+            (currentHand.scores?.nous || 0) + nextScoreWithModernAnnouncements.nous,
+          eux:
+            (currentHand.scores?.eux || 0) + nextScoreWithModernAnnouncements.eux,
         }
       : currentHand.scores;
 
@@ -1601,7 +2033,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         : allHandsEmpty
           ? "FIN_DE_MANCHE"
           : "PLI_EN_COURS",
-      scoreManche: nextScoreManche,
+      scoreManche: allHandsEmpty ? nextScoreWithModernAnnouncements : nextScoreManche,
       tricksWon: nextTricksWon,
       scores: nextScores,
       partieTerminee,
@@ -1888,6 +2320,56 @@ if (
   action.type === "PASS_ANNOUNCEMENT" ||
   action.type === "DECLARE_ANNOUNCEMENT"
 ) {
+  const currentHand = {
+    ...createEmptyHandState(),
+    ...(t.game?.hand || {}),
+  };
+
+  const actorSeatIndex = t.seats.findIndex((seatPseudo) => seatPseudo === pseudo);
+  if (actorSeatIndex === -1) return;
+
+  const activeSeatIndex = currentHand.currentTurnSeatIndex;
+  const activeSeatPseudo =
+    activeSeatIndex != null ? t.seats[activeSeatIndex] : null;
+
+  let effectiveSeatIndex = actorSeatIndex;
+
+  if (actorSeatIndex !== activeSeatIndex) {
+    const actorIsHuman = !isBotPseudo(pseudo);
+    const activeIsBot = isBotPseudo(activeSeatPseudo);
+    const canProxyBotAnnouncement = actorIsHuman && activeIsBot;
+
+    if (!canProxyBotAnnouncement) return;
+
+    effectiveSeatIndex = activeSeatIndex;
+  }
+
+  const nextHand = applyServerModernAnnouncementAction(
+    t,
+    currentHand,
+    effectiveSeatIndex,
+    action
+  );
+
+  if (!nextHand) return;
+
+  t.game = {
+    ...(t.game || createEmptyServerGame()),
+    dealerSeatIndex:
+      typeof nextHand.dealerSeatIndex === "number"
+        ? nextHand.dealerSeatIndex
+        : t.game?.dealerSeatIndex || 0,
+    currentTurnSeatIndex:
+      nextHand.currentTurnSeatIndex != null
+        ? nextHand.currentTurnSeatIndex
+        : null,
+    hand: nextHand,
+    version: (t.game?.version || 0) + 1,
+  };
+
+  broadcastTables();
+
+  // on garde le rebroadcast pour ne pas casser le frontend actuel
   broadcastToTable(t.id, {
     type: "table_game_action",
     tableId: t.id,
@@ -1895,6 +2377,11 @@ if (
     action,
     actor: pseudo,
   });
+
+  if (nextHand.phase === "PLI_EN_COURS") {
+    playBotCardsUntilHumanTurn(t);
+  }
+
   return;
 }
   const currentHand = {

@@ -190,6 +190,8 @@ const wsTableRef = useRef(null);
 const systemTimersRef = useRef(new Map());
 const previousBiddingStateRef = useRef(null);
 const modernAnnouncementSentKeyRef = useRef(null);
+const modernValidatedAnnouncementToastKeyRef = useRef(null);
+const bestValidatedAnnouncementToastRef = useRef(null);
 const serverBeloteToastKeyRef = useRef(null);
 const serverBeloteToastTimerRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
@@ -890,6 +892,7 @@ const isServerControlledTurn =
   !!serverHand &&
   (serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
     serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 ||
+    serverPhaseLabel === STATES.ANNONCES_MODERNE ||
     serverPhaseLabel === STATES.PLI_EN_COURS ||
     serverPhaseLabel === STATES.PLI_TERMINE ||
     serverPhaseLabel === STATES.FIN_DE_MANCHE ||
@@ -909,8 +912,13 @@ const isServerLocalTurn =
 const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
 const _isActiveBot = !!activeSeatInfo?.isBot;
 
+const effectiveModernAnnouncements =
+  mode === "moderne" && serverHand?.modernAnnouncements
+    ? serverHand.modernAnnouncements
+    : game.modernAnnouncements;
+
 const currentAnnouncements =
-  game.modernAnnouncements?.detectedByPlayer?.[localDisplayedPlayerId] || [];
+  effectiveModernAnnouncements?.detectedByPlayer?.[localDisplayedPlayerId] || [];
 
 
 const serverScores = serverHand?.scores || null;
@@ -947,31 +955,50 @@ const mult = game.contratMultiplicateur || 1;
 
 const bestValidatedAnnouncement =
   mode === "moderne"
-    ? (game.modernAnnouncements?.validated || [])[0] || null
+    ? (effectiveModernAnnouncements?.validated || [])[0] || null
     : null;
-
+const validatedAnnouncementKey =
+  bestValidatedAnnouncement
+    ? [
+        sharedRoundId,
+        bestValidatedAnnouncement.playerId || "none",
+        bestValidatedAnnouncement.type || "none",
+        bestValidatedAnnouncement.highRank || "none",
+        bestValidatedAnnouncement.suit || "none",
+        bestValidatedAnnouncement.points || 0,
+      ].join(":")
+    : null;
+  useEffect(() => {
+  bestValidatedAnnouncementToastRef.current = bestValidatedAnnouncement;
+}, [bestValidatedAnnouncement]);
 const showModernAnnouncementPanel =
   mode === "moderne" &&
   serverPhaseLabel === STATES.ANNONCES_MODERNE &&
   isServerLocalTurn &&
   currentAnnouncements.length > 0;
 
+const primaryModernAnnouncement = currentAnnouncements[0] || null;
+
 useEffect(() => {
- if (mode !== "moderne") {
-  setVisibleAnnouncement(null);
-  setAnnouncementFading(false);
-  return;
-}
+  if (mode !== "moderne") {
+    modernValidatedAnnouncementToastKeyRef.current = null;
+    bestValidatedAnnouncementToastRef.current = null;
+    setVisibleAnnouncement(null);
+    setAnnouncementFading(false);
+    return;
+  }
 
-if (!isServerBiddingPhase) {
-  setVisibleAnnouncement(null);
-  setAnnouncementFading(false);
-  return;
-}
+  if (!validatedAnnouncementKey) return;
 
-if (!bestValidatedAnnouncement) return;
+  if (modernValidatedAnnouncementToastKeyRef.current === validatedAnnouncementKey) {
+    return;
+  }
 
-  setVisibleAnnouncement(bestValidatedAnnouncement);
+  const announcement = bestValidatedAnnouncementToastRef.current;
+  if (!announcement) return;
+
+  modernValidatedAnnouncementToastKeyRef.current = validatedAnnouncementKey;
+  setVisibleAnnouncement(announcement);
   setAnnouncementFading(false);
 
   const fadeTimer = setTimeout(() => {
@@ -981,13 +1008,13 @@ if (!bestValidatedAnnouncement) return;
   const hideTimer = setTimeout(() => {
     setVisibleAnnouncement(null);
     setAnnouncementFading(false);
-  }, 2000);
+  }, 2200);
 
   return () => {
     clearTimeout(fadeTimer);
     clearTimeout(hideTimer);
   };
-}, [mode, isServerBiddingPhase, bestValidatedAnnouncement]);
+}, [mode, validatedAnnouncementKey]);
 
 useEffect(() => {
   if (mode !== "moderne") {
@@ -995,15 +1022,15 @@ useEffect(() => {
     return;
   }
 
-  if (game.state !== STATES.ANNONCES_MODERNE) {
+  if (effectivePhaseLabel !== STATES.ANNONCES_MODERNE) {
     modernAnnouncementSentKeyRef.current = null;
     return;
   }
 
-const active = game.players[game.currentPlayerIndex];
+const active = activePlayer;
 if (!active) return;
 
-const declaredByPlayer = game.modernAnnouncements?.declaredByPlayer || {};
+const declaredByPlayer = effectiveModernAnnouncements?.declaredByPlayer || {};
 const alreadyAnswered = Object.prototype.hasOwnProperty.call(
   declaredByPlayer,
   active
@@ -1015,7 +1042,7 @@ if (alreadyAnswered) {
 }
 
 const detected =
-  game.modernAnnouncements?.detectedByPlayer?.[active] || [];
+  effectiveModernAnnouncements?.detectedByPlayer?.[active] || [];
 
 const activeSeatIndex = SEAT_INDEX_TO_LOGICAL_PLAYER.findIndex(
   (playerId) => playerId === active
@@ -1060,10 +1087,9 @@ const turnKey = `${sharedRoundId}:${active}`;
   return () => clearTimeout(timer);
 }, [
   mode,
-  game.state,
-  game.currentPlayerIndex,
-  game.players,
-  game.modernAnnouncements,
+  effectivePhaseLabel,
+  activePlayer,
+  effectiveModernAnnouncements,
   seatsInfo,
   localDisplayedPlayerId,
   isPrimaryTableDriver,
@@ -1424,8 +1450,38 @@ useEffect(() => {
         lineHeight: 1.1,
       }}
     >
-      Annonce
+      {primaryModernAnnouncement
+        ? `${primaryModernAnnouncement.label || "Annonce"} (${primaryModernAnnouncement.points || 0} pts)`
+        : "Annonce"}
     </div>
+
+    {primaryModernAnnouncement?.cards?.length > 0 && (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 4,
+          marginBottom: 8,
+          minHeight: 54,
+        }}
+      >
+        {primaryModernAnnouncement.cards.map((card, index) => (
+          <img
+            key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+            src={cardImgSrc(card)}
+            alt={`${card.value} ${card.suit}`}
+            className="card-img"
+            draggable={false}
+            style={{
+              width: 42,
+              height: "auto",
+              marginLeft: index === 0 ? 0 : -10,
+            }}
+          />
+        ))}
+      </div>
+    )}
 
     <div
       className="atout-actions"
@@ -1438,7 +1494,7 @@ useEffect(() => {
       <button
         className="atout-btn take"
         style={{ minWidth: 96, padding: "8px 12px" }}
-        onClick={() => handleDeclareAnnouncement(currentAnnouncements[0])}
+        onClick={() => handleDeclareAnnouncement(primaryModernAnnouncement)}
         disabled={!isServerBiddingPhase || !isServerLocalTurn}
       >
         Annonce
@@ -1456,45 +1512,72 @@ useEffect(() => {
   </div>
 )}
 
-{mode === "moderne" && isServerBiddingPhase && visibleAnnouncement && (
+{mode === "moderne" && visibleAnnouncement && (
   <div
-style={{
-  position: "absolute",
-  top: 165,
-  left: "50%",
-  transform: `translateX(-50%) translateY(${announcementFading ? "-6px" : "0px"})`,
-  zIndex: 40,
-  pointerEvents: "none",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "flex-end",
-  opacity: announcementFading ? 0 : 1,
-  transition: "opacity 0.28s ease, transform 0.28s ease",
-}}
+    style={{
+      position: "absolute",
+      top: 150,
+      left: "50%",
+      transform: `translateX(-50%) translateY(${announcementFading ? "-6px" : "0px"})`,
+      zIndex: 40,
+      pointerEvents: "none",
+      opacity: announcementFading ? 0 : 1,
+      transition: "opacity 0.28s ease, transform 0.28s ease",
+    }}
   >
-    {(visibleAnnouncement.cards || []).map((card, index) => {
-      const total = visibleAnnouncement.cards.length;
-      const center = (total - 1) / 2;
-      const offset = index - center;
+    <div
+      style={{
+        minWidth: 240,
+        maxWidth: 320,
+        padding: "10px 14px",
+        background: "rgba(72, 16, 28, 0.92)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 8px 18px rgba(0,0,0,0.24)",
+        borderRadius: 16,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "#fff",
+          lineHeight: 1.1,
+          textAlign: "center",
+        }}
+      >
+        {`${visibleAnnouncement.label || "Annonce"} (${visibleAnnouncement.points || 0} pts)`}
+      </div>
 
-      return (
-        <img
-          key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
-          src={cardImgSrc(card)}
-          alt={`${card.value} ${card.suit}`}
-          className="card-img"
-          draggable={false}
-          style={{
-            width: 76,
-            height: "auto",
-            marginLeft: index === 0 ? 0 : -14,
-            transform: `translateY(${Math.abs(offset) * 4}px) rotate(${offset * 5}deg)`,
-            boxShadow: "0 6px 14px rgba(0,0,0,0.35)",
-            borderRadius: 8,
-          }}
-        />
-      );
-    })}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 58,
+        }}
+      >
+        {(visibleAnnouncement.cards || []).map((card, index) => (
+          <img
+            key={`${card.suit}-${String(card.value).toUpperCase()}-${index}`}
+            src={cardImgSrc(card)}
+            alt={`${card.value} ${card.suit}`}
+            className="card-img"
+            draggable={false}
+            style={{
+              width: 52,
+              height: "auto",
+              marginLeft: index === 0 ? 0 : -10,
+              boxShadow: "0 4px 10px rgba(0,0,0,0.28)",
+              borderRadius: 6,
+            }}
+          />
+        ))}
+      </div>
+    </div>
   </div>
 )}
 
