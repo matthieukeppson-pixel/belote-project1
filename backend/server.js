@@ -1183,7 +1183,7 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         atout: chosenSuit,
         takerSeatIndex: actorSeatIndex,
         belote:
-          table.mode === "classic"
+          table.mode === "classic" || table.mode === "moderne"
             ? computeClassicBeloteRebelote(completedDeal.hands, chosenSuit)
             : hand.belote,
         contratMultiplicateur: 1,
@@ -1219,7 +1219,7 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
         atout: action.suit,
         takerSeatIndex: actorSeatIndex,
         belote:
-          table.mode === "classic"
+          table.mode === "classic" || table.mode === "moderne"
             ? computeClassicBeloteRebelote(completedDeal.hands, action.suit)
             : hand.belote,
         contratMultiplicateur: 1,
@@ -2059,7 +2059,9 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
 
     const beloteTeam =
       allHandsEmpty &&
-      table.mode === "classic" &&
+      (table.mode === "classic" || table.mode === "moderne") &&
+      currentHand.atout !== "SA" &&
+      currentHand.atout !== "TA" &&
       currentHand.belote?.state === "REBELOTE" &&
       currentHand.belote?.joueur
         ? seatTeamKey(LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(currentHand.belote.joueur))
