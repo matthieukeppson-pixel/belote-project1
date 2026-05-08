@@ -1506,6 +1506,23 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
     const bestCard = bestEntry.card;
     const candidateCard = candidateEntry.card;
 
+    if (atout === "TA") {
+      const bestFollowsSuit = getCardSuit(bestCard) === nextCouleurDemandee;
+      const candidateFollowsSuit =
+        getCardSuit(candidateCard) === nextCouleurDemandee;
+
+      if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
+      if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+
+      if (candidateFollowsSuit && bestFollowsSuit) {
+        return getRankValue(candidateCard) > getRankValue(bestCard)
+          ? candidateEntry
+          : bestEntry;
+      }
+
+      return bestEntry;
+    }
+
     const bestIsTrump = isTrump(bestCard);
     const candidateIsTrump = isTrump(candidateCard);
 
@@ -1533,6 +1550,37 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
 
     return bestEntry;
   };
+
+  if (currentTrickCards.length > 0 && atout === "TA" && requestedSuit) {
+    const hasRequestedSuitForTa = playerHand.some(
+      (card) => getCardSuit(card) === requestedSuit
+    );
+
+    if (hasRequestedSuitForTa) {
+      const currentBestRequestedSuitEntry = currentTrickCards
+        .filter((entry) => entry?.card && getCardSuit(entry.card) === requestedSuit)
+        .reduce((bestEntry, entry) => {
+          if (!bestEntry) return entry;
+          return getRankValue(entry.card) > getRankValue(bestEntry.card)
+            ? entry
+            : bestEntry;
+        }, null);
+
+      const currentBestRank = currentBestRequestedSuitEntry?.card
+        ? getRankValue(currentBestRequestedSuitEntry.card)
+        : 0;
+
+      const hasHigherRequestedSuitCard = playerHand.some(
+        (card) =>
+          getCardSuit(card) === requestedSuit && getRankValue(card) > currentBestRank
+      );
+
+      if (hasHigherRequestedSuitCard && getRankValue(playedCard) <= currentBestRank) {
+        return null;
+      }
+    }
+  }
+
   if (
     currentTrickCards.length > 0 &&
     requestedSuit &&
@@ -1688,6 +1736,22 @@ function buildFirstBotPlayCardAction(table) {
     const bestCard = bestEntry.card;
     const candidateCard = candidateEntry.card;
 
+    if (atout === "TA") {
+      const bestFollowsSuit = getBotCardSuit(bestCard) === requestedSuit;
+      const candidateFollowsSuit = getBotCardSuit(candidateCard) === requestedSuit;
+
+      if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
+      if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+
+      if (candidateFollowsSuit && bestFollowsSuit) {
+        return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+          ? candidateEntry
+          : bestEntry;
+      }
+
+      return bestEntry;
+    }
+
     const bestIsTrump = isBotTrump(bestCard);
     const candidateIsTrump = isBotTrump(candidateCard);
 
@@ -1719,6 +1783,18 @@ function buildFirstBotPlayCardAction(table) {
   const partnerIsWinning =
     currentBestEntry &&
     seatTeamKey(currentBestEntry.seatIndex) === seatTeamKey(activeSeatIndex);
+
+  const taHigherRequestedSuitCard =
+    atout === "TA" && requestedSuit && currentBestEntry
+      ? playerHand
+          .filter(
+            (card) =>
+              card &&
+              getBotCardSuit(card) === requestedSuit &&
+              getBotRankValue(card) > getBotRankValue(currentBestEntry.card)
+          )
+          .sort((a, b) => getBotRankValue(a) - getBotRankValue(b))[0] || null
+      : null;
   const currentBestTrumpRank =
     atout && atout !== "SA" && atout !== "TA"
       ? currentTrickCards
@@ -1764,6 +1840,7 @@ function buildFirstBotPlayCardAction(table) {
       : null;
 
   const card =
+    taHigherRequestedSuitCard ||
     requestedSuitCard ||
     nonTrumpDiscardCard ||
     trumpFallbackCard ||
