@@ -116,8 +116,22 @@ function getServerCardPointValue(card, atout) {
     7: 0,
   };
 
-  const isTrump =
-    atout === "TA" ? true : atout === "SA" || !atout ? false : suit === atout;
+  const noTrumpPoints = {
+    A: 19,
+    10: 10,
+    K: 4,
+    Q: 3,
+    J: 2,
+    9: 0,
+    8: 0,
+    7: 0,
+  };
+
+  if (atout === "SA") {
+    return noTrumpPoints[value] || 0;
+  }
+
+  const isTrump = atout === "TA" ? true : !atout ? false : suit === atout;
 
   return isTrump ? trumpPoints[value] || 0 : normalPoints[value] || 0;
 }
