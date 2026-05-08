@@ -863,18 +863,22 @@ function handleDeclareAnnouncement(announcement) {
   });
 }
 
- function handleContre() {
+function handleContre() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "CONTRE" }));
+  if (!isServerLocalTurn) return;
+  sendTableGameAction({ type: "CONTRE" });
 }
 
-  function handleSurContre() {
+function handleSurContre() {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "SURCONTRE" }));
+  if (!isServerLocalTurn) return;
+  sendTableGameAction({ type: "SURCONTRE" });
 }
+
 function _handleBidSuit(suit) {
   if (!isServerBiddingPhase) return;
-  setGame((g) => dispatch(g, { type: "BID", value: bidValue, suit }));
+  if (!isServerLocalTurn) return;
+  sendTableGameAction({ type: "BID", value: bidValue, suit });
 }
 function handleTakeAtoutSuit(suit) {
   if (!isServerBiddingPhase) return;
@@ -1123,7 +1127,8 @@ useEffect(() => {
   if (!isPrimaryTableDriver) return;
   if (
     serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
-    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2
+    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2 &&
+    serverPhaseLabel !== STATES.ENCHERES
   ) return;
   if (!isServerTurnBot) return;
 
@@ -1404,7 +1409,7 @@ useEffect(() => {
 <button
   key={suit}
   className="atout-btn take atout-suit-btn"
-  onClick={() => handleTakeAtoutSuit(suit)}
+  onClick={() => _handleBidSuit(suit)}
   disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
 

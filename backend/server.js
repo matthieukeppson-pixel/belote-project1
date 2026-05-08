@@ -1351,6 +1351,13 @@ function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
       const newPassesAfterBid = (hand.passesAfterBid || 0) + 1;
 
       if (newPassesAfterBid >= 3) {
+        // SERVER_CONTREE_COMPLETE_DEAL_AFTER_CONTRACT_MARKER
+        const completedDeal = completeAuthoritativeDealToEightAfterTake(
+          hand,
+          currentBid.seatIndex,
+          false
+        );
+
         return {
           ...hand,
           phase: "PLI_EN_COURS",
@@ -1358,6 +1365,12 @@ function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
           takerSeatIndex: currentBid.seatIndex,
           contratValeur: currentBid.value,
           currentTurnSeatIndex: startSeatIndex,
+          hands: completedDeal.hands,
+          deck: completedDeal.deck,
+          pli: [],
+          trickCards: [null, null, null, null],
+          couleurDemandee: null,
+          winnerIndex: null,
           passes: 0,
           passesAfterBid: 0,
         };
