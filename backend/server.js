@@ -200,12 +200,64 @@ function computeClassicCapotScores(tricksWon) {
   return null;
 }
 
+function buildServerBeloteRebeloteEntry(playerId, suit) {
+  return {
+    state: "READY",
+    joueur: playerId,
+    suit,
+    firstPlayedValue: null,
+    secondPlayedValue: null,
+  };
+}
+
 function computeClassicBeloteRebelote(hands, atout) {
-  if (!hands || !atout || atout === "TA" || atout === "SA") {
+  if (!hands || !atout || atout === "SA") {
     return {
       state: "NONE",
       joueur: null,
+      suit: null,
     };
+  }
+
+  if (atout === "TA") {
+    const entries = [];
+
+    for (let seatIndex = 0; seatIndex < 4; seatIndex++) {
+      const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[seatIndex];
+      const cards = Array.isArray(hands[playerId]) ? hands[playerId] : [];
+
+      for (const suit of SUITS) {
+        const hasKing = cards.some(
+          (card) =>
+            (card.suit ?? card.couleur ?? card.color ?? null) === suit &&
+            String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase() === "K"
+        );
+
+        const hasQueen = cards.some(
+          (card) =>
+            (card.suit ?? card.couleur ?? card.color ?? null) === suit &&
+            String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase() === "Q"
+        );
+
+        if (hasKing && hasQueen) {
+          entries.push(buildServerBeloteRebeloteEntry(playerId, suit));
+        }
+      }
+    }
+
+    return entries.length > 0
+      ? {
+          state: "READY",
+          joueur: null,
+          suit: null,
+          entries,
+        }
+      : {
+          state: "NONE",
+          joueur: null,
+          suit: null,
+          entries: [],
+        };
   }
 
   for (let seatIndex = 0; seatIndex < 4; seatIndex++) {
@@ -225,32 +277,72 @@ function computeClassicBeloteRebelote(hands, atout) {
     );
 
     if (hasKingOfTrump && hasQueenOfTrump) {
-      return {
-        state: "READY",
-        joueur: playerId,
-        firstPlayedValue: null,
-        secondPlayedValue: null,
-      };
+      return buildServerBeloteRebeloteEntry(playerId, atout);
     }
   }
 
   return {
     state: "NONE",
     joueur: null,
+    suit: null,
   };
 }
 
 function updateClassicBeloteRebeloteOnPlay(belote, playerId, card, atout) {
-  if (!belote || belote.state === "NONE" || !belote.joueur) return belote;
-  if (belote.joueur !== playerId) return belote;
-  if (!card || !atout || atout === "TA" || atout === "SA") return belote;
+  if (!belote || belote.state === "NONE") return belote;
+  if (!card || !atout || atout === "SA") return belote;
 
   const cardSuit = card.suit ?? card.couleur ?? card.color ?? null;
   const cardValue = String(card.value ?? card.rank ?? card.valeur ?? "").toUpperCase();
 
-  if (cardSuit !== atout || (cardValue !== "K" && cardValue !== "Q")) {
-    return belote;
+  if (cardValue !== "K" && cardValue !== "Q") return belote;
+
+  if (atout === "TA") {
+    const entries = Array.isArray(belote.entries) ? belote.entries : [];
+    const entryIndex = entries.findIndex(
+      (entry) =>
+        entry?.joueur === playerId &&
+        entry?.suit === cardSuit &&
+        entry?.state !== "REBELOTE"
+    );
+
+    if (entryIndex === -1) return belote;
+
+    const entry = entries[entryIndex];
+
+    if (entry.firstPlayedValue === cardValue || entry.secondPlayedValue === cardValue) {
+      return belote;
+    }
+
+    const nextEntry = !entry.firstPlayedValue
+      ? {
+          ...entry,
+          state: "BELOTE",
+          firstPlayedValue: cardValue,
+        }
+      : {
+          ...entry,
+          state: "REBELOTE",
+          secondPlayedValue: cardValue,
+        };
+
+    const nextEntries = entries.map((candidate, index) =>
+      index === entryIndex ? nextEntry : candidate
+    );
+
+    return {
+      ...belote,
+      state: nextEntry.state,
+      joueur: playerId,
+      suit: cardSuit,
+      firstPlayedValue: nextEntry.firstPlayedValue,
+      secondPlayedValue: nextEntry.secondPlayedValue,
+      entries: nextEntries,
+    };
   }
+
+  if (!belote.joueur || belote.joueur !== playerId) return belote;
+  if (cardSuit !== atout) return belote;
 
   if (belote.firstPlayedValue === cardValue || belote.secondPlayedValue === cardValue) {
     return belote;
@@ -260,6 +352,7 @@ function updateClassicBeloteRebeloteOnPlay(belote, playerId, card, atout) {
     return {
       ...belote,
       state: "BELOTE",
+      suit: cardSuit,
       firstPlayedValue: cardValue,
     };
   }
@@ -267,6 +360,7 @@ function updateClassicBeloteRebeloteOnPlay(belote, playerId, card, atout) {
   return {
     ...belote,
     state: "REBELOTE",
+    suit: cardSuit,
     secondPlayedValue: cardValue,
   };
 }
@@ -2057,21 +2151,44 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
         : nextScoreManche;
 
-    const beloteTeam =
+    const beloteBonusesByTeam = {
+      nous: 0,
+      eux: 0,
+    };
+
+    if (
       allHandsEmpty &&
       (table.mode === "classic" || table.mode === "moderne") &&
-      currentHand.atout !== "SA" &&
-      currentHand.atout !== "TA" &&
-      currentHand.belote?.state === "REBELOTE" &&
-      currentHand.belote?.joueur
-        ? seatTeamKey(LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(currentHand.belote.joueur))
-        : null;
+      currentHand.atout !== "SA"
+    ) {
+      if (currentHand.atout === "TA") {
+        for (const entry of currentHand.belote?.entries || []) {
+          if (entry?.state !== "REBELOTE" || !entry?.joueur) continue;
+
+          const team = seatTeamKey(
+            LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(entry.joueur)
+          );
+
+          if (team === "nous" || team === "eux") {
+            beloteBonusesByTeam[team] += 20;
+          }
+        }
+      } else if (currentHand.belote?.state === "REBELOTE" && currentHand.belote?.joueur) {
+        const team = seatTeamKey(
+          LOGICAL_PLAYER_BY_SEAT_INDEX.indexOf(currentHand.belote.joueur)
+        );
+
+        if (team === "nous" || team === "eux") {
+          beloteBonusesByTeam[team] += 20;
+        }
+      }
+    }
 
     const nextScoreWithBelote =
-      beloteTeam && nextContractScores
+      beloteBonusesByTeam.nous > 0 || beloteBonusesByTeam.eux > 0
         ? {
-            nous: nextContractScores.nous + (beloteTeam === "nous" ? 20 : 0),
-            eux: nextContractScores.eux + (beloteTeam === "eux" ? 20 : 0),
+            nous: nextContractScores.nous + beloteBonusesByTeam.nous,
+            eux: nextContractScores.eux + beloteBonusesByTeam.eux,
           }
         : nextContractScores;
 

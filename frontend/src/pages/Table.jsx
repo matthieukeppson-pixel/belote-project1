@@ -645,7 +645,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     if (state !== "BELOTE" && state !== "REBELOTE") return;
     if (!playerId) return;
 
-    const toastKey = `${sharedRoundId}:${state}:${playerId}`;
+    const toastKey = `${sharedRoundId}:${state}:${playerId}:${serverHand?.belote?.suit || "none"}`;
     if (serverBeloteToastKeyRef.current === toastKey) return;
 
     serverBeloteToastKeyRef.current = toastKey;
@@ -673,6 +673,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     mode,
     serverHand?.belote?.state,
     serverHand?.belote?.joueur,
+    serverHand?.belote?.suit,
     sharedRoundId,
     seatsInfo,
   ]);
