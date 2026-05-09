@@ -991,6 +991,14 @@ const showModernAnnouncementPanel =
 
 const primaryModernAnnouncement = currentAnnouncements[0] || null;
 
+const visibleAnnouncementSeatIndex = visibleAnnouncement?.playerId
+  ? SEAT_INDEX_TO_LOGICAL_PLAYER.indexOf(visibleAnnouncement.playerId)
+  : -1;
+const visibleAnnouncementPlayerName =
+  visibleAnnouncementSeatIndex >= 0
+    ? seatsInfo[visibleAnnouncementSeatIndex]?.name || visibleAnnouncement.playerId
+    : visibleAnnouncement?.playerId || null;
+
 useEffect(() => {
   if (mode !== "moderne" && mode !== "contree") {
     modernValidatedAnnouncementToastKeyRef.current = null;
@@ -1529,9 +1537,9 @@ useEffect(() => {
   <div
     style={{
       position: "absolute",
-      top: 150,
-      left: "50%",
-      transform: `translateX(-50%) translateY(${announcementFading ? "-6px" : "0px"})`,
+      top: 138,
+      right: 24,
+      transform: `translateY(${announcementFading ? "-6px" : "0px"})`,
       zIndex: 40,
       pointerEvents: "none",
       opacity: announcementFading ? 0 : 1,
@@ -1540,29 +1548,32 @@ useEffect(() => {
   >
     <div
       style={{
-        minWidth: 240,
+        minWidth: 220,
         maxWidth: 320,
-        padding: "10px 14px",
-        background: "rgba(72, 16, 28, 0.92)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        boxShadow: "0 8px 18px rgba(0,0,0,0.24)",
-        borderRadius: 16,
+        padding: 0,
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+        borderRadius: 0,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 8,
+        gap: 6,
       }}
     >
       <div
         style={{
-          fontSize: 16,
-          fontWeight: 700,
+          fontSize: 15,
+          fontWeight: 800,
           color: "#fff",
           lineHeight: 1.1,
           textAlign: "center",
+          textShadow: "0 2px 5px rgba(0,0,0,0.75)",
         }}
       >
-        {`${visibleAnnouncement.label || "Annonce"} (${visibleAnnouncement.points || 0} pts)`}
+        {visibleAnnouncementPlayerName
+          ? `${visibleAnnouncementPlayerName} - ${visibleAnnouncement.label || "Annonce"} (${visibleAnnouncement.points || 0} pts)`
+          : `${visibleAnnouncement.label || "Annonce"} (${visibleAnnouncement.points || 0} pts)`}
       </div>
 
       <div
