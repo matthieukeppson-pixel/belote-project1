@@ -688,6 +688,8 @@ const bidResetNextValue =
   // AFFICHAGE DU PLI
   // ============================================
   useEffect(() => {
+    if (serverHand) return;
+
     if (game.pli.length > 0) {
       const showTimer = setTimeout(() => {
         setHideLastPli(false);
@@ -704,7 +706,7 @@ const bidResetNextValue =
 
       return () => clearTimeout(hideTimer);
     }
-  }, [game.pli, displayPli]);
+  }, [serverHand, game.pli, displayPli]);
 
   // ============================================
   // FIN DE MANCHE — CALCUL PARTIE
