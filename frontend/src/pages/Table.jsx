@@ -795,15 +795,6 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     return () => clearTimeout(timer);
   }, [effectivePhaseLabel]);
 
-// ============================================
-// RELANCE DE MANCHE (APRÈS VISUEL)
-// ============================================
-// Désactivée : la nouvelle manche doit repartir depuis le serveur,
-// pas par une reconstruction locale automatique.
-useEffect(() => {
-  if (effectivePhaseLabel !== STATES.FIN_DE_MANCHE) return;
-}, [effectivePhaseLabel]);
-
 
   // ============================================
   // ACTIONS
