@@ -1406,6 +1406,7 @@ function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
           atout: currentBid.suit,
           takerSeatIndex: currentBid.seatIndex,
           contratValeur: currentBid.value,
+          belote: computeClassicBeloteRebelote(completedDeal.hands, currentBid.suit),
           currentTurnSeatIndex: startSeatIndex,
           hands: completedDeal.hands,
           deck: completedDeal.deck,
@@ -2215,7 +2216,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
 
     if (
       allHandsEmpty &&
-      (table.mode === "classic" || table.mode === "moderne") &&
+      (table.mode === "classic" || table.mode === "moderne" || table.mode === "contree") &&
       currentHand.atout !== "SA"
     ) {
       if (currentHand.atout === "TA") {

@@ -641,7 +641,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
     const state = serverHand?.belote?.state;
     const playerId = serverHand?.belote?.joueur;
 
-    if (mode !== "classic" && mode !== "moderne") return;
+    if (mode !== "classic" && mode !== "moderne" && mode !== "contree") return;
     if (state !== "BELOTE" && state !== "REBELOTE") return;
     if (!playerId) return;
 
@@ -752,7 +752,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   } else if (ruleset === "contree") {
     const expectedTotal =
       contrat === 500 ? 500 * multLocal : 162 + contrat * multLocal;
-    ok = total === expectedTotal;
+    ok = total === expectedTotal || total === expectedTotal + 20;
   }
 
   if (!ok) {
