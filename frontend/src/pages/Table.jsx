@@ -1160,51 +1160,6 @@ useEffect(() => {
   sendTableGameAction,
 ]);
 
-useEffect(() => {
-  if (!import.meta.env.DEV) return;
-
-  const legacyLocalAutoPlayEnabled = false;
-  if (!legacyLocalAutoPlayEnabled) return;
-
-  if (game.state !== STATES.PLI_EN_COURS) return;
-  if (!localDisplayedPlayerId) return;
-  if (activePlayer === localDisplayedPlayerId) return;
-  if (visibleAnnouncement) return;
-
-  const timer = setTimeout(() => {
-    setGame((g) => {
-      if (g.state !== STATES.PLI_EN_COURS) return g;
-
-      const active = g.players[g.currentPlayerIndex];
-      if (active === localDisplayedPlayerId) return g;
-
-      const hand = g.hands[active];
-      if (!hand || hand.length === 0) return g;
-
-      for (const card of hand) {
-        const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
-        const next = dispatch(g, { type: "PLAY_CARD", cardKey });
-
-        if (next !== g) {
-          sendTableGameAction({ type: "PLAY_CARD", cardKey });
-          return g;
-        }
-      }
-
-      return g;
-    });
-  }, 900);
-
-  return () => clearTimeout(timer);
-}, [
-  game.state,
-  activePlayer,
-  game.players,
-  game.currentPlayerIndex,
-  visibleAnnouncement,
-  localDisplayedPlayerId,
-  sendTableGameAction,
-]);
 
   
 
