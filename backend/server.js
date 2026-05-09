@@ -2427,6 +2427,14 @@ function refreshServerGameForTable(table) {
     hand: sharedHand,
   };
 }
+function resumeTableAfterSeatChange(table) {
+  if (!table?.game?.hand) return;
+
+  playBotCardsUntilHumanTurn(table);
+  scheduleAdvanceCompletedTrick(table);
+  scheduleStartNextHandAfterEnd(table);
+}
+
 function isPlayerInTable(tableId, pseudo) {
   const t = tablesMap.get(Number(tableId));
   if (!t) return false;
@@ -3012,6 +3020,7 @@ if (msg.type === "choose_seat") {
         if (idx !== -1) {
           t.seats[idx] = null;
          refreshServerGameForTable(t);
+          resumeTableAfterSeatChange(t);
           if (Number(ws.tableId) === Number(t.id)) {
             ws.tableId = null;
           }
@@ -3035,6 +3044,7 @@ if (msg.type === "choose_seat") {
        const leftTable = tablesMap.get(left);
 if (leftTable) {
   refreshServerGameForTable(leftTable);
+  resumeTableAfterSeatChange(leftTable);
 }
         broadcastTables();
 
@@ -3065,6 +3075,7 @@ if (leftTable) {
       const leftTable = tablesMap.get(leftTableId);
       if (leftTable) {
         refreshServerGameForTable(leftTable);
+        resumeTableAfterSeatChange(leftTable);
       }
       broadcastPlayers();
       broadcastTables();
