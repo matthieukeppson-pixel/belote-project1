@@ -804,23 +804,6 @@ useEffect(() => {
   if (effectivePhaseLabel !== STATES.FIN_DE_MANCHE) return;
 }, [effectivePhaseLabel]);
 
-  // ============================================
-  // FIN DE PLI
-  // ============================================
-  useEffect(() => {
-    const legacyLocalNextPliEnabled = false;
-    if (!legacyLocalNextPliEnabled) return;
-
-    if (game.state !== STATES.PLI_TERMINE) return;
-
-    const timer = setTimeout(() => {
-      setDisplayPli([]);
-      setHideLastPli(false);
-      setGame((g) => dispatch(g, { type: "NEXT_PLI" }));
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, [game.state]);
 
   // ============================================
   // ACTIONS
