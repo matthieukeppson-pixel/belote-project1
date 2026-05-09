@@ -603,14 +603,34 @@ const [announcementFading, setAnnouncementFading] = useState(false);
       setGame(buildFreshLocalGame());
   }
 
+const bidResetCurrentBid = serverHand?.currentBid || game.currentBid || null;
+const bidResetMinimumValue = bidResetCurrentBid
+  ? Number(bidResetCurrentBid.value || 0) + 10
+  : 80;
+const bidResetNextValue =
+  BID_VALUES.find((value) => value >= bidResetMinimumValue) || 500;
+
  useEffect(() => {
   if (mode !== "contree") return;
   if (!isServerBiddingPhase) return;
-  if (game.state !== STATES.ENCHERES) return;
-  if (game.currentBid) return;
+  if (effectivePhaseLabel !== STATES.ENCHERES) return;
 
-  setBidValue(80);
-}, [mode, isServerBiddingPhase, game.state, game.currentBid]);
+  if (!bidResetCurrentBid) {
+    setBidValue(80);
+    return;
+  }
+
+  setBidValue((current) =>
+    current >= bidResetMinimumValue ? current : bidResetNextValue
+  );
+}, [
+  mode,
+  isServerBiddingPhase,
+  effectivePhaseLabel,
+  bidResetCurrentBid,
+  bidResetMinimumValue,
+  bidResetNextValue,
+]);
 
 
   useEffect(() => {
@@ -846,6 +866,13 @@ function handleSurContre() {
 function _handleBidSuit(suit) {
   if (!isServerBiddingPhase) return;
   if (!isServerLocalTurn) return;
+
+  const minimumBidValue = authoritativeCurrentBid
+    ? Number(authoritativeCurrentBid.value || 0) + 10
+    : 80;
+
+  if (bidValue < minimumBidValue) return;
+
   sendTableGameAction({ type: "BID", value: bidValue, suit });
 }
 function handleTakeAtoutSuit(suit) {
