@@ -612,19 +612,6 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   setBidValue(80);
 }, [mode, isServerBiddingPhase, game.state, game.currentBid]);
 
-  useEffect(() => {
-    const s = game?.belote?.state;
-    if (!s || s === "NONE") return;
-
-    if (s === "BELOTE") {
-      setBeloteToast({ text: `Belote ! (${game.belote.joueur})`, ts: Date.now() });
-    } else if (s === "REBELOTE") {
-      setBeloteToast({ text: `Rebelote ! (${game.belote.joueur})`, ts: Date.now() });
-    }
-
-    const t = setTimeout(() => setBeloteToast(null), 1200);
-    return () => clearTimeout(t);
-  }, [game?.belote?.state, game?.belote?.joueur]);
 
   useEffect(() => {
     serverBeloteToastKeyRef.current = null;
