@@ -752,7 +752,13 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   } else if (ruleset === "contree") {
     const expectedTotal =
       contrat === 500 ? 500 * multLocal : 162 + contrat * multLocal;
-    ok = total === expectedTotal || total === expectedTotal + 20;
+    const contreeAnnouncementPoints = (game.modernAnnouncements?.validated || []).reduce(
+      (sum, ann) => sum + (ann?.points || 0),
+      0
+    );
+    ok =
+      total === expectedTotal + contreeAnnouncementPoints ||
+      total === expectedTotal + contreeAnnouncementPoints + 20;
   }
 
   if (!ok) {
@@ -919,7 +925,7 @@ const activeSeatInfo = seatInfoForLogicalPlayerId(activePlayer);
 const _isActiveBot = !!activeSeatInfo?.isBot;
 
 const effectiveModernAnnouncements =
-  mode === "moderne" && serverHand?.modernAnnouncements
+  (mode === "moderne" || mode === "contree") && serverHand?.modernAnnouncements
     ? serverHand.modernAnnouncements
     : game.modernAnnouncements;
 
@@ -960,7 +966,7 @@ const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : 
 const mult = game.contratMultiplicateur || 1;
 
 const bestValidatedAnnouncement =
-  mode === "moderne"
+  mode === "moderne" || mode === "contree"
     ? (effectiveModernAnnouncements?.validated || [])[0] || null
     : null;
 const validatedAnnouncementKey =
@@ -978,7 +984,7 @@ const validatedAnnouncementKey =
   bestValidatedAnnouncementToastRef.current = bestValidatedAnnouncement;
 }, [bestValidatedAnnouncement]);
 const showModernAnnouncementPanel =
-  mode === "moderne" &&
+  (mode === "moderne" || mode === "contree") &&
   serverPhaseLabel === STATES.ANNONCES_MODERNE &&
   isServerLocalTurn &&
   currentAnnouncements.length > 0;
@@ -986,7 +992,7 @@ const showModernAnnouncementPanel =
 const primaryModernAnnouncement = currentAnnouncements[0] || null;
 
 useEffect(() => {
-  if (mode !== "moderne") {
+  if (mode !== "moderne" && mode !== "contree") {
     modernValidatedAnnouncementToastKeyRef.current = null;
     bestValidatedAnnouncementToastRef.current = null;
     setVisibleAnnouncement(null);
@@ -1023,7 +1029,7 @@ useEffect(() => {
 }, [mode, validatedAnnouncementKey]);
 
 useEffect(() => {
-  if (mode !== "moderne") {
+  if (mode !== "moderne" && mode !== "contree") {
     modernAnnouncementSentKeyRef.current = null;
     return;
   }
@@ -1519,7 +1525,7 @@ useEffect(() => {
   </div>
 )}
 
-{mode === "moderne" && visibleAnnouncement && (
+{(mode === "moderne" || mode === "contree") && visibleAnnouncement && (
   <div
     style={{
       position: "absolute",

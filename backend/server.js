@@ -707,7 +707,7 @@ function applyServerModernAnnouncementAction(table, currentHand, actorSeatIndex,
     ...(currentHand || {}),
   };
 
-  if (table?.mode !== "moderne") return null;
+  if (table?.mode !== "moderne" && table?.mode !== "contree") return null;
   if (hand.phase !== "ANNONCES_MODERNE") return null;
 
   if (
@@ -1402,12 +1402,16 @@ function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
 
         return {
           ...hand,
-          phase: "PLI_EN_COURS",
+          phase: "ANNONCES_MODERNE",
           atout: currentBid.suit,
           takerSeatIndex: currentBid.seatIndex,
           contratValeur: currentBid.value,
           belote: computeClassicBeloteRebelote(completedDeal.hands, currentBid.suit),
           currentTurnSeatIndex: startSeatIndex,
+          modernAnnouncements: buildServerModernAnnouncementsState(
+            completedDeal.hands,
+            currentBid.suit
+          ),
           hands: completedDeal.hands,
           deck: completedDeal.deck,
           pli: [],
@@ -1430,7 +1434,9 @@ function applyContreeBiddingAction(table, hand, actorSeatIndex, action) {
 
     if (newPasses >= 4) {
       const nextDealerSeatIndex = nextSeatIndex(hand.dealerSeatIndex);
-      return buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+      const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
+      nextHand.scores = hand.scores || { nous: 0, eux: 0 };
+      return nextHand;
     }
 
     return {
@@ -2251,13 +2257,13 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         : nextContractScores;
 
     const modernAnnouncementWinningTeam =
-      allHandsEmpty && table.mode === "moderne"
+      allHandsEmpty && (table.mode === "moderne" || table.mode === "contree")
         ? currentHand.modernAnnouncements?.winningTeam || null
         : null;
 
     const modernAnnouncementPoints =
       allHandsEmpty &&
-      table.mode === "moderne" &&
+      (table.mode === "moderne" || table.mode === "contree") &&
       (modernAnnouncementWinningTeam === "nous" || modernAnnouncementWinningTeam === "eux")
         ? (currentHand.modernAnnouncements?.validated || []).reduce(
             (total, announcement) => total + (announcement?.points || 0),
