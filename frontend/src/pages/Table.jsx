@@ -1377,13 +1377,16 @@ useEffect(() => {
     >
       {BID_VALUES.map((v) => {
         const min = authoritativeCurrentBid ? authoritativeCurrentBid.value + 10 : 80;
-        const disabled = v < min;
+        const disabled = !isServerLocalTurn || v < min;
 
         return (
           <button
             key={v}
             className="atout-btn take"
-            onClick={() => setBidValue(v)}
+            onClick={() => {
+              if (!isServerLocalTurn) return;
+              setBidValue(v);
+            }}
             disabled={disabled}
             style={{
               opacity: disabled ? 0.45 : 1,
@@ -1417,7 +1420,7 @@ useEffect(() => {
      <button
   className="atout-btn pass"
   onClick={handlePass}
-  disabled={!isServerBiddingPhase}
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
   Passer
 </button>
