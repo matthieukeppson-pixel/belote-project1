@@ -750,8 +750,9 @@ const [announcementFading, setAnnouncementFading] = useState(false);
   } else if (ruleset === "classic") {
     ok = total === 162 || total === 182;
   } else if (ruleset === "contree") {
-    const base = 162 + contrat * multLocal;
-    ok = total === base || total === base + 20;
+    const expectedTotal =
+      contrat === 500 ? 500 * multLocal : 162 + contrat * multLocal;
+    ok = total === expectedTotal;
   }
 
   if (!ok) {

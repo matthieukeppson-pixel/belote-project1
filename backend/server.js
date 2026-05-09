@@ -200,6 +200,48 @@ function computeClassicCapotScores(tricksWon) {
   return null;
 }
 
+function computeContreeContractScores(hand, scoreManche, tricksWon) {
+  const contractValue = Number(hand?.contratValeur || 0);
+  const multiplier = Number(hand?.contratMultiplicateur || 1);
+  const takerTeam =
+    typeof hand?.takerSeatIndex === "number" ? seatTeamKey(hand.takerSeatIndex) : null;
+
+  if (!takerTeam || !contractValue) return scoreManche;
+
+  const defenderTeam = takerTeam === "nous" ? "eux" : "nous";
+  const takerPoints = Number(scoreManche?.[takerTeam] || 0);
+  const defenderPoints = Number(scoreManche?.[defenderTeam] || 0);
+  const takerTricks = Number(tricksWon?.[takerTeam] || 0);
+
+  if (contractValue === 500) {
+    const capotSucceeded = takerTricks === 8;
+    const capotScore = 500 * multiplier;
+
+    return capotSucceeded
+      ? {
+          [takerTeam]: capotScore,
+          [defenderTeam]: 0,
+        }
+      : {
+          [takerTeam]: 0,
+          [defenderTeam]: capotScore,
+        };
+  }
+
+  const takerSucceeded = takerPoints >= contractValue;
+  const contractBonus = contractValue * multiplier;
+
+  return takerSucceeded
+    ? {
+        [takerTeam]: takerPoints + contractBonus,
+        [defenderTeam]: defenderPoints,
+      }
+    : {
+        [takerTeam]: 0,
+        [defenderTeam]: 162 + contractBonus,
+      };
+}
+
 function buildServerBeloteRebeloteEntry(playerId, suit) {
   return {
     state: "READY",
@@ -2162,7 +2204,9 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     const nextContractScores =
       allHandsEmpty && table.mode === "classic"
         ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
-        : nextScoreManche;
+        : allHandsEmpty && table.mode === "contree"
+          ? computeContreeContractScores(currentHand, nextScoreManche, nextTricksWon)
+          : nextScoreManche;
 
     const beloteBonusesByTeam = {
       nous: 0,
