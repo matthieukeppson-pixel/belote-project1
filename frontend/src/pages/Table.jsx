@@ -918,13 +918,49 @@ const localHand =
   serverLocalHand ||
   (localDisplayedPlayerId && game.hands[localDisplayedPlayerId]) ||
   [];
-const actorId = game.players[game.currentPlayerIndex];
-const preneurId = game.currentBid ? game.players[game.currentBid.playerIndex] : null;
+const authoritativeCurrentBid = serverHand?.currentBid || game.currentBid || null;
+const mult = serverHand?.contratMultiplicateur || game.contratMultiplicateur || 1;
 
-  const actorTeam = game.teams.nous.includes(actorId) ? "nous" : "eux";
-  const preneurTeam = preneurId && game.teams.nous.includes(preneurId) ? "nous" : "eux";
+const localSeatTeam =
+  mySeatIndex === 0 || mySeatIndex === 2
+    ? "nous"
+    : mySeatIndex === 1 || mySeatIndex === 3
+      ? "eux"
+      : null;
 
-const mult = game.contratMultiplicateur || 1;
+const currentBidSeatIndex =
+  typeof authoritativeCurrentBid?.seatIndex === "number"
+    ? authoritativeCurrentBid.seatIndex
+    : null;
+const currentBidPlayerId =
+  currentBidSeatIndex != null
+    ? displayedPlayerIdForSeatIndex(currentBidSeatIndex)
+    : typeof authoritativeCurrentBid?.playerIndex === "number"
+      ? game.players[authoritativeCurrentBid.playerIndex]
+      : null;
+const currentBidTeam =
+  currentBidSeatIndex === 0 || currentBidSeatIndex === 2
+    ? "nous"
+    : currentBidSeatIndex === 1 || currentBidSeatIndex === 3
+      ? "eux"
+      : currentBidPlayerId && game.teams.nous.includes(currentBidPlayerId)
+        ? "nous"
+        : currentBidPlayerId && game.teams.eux.includes(currentBidPlayerId)
+          ? "eux"
+          : null;
+
+const canContre =
+  !!authoritativeCurrentBid &&
+  mult === 1 &&
+  !!localSeatTeam &&
+  !!currentBidTeam &&
+  localSeatTeam !== currentBidTeam;
+const canSurContre =
+  !!authoritativeCurrentBid &&
+  mult === 2 &&
+  !!localSeatTeam &&
+  !!currentBidTeam &&
+  localSeatTeam === currentBidTeam;
 
 const bestValidatedAnnouncement =
   mode === "moderne" || mode === "contree"
@@ -1216,7 +1252,7 @@ useEffect(() => {
             )}
 
  {mode === "contree" &&
-  game.state === STATES.ENCHERES &&
+  effectivePhaseLabel === STATES.ENCHERES &&
   isServerBiddingPhase && (
   <div
     className="atout-panel"
@@ -1238,7 +1274,7 @@ useEffect(() => {
       Enchères (Contrée)
     </div>
 
-    {game.currentBid ? (
+    {authoritativeCurrentBid ? (
       <>
         <div
           style={{
@@ -1247,8 +1283,8 @@ useEffect(() => {
             fontWeight: 800,
           }}
         >
-          Contrat actuel : {game.currentBid.value} {atoutSymbol(game.currentBid.suit)} · x
-          {game.contratMultiplicateur || 1}
+          Contrat actuel : {authoritativeCurrentBid.value} {atoutSymbol(authoritativeCurrentBid.suit)} · x
+          {mult}
         </div>
 
         <div
@@ -1271,10 +1307,10 @@ useEffect(() => {
     opacity:
       mult >= 2
         ? 1
-        : (!game.currentBid || actorTeam === preneurTeam ? 0.55 : 1),
+        : (canContre ? 1 : 0.55),
   }}
   onClick={handleContre}
- disabled={!isServerBiddingPhase || !game.currentBid || mult !== 1 || actorTeam === preneurTeam}
+ disabled={!isServerBiddingPhase || !canContre}
 >
   Contrer
 </button>
@@ -1295,10 +1331,10 @@ useEffect(() => {
     opacity:
       mult >= 4
         ? 1
-        : (!game.currentBid || actorTeam !== preneurTeam ? 0.55 : 1),
+        : (canSurContre ? 1 : 0.55),
   }}
   onClick={handleSurContre}
- disabled={!isServerBiddingPhase || !game.currentBid || mult !== 2 || actorTeam !== preneurTeam}
+ disabled={!isServerBiddingPhase || !canSurContre}
 >
   Surcontrer
 </button>
@@ -1311,7 +1347,7 @@ useEffect(() => {
       style={{ gap: 8, flexWrap: "wrap", justifyContent: "center" }}
     >
       {BID_VALUES.map((v) => {
-        const min = game.currentBid ? game.currentBid.value + 10 : 80;
+        const min = authoritativeCurrentBid ? authoritativeCurrentBid.value + 10 : 80;
         const disabled = v < min;
 
         return (
