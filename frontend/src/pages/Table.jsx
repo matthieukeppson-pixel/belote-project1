@@ -583,6 +583,8 @@ const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
 const [announcementFading, setAnnouncementFading] = useState(false);
 
   function handleNouvellePartie() {
+    if (hasServerHand) return;
+
     setDisplayPli([]);
     setHideLastPli(false);
 
