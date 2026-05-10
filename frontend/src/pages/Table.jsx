@@ -521,6 +521,7 @@ const [game, setGame] = useState(() => buildFreshLocalGame());
 
 
 const serverHand = _tableSnapshot?.game?.hand || null;
+const hasServerHand = !!serverHand;
 
 const localPhaseLabel = game?.state || "UNKNOWN";
 const serverPhaseLabel = serverHand?.phase || "none";
@@ -569,6 +570,8 @@ useEffect(() => {
   finDeMancheCompteeRef.current = false;
   finDeMancheRef.current = null;
 
+  if (hasServerHand) return;
+
   setGame((currentGame) => {
     if (currentGame.dealSeed === sharedDealSeed) return currentGame;
 
@@ -576,7 +579,7 @@ useEffect(() => {
       dealSeed: sharedDealSeed,
     });
   });
-}, [sharedDealSeed, game.dealSeed, buildFreshLocalGame]);
+}, [sharedDealSeed, game.dealSeed, buildFreshLocalGame, hasServerHand]);
   // ============================================
   // UI STATES
   // ============================================
