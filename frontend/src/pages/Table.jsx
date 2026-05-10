@@ -1648,7 +1648,11 @@ useEffect(() => {
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
   const hasDisplayedSeat = !!displayedSeat?.name;
-  const displayedHandCount = game.hands[player]?.length ?? 0;
+  const serverDisplayedHand = Array.isArray(serverHand?.hands?.[player])
+    ? serverHand.hands[player]
+    : null;
+  const displayedHandCount =
+    serverDisplayedHand?.length ?? game.hands[player]?.length ?? 0;
   const visibleBackCards = Math.min(2, displayedHandCount);
   const backCardOverlapStep =
     position === "left" || position === "right" ? 6 : 10;
