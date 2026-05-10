@@ -712,6 +712,7 @@ const bidResetNextValue =
   // FIN DE MANCHE — CALCUL PARTIE
   // ============================================
   useEffect(() => {
+    if (serverHand) return;
     if (game.state !== STATES.FIN_DE_MANCHE) return;
     if (!partieRef.current) return;
 
@@ -789,7 +790,7 @@ const bidResetNextValue =
     if (next?.scorePartie) setScorePartie(next.scorePartie);
     if (next?.partieTerminee) setPartieTerminee(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.state]);
+  }, [serverHand, game.state]);
 
   // ============================================
   // FIN DE MANCHE — VISUEL (dernier pli)
