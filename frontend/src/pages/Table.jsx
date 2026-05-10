@@ -934,6 +934,10 @@ const serverScores = serverHand?.scores || null;
 const scoreUI = serverHand
   ? serverScores || { nous: 0, eux: 0 }
   : scorePartie;
+const isServerGameOver =
+  !!serverHand &&
+  (serverHand?.partieTerminee || serverPhaseLabel === "FIN_DE_PARTIE");
+const shouldShowNewGameButton = isServerGameOver || (!serverHand && partieTerminee);
 const serverDisplayPli = Array.isArray(serverHand?.trickCards)
   ? serverHand.trickCards.filter((play) => play && play.card)
   : [];
@@ -1610,11 +1614,11 @@ useEffect(() => {
               </div>
             )}
 
-            {(serverHand?.partieTerminee || partieTerminee) && (
+            {shouldShowNewGameButton && (
               <button
                 className="new-game-btn"
                 onClick={() => {
-                  if (serverHand?.partieTerminee) {
+                  if (isServerGameOver) {
                     sendTableGameAction({ type: "RESET_ROUND" });
                     return;
                   }
