@@ -1145,6 +1145,8 @@ const turnKey = `${sharedRoundId}:${active}`;
 ]);
 
 useEffect(() => {
+  if (serverHand) return;
+
   const previousState = previousBiddingStateRef.current;
 
   if (
@@ -1158,6 +1160,7 @@ useEffect(() => {
 
   previousBiddingStateRef.current = game.state;
 }, [
+  serverHand,
   game.state,
   game.dealSeed,
   sharedDealSeed,
