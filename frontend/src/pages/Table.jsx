@@ -840,11 +840,13 @@ function handlePass() {
 
 function handlePassAnnouncement() {
   if (!isServerBiddingPhase) return;
+  if (!isServerLocalTurn) return;
   sendTableGameAction({ type: "PASS_ANNOUNCEMENT" });
 }
 
 function handleDeclareAnnouncement(announcement) {
   if (!isServerBiddingPhase) return;
+  if (!isServerLocalTurn) return;
   if (!announcement) return;
 
   sendTableGameAction({
@@ -885,6 +887,8 @@ function handleTakeAtoutSuit(suit) {
   sendTableGameAction({ type: "TAKE_ATOUT", suit });
 }
  function handlePlayCard(card) {
+  if (!isServerLocalTurn) return;
+
   const cardKey = `${card.suit}:${String(card.value).toUpperCase()}`;
   sendTableGameAction({ type: "PLAY_CARD", cardKey });
 }
