@@ -821,7 +821,7 @@ const sendTableGameAction = useCallback((action) => {
   const ws = wsTableRef.current;
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   if (!tableId) return;
-  if (!sharedRoundId) return;
+  if (!sharedRoundId || sharedRoundId === "none") return;
 
   ws.send(
     JSON.stringify({
