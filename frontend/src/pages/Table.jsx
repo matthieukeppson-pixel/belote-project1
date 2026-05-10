@@ -194,6 +194,7 @@ const modernValidatedAnnouncementToastKeyRef = useRef(null);
 const bestValidatedAnnouncementToastRef = useRef(null);
 const serverBeloteToastKeyRef = useRef(null);
 const serverBeloteToastTimerRef = useRef(null);
+const serverHandRef = useRef(null);
 const [_tableSnapshot, setTableSnapshot] = useState(null);
 const mode = _tableSnapshot?.mode || initialRouteMode || "classic";
 const modeLabel =
@@ -402,12 +403,15 @@ useEffect(() => {
 
       if (msg.type === "tables" && Array.isArray(msg.tables)) {
         const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
+        serverHandRef.current = found?.game?.hand || null;
         setTableSnapshot(found);
         return;
       }
 
       if (msg.type === "table_game_action" && Number(msg.tableId) === Number(tableId)) {
         if (!msg.action || typeof msg.action.type !== "string") return;
+
+        if (serverHandRef.current) return;
 
         setGame((g) => dispatch(g, msg.action));
         return;
