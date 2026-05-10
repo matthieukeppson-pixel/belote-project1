@@ -1787,6 +1787,7 @@ useEffect(() => {
                           className="atout-btn take"
                          onClick={() => handleTakeAtoutSuit("SA")}
                           title="Sans Atout"
+                          disabled={!isServerBiddingPhase || !isServerLocalTurn}
                         >
                           SA
                         </button>
