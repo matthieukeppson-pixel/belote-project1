@@ -2053,13 +2053,6 @@ function playOneBotCardIfNeeded(table) {
     version: (table.game?.version || 0) + 1,
   };
 
-  broadcastToTable(table.id, {
-    type: "table_game_action",
-    tableId: table.id,
-    roundId: String(nextHand.roundId || hand.roundId || ""),
-    action,
-    actor: actorPseudo,
-  });
 
   broadcastTables();
   scheduleAdvanceCompletedTrick(table);
