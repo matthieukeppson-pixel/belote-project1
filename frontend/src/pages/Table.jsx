@@ -528,6 +528,7 @@ const serverTurnSeatIndex =
     : null;
 const serverTurnPlayerId = displayedPlayerIdForSeatIndex(serverTurnSeatIndex);
 const authoritativeAtout = serverHand?.atout || game.atout || null;
+const authoritativeAtoutPropose = serverHand?.atoutPropose || game.atoutPropose || null;
 
 const authoritativeTakerSeatIndex =
   typeof serverHand?.takerSeatIndex === "number"
@@ -1815,12 +1816,12 @@ useEffect(() => {
   (effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 ||
     effectivePhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2) &&
   showServerBiddingHint &&
-  game.atoutPropose && (
+  authoritativeAtoutPropose && (
                 <div className="atout-card">
                   <div className="label">Atout</div>
                   <img
-                    src={cardImgSrc(game.atoutPropose)}
-                    alt={`${game.atoutPropose.value} ${game.atoutPropose.suit}`}
+                    src={cardImgSrc(authoritativeAtoutPropose)}
+                    alt={`${authoritativeAtoutPropose.value} ${authoritativeAtoutPropose.suit}`}
                     className="card-img"
                     draggable={false}
                   />
@@ -1830,16 +1831,17 @@ useEffect(() => {
            {(mode === "classic" || mode === "moderne") &&
   serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
   showServerBiddingHint &&
-  game.atoutPropose && (
+  authoritativeAtoutPropose && (
                 <div className="atout-panel atout-panel--glass atout-panel--tour2-wide">
                   <div className="atout-title">Choisir l’atout</div>
 
                   <div className="atout-actions atout-actions--tour2">
-                    {ALL_SUITS.filter((suit) => suit !== game.atoutPropose.suit).map((suit) => (
+                    {ALL_SUITS.filter((suit) => suit !== authoritativeAtoutPropose.suit).map((suit) => (
                       <button
                         key={suit}
                         className="atout-btn take atout-suit-btn"
                         onClick={() => handleTakeAtoutSuit(suit)}
+                        disabled={!isServerBiddingPhase || !isServerLocalTurn}
                       >
                         <span className={`atout-suit-symbol ${suit}`}>{suitLabel(suit)}</span>
                       </button>
@@ -1851,6 +1853,7 @@ useEffect(() => {
       className="atout-btn take"
       onClick={() => handleTakeAtoutSuit("SA")}
       title="Sans Atout"
+      disabled={!isServerBiddingPhase || !isServerLocalTurn}
     >
       SA
     </button>
@@ -1858,6 +1861,7 @@ useEffect(() => {
       className="atout-btn take"
       onClick={() => handleTakeAtoutSuit("TA")}
       title="Tout Atout"
+      disabled={!isServerBiddingPhase || !isServerLocalTurn}
     >
       TA
     </button>
@@ -1867,7 +1871,7 @@ useEffect(() => {
 <button
   className="atout-btn pass atout-pass-inline"
   onClick={handlePass}
-  disabled={!isServerBiddingPhase}
+  disabled={!isServerBiddingPhase || !isServerLocalTurn}
 >
   Passer
 </button>
