@@ -2651,14 +2651,6 @@ if (
 
   broadcastTables();
 
-  // on garde le rebroadcast pour ne pas casser le frontend actuel
-  broadcastToTable(t.id, {
-    type: "table_game_action",
-    tableId: t.id,
-    roundId,
-    action,
-    actor: pseudo,
-  });
 
   if (nextHand.phase === "PLI_EN_COURS") {
     playBotCardsUntilHumanTurn(t);
@@ -2715,16 +2707,6 @@ if (
 
   broadcastTables();
 
-  // on garde le rebroadcast pour ne pas casser le frontend actuel
-    broadcastToTable(t.id, {
-    type: "table_game_action",
-    tableId: t.id,
-    roundId,
-    action,
-    actor: pseudo,
-  });
-
-  broadcastTables();
 
   playBotCardsUntilHumanTurn(t);
   return;
