@@ -1,0 +1,50 @@
+﻿# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dépendances
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Builds
+dist/
+dist-ssr/
+build/
+coverage/
+*.local
+
+# Environment / config locale
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Uploads utilisateurs
+backend/uploads/
+
+# Fichiers temporaires / sauvegardes locales
+*.bak
+*.patch
+*.BROKEN*
+*.backup.jsx
+diff_*.txt
+*_diff.txt
+rapport-avancement-git.txt
+backend/ws-test.mjs
