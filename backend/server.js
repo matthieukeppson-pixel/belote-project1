@@ -1,7 +1,9 @@
 ﻿import express from "express";
 import cors from "cors";
 import http from "http";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { WebSocketServer } from "ws";
+import db from "./db.js";
 
 /**
  * BACKEND
@@ -40,7 +42,176 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 app.get("/", (_req, res) => res.send("Backend HTTP OK"));
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
+  });
+}
 
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function onRun(err) {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      resolve({
+        lastID: this.lastID,
+        changes: this.changes,
+      });
+    });
+  });
+}
+
+function normalizeUsername(value) {
+  return String(value || "").trim();
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(String(password), salt, 64).toString("hex");
+
+  return `scrypt:${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+  const parts = String(storedHash || "").split(":");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+
+  const [, salt, expectedHash] = parts;
+  const actual = Buffer.from(
+    scryptSync(String(password), salt, 64).toString("hex"),
+    "hex"
+  );
+  const expected = Buffer.from(expectedHash, "hex");
+
+  if (actual.length !== expected.length) return false;
+
+  return timingSafeEqual(actual, expected);
+}
+
+function publicUserFromDb(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    username: row.username,
+    pseudo: row.username,
+    email: row.email,
+    avatar_url: row.avatar_url || "/avatar_blue.png",
+  };
+}
+
+app.post("/api/register", async (req, res) => {
+  try {
+    const username = normalizeUsername(req.body?.username || req.body?.pseudo);
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+    const avatarUrl =
+      String(req.body?.avatar_url || req.body?.avatar || "/avatar_blue.png").trim() ||
+      "/avatar_blue.png";
+
+    if (!username) {
+      return res.status(400).json({ error: "Pseudo obligatoire" });
+    }
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ error: "Email invalide" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: "Le mot de passe doit contenir au moins 6 caractères",
+      });
+    }
+
+    const existing = await dbGet(
+      `
+        SELECT id, username, email
+        FROM users
+        WHERE lower(username) = lower(?) OR lower(email) = lower(?)
+        LIMIT 1
+      `,
+      [username, email]
+    );
+
+    if (existing) {
+      return res.status(409).json({
+        error: "Pseudo ou email déjà utilisé",
+      });
+    }
+
+    const passwordHash = hashPassword(password);
+
+    const result = await dbRun(
+      `
+        INSERT INTO users (username, email, password_hash, avatar_url)
+        VALUES (?, ?, ?, ?)
+      `,
+      [username, email, passwordHash, avatarUrl]
+    );
+
+    const created = await dbGet(
+      `
+        SELECT id, username, email, avatar_url
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [result.lastID]
+    );
+
+    return res.status(201).json({
+      user: publicUserFromDb(created),
+    });
+  } catch (err) {
+    console.error("Erreur /api/register", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email et mot de passe obligatoires" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT id, username, email, password_hash, avatar_url
+        FROM users
+        WHERE lower(email) = lower(?)
+        LIMIT 1
+      `,
+      [email]
+    );
+
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: "Identifiants invalides" });
+    }
+
+    const token = randomBytes(32).toString("hex");
+
+    return res.json({
+      token,
+      user: publicUserFromDb(user),
+    });
+  } catch (err) {
+    console.error("Erreur /api/login", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 app.listen(HTTP_PORT, () => {
   console.log(`âœ… Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
 });
