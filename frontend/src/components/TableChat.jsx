@@ -46,6 +46,19 @@ const SIMPLE_EMOJIS = [
   { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
   { code: ":croissant:", src: "/emojis/croissant.png", alt: "croissant" },
   { code: ":barbecue:", src: "/emojis/barbecue.png", alt: "barbecue" },
+
+  // Emojis Vero pack 2
+  { code: ":merci_pancarte:", src: "/emojis/merci_pancarte.png", alt: "merci pancarte" },
+  { code: ":chocolat_sourire:", src: "/emojis/chocolat_sourire.png", alt: "chocolat sourire" },
+  { code: ":bieres:", src: "/emojis/bieres.png", alt: "bieres" },
+  { code: ":musique_calme:", src: "/emojis/musique_calme.png", alt: "musique calme" },
+  { code: ":micro:", src: "/emojis/micro.png", alt: "micro" },
+  { code: ":glace_choco:", src: "/emojis/glace_choco.png", alt: "glace choco" },
+  { code: ":fete:", src: "/emojis/fete.png", alt: "fete" },
+  { code: ":sucette_or:", src: "/emojis/sucette_or.png", alt: "sucette or" },
+  { code: ":malade_thermo:", src: "/emojis/malade_thermo.png", alt: "malade thermo" },
+  { code: ":chocolat:", src: "/emojis/chocolat.png", alt: "chocolat" },
+  { code: ":singe_cache:", src: "/emojis/singe_cache.png", alt: "singe cache" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
