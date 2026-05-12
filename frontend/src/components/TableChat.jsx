@@ -28,39 +28,19 @@ const SIMPLE_EMOJIS = [
   { code: ":bisou:", src: "/emojis/bisou.png", alt: "bisou" },
 ];
 
-const CUSTOM_CHAT_EMOJIS = {
-  ":coeur:": "/emojis/coeur.png",
-  ":cool:": "/emojis/cool.png",
-  ":langue:": "/emojis/langue.png",
-  ":pouce:": "/emojis/pouce.png",
-  ":reflexion:": "/emojis/reflexion.png",
-  ":sourire:": "/emojis/sourire.png",
+const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
+  SIMPLE_EMOJIS.map((emoji) => [emoji.code.toLowerCase(), emoji.src])
+);
 
-  ":cafe:": "/emojis/cafe.png",
-  ":cadeau:": "/emojis/cadeau.png",
-  ":facepalm:": "/emojis/facepalm.png",
-  ":diable:": "/emojis/diable.png",
-  ":merci:": "/emojis/merci.png",
-  ":clinoeil:": "/emojis/clinoeil.png",
-  ":attention:": "/emojis/attention.png",
-  ":rougir:": "/emojis/rougir.png",
-  ":parfait:": "/emojis/parfait.png",
-  ":stress:": "/emojis/stress.png",
-
-  ":rire:": "/emojis/rire.png",
-  ":dodo:": "/emojis/dodo.png",
-  ":fleur:": "/emojis/fleur.png",
-  ":colere:": "/emojis/colere.png",
-  ":glace:": "/emojis/glace.png",
-  ":bisou:": "/emojis/bisou.png",
-};
+const CUSTOM_CHAT_EMOJI_REGEX = new RegExp(
+  "(" + SIMPLE_EMOJIS.map((emoji) => emoji.code).join("|") + ")",
+  "gi"
+);
 
 function renderCustomMessageContent(text) {
   const raw = String(text || "");
 
-  const parts = raw.split(
-    /(:coeur:|:cool:|:langue:|:pouce:|:reflexion:|:sourire:|:cafe:|:cadeau:|:facepalm:|:diable:|:merci:|:clinoeil:|:attention:|:rougir:|:parfait:|:stress:|:rire:|:dodo:|:fleur:|:colere:|:glace:|:bisou:)/gi
-  );
+  const parts = raw.split(CUSTOM_CHAT_EMOJI_REGEX);
 
   return parts.map((part, index) => {
     const clean = String(part || "").trim().toLowerCase();
