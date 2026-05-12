@@ -26,6 +26,26 @@ const SIMPLE_EMOJIS = [
   { code: ":colere:", src: "/emojis/colere.png", alt: "colere" },
   { code: ":glace:", src: "/emojis/glace.png", alt: "glace" },
   { code: ":bisou:", src: "/emojis/bisou.png", alt: "bisou" },
+
+  // Emojis Vero
+  { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
+  { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
+  { code: ":sucette:", src: "/emojis/sucette.png", alt: "sucette" },
+  { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
+  { code: ":cafe_croissant:", src: "/emojis/cafe_croissant.png", alt: "cafe croissant" },
+  { code: ":singe_chut:", src: "/emojis/singe_chut.png", alt: "singe chut" },
+  { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
+  { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
+  { code: ":dj:", src: "/emojis/dj.png", alt: "dj" },
+  { code: ":rigolo:", src: "/emojis/rigolo.png", alt: "rigolo" },
+  { code: ":cookie:", src: "/emojis/cookie.png", alt: "cookie" },
+  { code: ":telephone:", src: "/emojis/telephone.png", alt: "telephone" },
+  { code: ":jus_orange:", src: "/emojis/jus_orange.png", alt: "jus orange" },
+  { code: ":ange:", src: "/emojis/ange.png", alt: "ange" },
+  { code: ":bonbon:", src: "/emojis/bonbon.png", alt: "bonbon" },
+  { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
+  { code: ":croissant:", src: "/emojis/croissant.png", alt: "croissant" },
+  { code: ":barbecue:", src: "/emojis/barbecue.png", alt: "barbecue" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
