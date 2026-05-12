@@ -4,12 +4,107 @@ import { createPortal } from "react-dom";
 import "../styles/salonjeu.css";
 import Profil from "./Profil.jsx";
 
+const SALON_EMOJIS = [
+  { code: ":langue:", src: "/emojis/langue.png", alt: "langue" },
+  { code: ":pouce:", src: "/emojis/pouce.png", alt: "pouce" },
+  { code: ":coeur:", src: "/emojis/coeur.png", alt: "coeur" },
+  { code: ":cool:", src: "/emojis/cool.png", alt: "cool" },
+  { code: ":sourire:", src: "/emojis/sourire.png", alt: "sourire" },
+  { code: ":reflexion:", src: "/emojis/reflexion.png", alt: "reflexion" },
+
+  { code: ":cafe:", src: "/emojis/cafe.png", alt: "cafe" },
+  { code: ":cadeau:", src: "/emojis/cadeau.png", alt: "cadeau" },
+  { code: ":facepalm:", src: "/emojis/facepalm.png", alt: "facepalm" },
+  { code: ":diable:", src: "/emojis/diable.png", alt: "diable" },
+  { code: ":merci:", src: "/emojis/merci.png", alt: "merci" },
+  { code: ":clinoeil:", src: "/emojis/clinoeil.png", alt: "clinoeil" },
+  { code: ":attention:", src: "/emojis/attention.png", alt: "attention" },
+  { code: ":rougir:", src: "/emojis/rougir.png", alt: "rougir" },
+  { code: ":parfait:", src: "/emojis/parfait.png", alt: "parfait" },
+  { code: ":stress:", src: "/emojis/stress.png", alt: "stress" },
+
+  { code: ":rire:", src: "/emojis/rire.png", alt: "rire" },
+  { code: ":dodo:", src: "/emojis/dodo.png", alt: "dodo" },
+  { code: ":fleur:", src: "/emojis/fleur.png", alt: "fleur" },
+  { code: ":colere:", src: "/emojis/colere.png", alt: "colere" },
+  { code: ":glace:", src: "/emojis/glace.png", alt: "glace" },
+  { code: ":bisou:", src: "/emojis/bisou.png", alt: "bisou" },
+
+  // Emojis Vero
+  { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
+  { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
+  { code: ":sucette:", src: "/emojis/sucette.png", alt: "sucette" },
+  { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
+  { code: ":cafe_croissant:", src: "/emojis/cafe_croissant.png", alt: "cafe croissant" },
+  { code: ":singe_chut:", src: "/emojis/singe_chut.png", alt: "singe chut" },
+  { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
+  { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
+  { code: ":dj:", src: "/emojis/dj.png", alt: "dj" },
+  { code: ":rigolo:", src: "/emojis/rigolo.png", alt: "rigolo" },
+  { code: ":cookie:", src: "/emojis/cookie.png", alt: "cookie" },
+  { code: ":telephone:", src: "/emojis/telephone.png", alt: "telephone" },
+  { code: ":jus_orange:", src: "/emojis/jus_orange.png", alt: "jus orange" },
+  { code: ":ange:", src: "/emojis/ange.png", alt: "ange" },
+  { code: ":bonbon:", src: "/emojis/bonbon.png", alt: "bonbon" },
+  { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
+  { code: ":croissant:", src: "/emojis/croissant.png", alt: "croissant" },
+  { code: ":barbecue:", src: "/emojis/barbecue.png", alt: "barbecue" },
+
+  // Emojis Vero pack 2
+  { code: ":merci_pancarte:", src: "/emojis/merci_pancarte.png", alt: "merci pancarte" },
+  { code: ":chocolat_sourire:", src: "/emojis/chocolat_sourire.png", alt: "chocolat sourire" },
+  { code: ":bieres:", src: "/emojis/bieres.png", alt: "bieres" },
+  { code: ":musique_calme:", src: "/emojis/musique_calme.png", alt: "musique calme" },
+  { code: ":micro:", src: "/emojis/micro.png", alt: "micro" },
+  { code: ":glace_choco:", src: "/emojis/glace_choco.png", alt: "glace choco" },
+  { code: ":fete:", src: "/emojis/fete.png", alt: "fete" },
+  { code: ":sucette_or:", src: "/emojis/sucette_or.png", alt: "sucette or" },
+  { code: ":malade_thermo:", src: "/emojis/malade_thermo.png", alt: "malade thermo" },
+  { code: ":chocolat:", src: "/emojis/chocolat.png", alt: "chocolat" },
+  { code: ":singe_cache:", src: "/emojis/singe_cache.png", alt: "singe cache" },
+];
+
+const SALON_CHAT_EMOJIS = Object.fromEntries(
+  SALON_EMOJIS.map((emoji) => [emoji.code.toLowerCase(), emoji.src])
+);
+
+const SALON_CHAT_EMOJI_REGEX = new RegExp(
+  "(" + SALON_EMOJIS.map((emoji) => emoji.code).join("|") + ")",
+  "gi"
+);
+
+function renderSalonMessageContent(text) {
+  const raw = String(text || "");
+  const parts = raw.split(SALON_CHAT_EMOJI_REGEX);
+
+  return parts.map((part, index) => {
+    const clean = String(part || "").trim().toLowerCase();
+    const src = SALON_CHAT_EMOJIS[clean];
+
+    if (src) {
+      return (
+        <span key={`salon-emoji-${index}`} className="salon-chat-custom-emoji-wrap">
+          <img
+            src={src}
+            alt={clean}
+            className="salon-chat-custom-emoji"
+          />
+        </span>
+      );
+    }
+
+    return <span key={`salon-text-${index}`}>{part}</span>;
+  });
+}
+
+
 export default function SalonJeu({ user }) {
   const currentName = user?.pseudo || "Joueur";
 
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [showProfil, setShowProfil] = useState(false);
 
   // ✅ Tables viennent du serveur WS (plus de mock)
@@ -209,6 +304,19 @@ return () => {
   /* ===============================
      ENVOI MESSAGE
   ================================ */
+  const addEmoji = (code) => {
+
+    setInputMessage((prev) => {
+
+      const clean = String(prev || "").trim();
+
+      return clean ? `${clean} ${code}` : code;
+
+    });
+
+  };
+
+
   const sendMessage = () => {
     const text = inputMessage.trim();
     if (!text) return;
@@ -220,6 +328,9 @@ return () => {
     });
 
     setInputMessage("");
+
+
+    setIsEmojiPanelOpen(false);
   };
 
   /* ===============================
@@ -319,10 +430,68 @@ const statusText = isHumanFull
             {messages.map((m) => (
               <div key={m.id} className="chat-message">
                 <span className="chat-user">{m.user} :</span>
-                <span className="chat-text">{m.text}</span>
+                <span className="chat-text">{renderSalonMessageContent(m.text)}</span>
               </div>
             ))}
           </div>
+
+          {isEmojiPanelOpen && (
+
+
+            <div className="salon-chat-emojis">
+
+
+              {SALON_EMOJIS.map((emoji) => (
+
+
+                <button
+
+
+                  key={emoji.code}
+
+
+                  type="button"
+
+
+                  className="salon-chat-emoji-btn"
+
+
+                  onClick={() => addEmoji(emoji.code)}
+
+
+                  title={emoji.alt}
+
+
+                >
+
+
+                  <img
+
+
+                    src={emoji.src}
+
+
+                    alt={emoji.alt}
+
+
+                    className="salon-chat-emoji-btn-img"
+
+
+                  />
+
+
+                </button>
+
+
+              ))}
+
+
+            </div>
+
+
+          )}
+
+
 
           <div className="chat-input-zone">
             <input
@@ -332,6 +501,22 @@ const statusText = isHumanFull
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Écrire un message..."
             />
+            <button
+
+              type="button"
+
+              className="chat-emoji-toggle"
+
+              onClick={() => setIsEmojiPanelOpen((prev) => !prev)}
+
+              title="Ouvrir les emojis"
+
+            >
+
+              {isEmojiPanelOpen ? "X" : ":)"}
+
+            </button>
+
             <button className="chat-send" onClick={sendMessage}>
               Envoyer
             </button>
