@@ -967,6 +967,11 @@ const localSeatTeam =
       ? "eux"
       : null;
 
+const displayScoreUI =
+  scoreUI && localSeatTeam === "eux"
+    ? { nous: scoreUI.eux, eux: scoreUI.nous }
+    : scoreUI;
+
 const currentBidSeatIndex =
   typeof authoritativeCurrentBid?.seatIndex === "number"
     ? authoritativeCurrentBid.seatIndex
@@ -1602,13 +1607,13 @@ useEffect(() => {
   </div>
 )}
 
-{scoreUI && (
+{displayScoreUI && (
               <div className="score-overlay score-pill">
                 <span className="score-side">Nous</span>
                 <div className="score-pill-box">
-                  {scoreUI.nous}
+                  {displayScoreUI.nous}
                   <span className="score-sep">–</span>
-                  {scoreUI.eux}
+                  {displayScoreUI.eux}
                 </div>
                 <span className="score-side">Eux</span>
               </div>
