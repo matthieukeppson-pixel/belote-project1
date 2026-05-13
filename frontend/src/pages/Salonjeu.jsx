@@ -334,11 +334,11 @@ return () => {
   };
 
   /* ===============================
-     CHAT TOUJOURS EN HAUT
+     CHAT TOUJOURS EN BAS
   ================================ */
   useEffect(() => {
     if (!chatBoxRef.current) return;
-    chatBoxRef.current.scrollTop = 0;
+    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
   }, [messages]);
 
   /* ===============================
