@@ -1056,13 +1056,27 @@ function syncBotsForTable(table) {
 
   const humanCount = getHumanSeatCount(table);
 
-  // aucun humain => table vide, pas de bots
+  // aucun humain => table vide, pas de bots, reset du mode bots
   if (humanCount === 0) {
+    table.botsEnabled = false;
     table.seats = table.seats.map((pseudo) => (isBotPseudo(pseudo) ? null : pseudo));
     return;
   }
 
-  // au moins un humain => on remplit les places libres avec des bots
+  const hand = table.game?.hand || null;
+  const handStarted =
+    table.game?.status === "READY" &&
+    hand?.roundId &&
+    hand?.phase &&
+    hand.phase !== "IDLE";
+
+  // Avant demarrage, les bots ne completent que si un humain les demande.
+  // Apres demarrage, ils peuvent encore remplacer un humain deconnecte.
+  if (!table.botsEnabled && !handStarted) {
+    table.seats = table.seats.map((pseudo) => (isBotPseudo(pseudo) ? null : pseudo));
+    return;
+  }
+
   table.seats = table.seats.map((pseudo, seatIndex) => {
     if (pseudo) return pseudo;
     return buildBotSeat(table.id, seatIndex);
@@ -1163,6 +1177,7 @@ function createTable(mode = "classic") {
     id,
     mode,
     seats: [null, null, null, null],
+    botsEnabled: false,
     game: createEmptyServerGame(),
   });
   return tablesMap.get(id);
@@ -2941,6 +2956,34 @@ if (
       broadcastTables();
       return;
     }
+
+if (msg.type === "start_with_bots") {
+  const tableId = normalizeTableId(msg.tableId);
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
+
+  if (!isPlayerInTable(t.id, pseudo)) {
+    return;
+  }
+
+  const humanCount = getHumanSeatCount(t);
+  if (humanCount <= 0 || humanCount >= 4) {
+    return;
+  }
+
+  t.botsEnabled = true;
+  refreshServerGameForTable(t);
+  broadcastTables();
+
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: "D\u00E9marrage avec bots",
+  });
+
+  playBotCardsUntilHumanTurn(t);
+  return;
+}
 
 if (msg.type === "join_table") {
   const tableId = normalizeTableId(msg.tableId);

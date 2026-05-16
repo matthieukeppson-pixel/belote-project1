@@ -1216,6 +1216,18 @@ useEffect(() => {
   navigate("/salon");
 }
 
+function startWithBots() {
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN || !tableId) return;
+  ws.send(JSON.stringify({ type: "start_with_bots", tableId }));
+}
+
+const canStartWithBots =
+  mySeatIndex !== -1 &&
+  humanSeatIndices.length > 0 &&
+  humanSeatIndices.length < 4 &&
+  _tableSnapshot?.game?.status !== "READY";
+
   // ============================================
   // RENDER
   // ============================================
@@ -1232,6 +1244,17 @@ useEffect(() => {
         ← Retour au salon
       </button>
       <div className="table-mode-pill">Mode : {modeLabel}</div>
+
+      {canStartWithBots && (
+        <button
+          type="button"
+          className="start-with-bots-btn"
+          onClick={startWithBots}
+        >
+          {"D\u00E9marrer avec bots"}
+        </button>
+      )}
+
       {showTableDebug && (
         <div
           style={{

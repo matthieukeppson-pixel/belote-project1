@@ -986,3 +986,30 @@ body {
 
 
 
+
+
+.start-with-bots-btn {
+  position: absolute;
+  top: 72px;
+  left: 46%;
+  transform: translateX(-50%);
+  z-index: 35;
+
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 220, 120, 0.50);
+  border-radius: 999px;
+
+  background: linear-gradient(180deg, rgba(122, 11, 39, 0.96), rgba(95, 8, 30, 0.96));
+  color: #fff7d1;
+
+  font-size: 0.95rem;
+  font-weight: 900;
+
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.start-with-bots-btn:hover {
+  filter: brightness(1.08);
+  border-color: rgba(255, 235, 150, 0.75);
+}
