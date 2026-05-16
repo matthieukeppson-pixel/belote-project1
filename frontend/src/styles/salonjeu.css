@@ -80,10 +80,11 @@
 .table-card {
   padding: 18px 16px;
   margin-bottom: 18px;
-  min-height: 140px;
+  min-height: 188px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   background: rgba(0, 30, 80, 0.65);
   border-radius: 16px;
   border: 1px solid rgba(120, 180, 255, 0.25);
@@ -108,7 +109,10 @@
 }
 
 .btn-join {
-  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin-top: 12px;
   padding: 8px 14px;
   font-size: 1.1rem;
   border-radius: 10px;
@@ -308,6 +312,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-top: auto;
 }
 
 .table-card {
@@ -425,8 +430,9 @@
   background: rgba(27, 108, 248, 0.45);
 }
 .table-seated-players {
+  min-height: 38px;
   margin-top: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 10px;
