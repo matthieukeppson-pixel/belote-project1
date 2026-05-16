@@ -1324,10 +1324,25 @@ useEffect(() => {
     {authoritativeCurrentBid ? (
       <>
         <div
+          className="contree-current-contract"
           style={{
-            marginBottom: 10,
+            width: "fit-content",
+            minWidth: 260,
+            maxWidth: 360,
+            margin: "0 auto 12px",
+            padding: "8px 22px",
             textAlign: "center",
-            fontWeight: 800,
+            whiteSpace: "nowrap",
+            fontWeight: 900,
+            fontSize: "1.08rem",
+            color: "#fff7d1",
+            background:
+              "linear-gradient(180deg, rgba(255, 223, 120, 0.20), rgba(255, 176, 55, 0.10))",
+            border: "1px solid rgba(255, 223, 120, 0.55)",
+            borderRadius: 12,
+            textShadow: "0 1px 2px rgba(0, 0, 0, 0.65)",
+            boxShadow:
+              "0 0 14px rgba(255, 211, 88, 0.20), inset 0 0 10px rgba(255, 255, 255, 0.06)",
           }}
         >
           Contrat actuel : {authoritativeCurrentBid.value} {atoutSymbol(authoritativeCurrentBid.suit)} · x
