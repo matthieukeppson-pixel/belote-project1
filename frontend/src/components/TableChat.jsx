@@ -12,7 +12,6 @@ const SIMPLE_EMOJIS = [
   { code: ":cafe:", src: "/emojis/cafe.png", alt: "cafe" },
   { code: ":cadeau:", src: "/emojis/cadeau.png", alt: "cadeau" },
   { code: ":facepalm:", src: "/emojis/facepalm.png", alt: "facepalm" },
-  { code: ":diable:", src: "/emojis/diable.png", alt: "diable" },
   { code: ":merci:", src: "/emojis/merci.png", alt: "merci" },
   { code: ":clinoeil:", src: "/emojis/clinoeil.png", alt: "clinoeil" },
   { code: ":attention:", src: "/emojis/attention.png", alt: "attention" },
@@ -30,9 +29,7 @@ const SIMPLE_EMOJIS = [
   // Emojis Vero
   { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
   { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
-  { code: ":sucette:", src: "/emojis/sucette.png", alt: "sucette" },
   { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
-  { code: ":cafe_croissant:", src: "/emojis/cafe_croissant.png", alt: "cafe croissant" },
   { code: ":singe_chut:", src: "/emojis/singe_chut.png", alt: "singe chut" },
   { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
   { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
@@ -44,21 +41,11 @@ const SIMPLE_EMOJIS = [
   { code: ":ange:", src: "/emojis/ange.png", alt: "ange" },
   { code: ":bonbon:", src: "/emojis/bonbon.png", alt: "bonbon" },
   { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
-  { code: ":croissant:", src: "/emojis/croissant.png", alt: "croissant" },
-  { code: ":barbecue:", src: "/emojis/barbecue.png", alt: "barbecue" },
 
   // Emojis Vero pack 2
-  { code: ":merci_pancarte:", src: "/emojis/merci_pancarte.png", alt: "merci pancarte" },
   { code: ":chocolat_sourire:", src: "/emojis/chocolat_sourire.png", alt: "chocolat sourire" },
   { code: ":bieres:", src: "/emojis/bieres.png", alt: "bieres" },
-  { code: ":musique_calme:", src: "/emojis/musique_calme.png", alt: "musique calme" },
-  { code: ":micro:", src: "/emojis/micro.png", alt: "micro" },
-  { code: ":glace_choco:", src: "/emojis/glace_choco.png", alt: "glace choco" },
-  { code: ":fete:", src: "/emojis/fete.png", alt: "fete" },
   { code: ":sucette_or:", src: "/emojis/sucette_or.png", alt: "sucette or" },
-  { code: ":malade_thermo:", src: "/emojis/malade_thermo.png", alt: "malade thermo" },
-  { code: ":chocolat:", src: "/emojis/chocolat.png", alt: "chocolat" },
-  { code: ":singe_cache:", src: "/emojis/singe_cache.png", alt: "singe cache" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
