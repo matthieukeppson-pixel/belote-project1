@@ -500,7 +500,7 @@ const statusText = isHumanFull
 
             >
 
-              {isEmojiPanelOpen ? "X" : ":)"}
+              {isEmojiPanelOpen ? "\u2715" : "\u{1F60A}"}
 
             </button>
 
