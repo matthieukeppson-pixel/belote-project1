@@ -134,6 +134,10 @@ export default function SalonJeu({ user }) {
     setOpenMenu(null);
   }
 
+  function createSalonTable() {
+    sendWS({ type: "create_table", mode: "classic" });
+  }
+
   function toggleModeMenu(tableId) {
     if (openMenu === tableId) {
       setOpenMenu(null);
@@ -337,6 +341,21 @@ return () => {
         {/* TABLES */}
         <div className="panel panel-side">
           <h2 className="panel-title">Tables</h2>
+
+          {tables.length < 6 ? (
+            <button
+              type="button"
+              className="btn-create-table"
+              onClick={createSalonTable}
+              title={"Cr\u00E9er une table"}
+            >
+              {"+ Cr\u00E9er une table"}
+            </button>
+          ) : (
+            <div className="tables-ready-info">
+              {tables.length + " tables disponibles"}
+            </div>
+          )}
 
           <div className="tables-list">
             {tables.map((t) => {

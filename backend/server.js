@@ -1155,6 +1155,8 @@ function createEmptyServerGame() {
   };
 }
 
+const MAX_TABLES = 6;
+
 function createTable(mode = "classic") {
   const id = nextTableId++;
   tablesMap.set(id, {
@@ -2902,6 +2904,17 @@ if (
     }
 
     if (msg.type === "create_table") {
+      if (tablesMap.size >= MAX_TABLES) {
+        ws.send(
+          JSON.stringify({
+            type: "create_table_denied",
+            reason: "Nombre maximum de tables atteint.",
+            maxTables: MAX_TABLES,
+          })
+        );
+        return;
+      }
+
       const mode = String(msg.mode || "classic").trim() || "classic";
       const t = createTable(mode);
       system(`ðŸŸ¢ Table ${t.id} crÃ©Ã©e (${mode})`);
