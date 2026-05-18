@@ -969,3 +969,36 @@
 
   box-shadow: 0 0 10px rgba(0, 150, 255, 0.22);
 }
+
+
+.table-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.table-card-actions .btn-join {
+  margin-top: 0;
+}
+
+.btn-watch {
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  padding: 8px 14px;
+
+  font-size: 1.1rem;
+  border-radius: 10px;
+
+  background: rgba(0, 35, 110, 0.78);
+  color: #eaf6ff;
+
+  border: 1px solid rgba(120, 180, 255, 0.35);
+  cursor: pointer;
+}
+
+.btn-watch:hover {
+  filter: brightness(1.08);
+  border-color: rgba(160, 205, 255, 0.7);
+}

@@ -413,15 +413,28 @@ const statusText = isHumanFull
                     </div>
                   </div>
 
-                 <button
-  className="btn-join"
-  disabled={isHumanFull}
-  onClick={() => {
-    navigate(`/table/${t.id}`, { state: { mode: t.mode } });
-  }}
->
-  {isHumanFull ? "Table complète" : "Rejoindre"}
-</button>
+                  <div className="table-card-actions">
+                    <button
+                      className="btn-join"
+                      disabled={isHumanFull}
+                      onClick={() => {
+                        navigate(`/table/${t.id}`, { state: { mode: t.mode } });
+                      }}
+                    >
+                      {isHumanFull ? "Table compl\u00E8te" : "Rejoindre"}
+                    </button>
+
+                    <button
+                      className="btn-watch"
+                      onClick={() => {
+                        navigate(`/table/${t.id}`, {
+                          state: { mode: t.mode, role: "visitor" },
+                        });
+                      }}
+                    >
+                      Regarder
+                    </button>
+                  </div>
                 </div>
               );
             })}

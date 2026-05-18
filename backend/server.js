@@ -245,7 +245,7 @@ function makeBotName(tableId, seatIndex) {
 }
 
 function makeBotAvatar(seatIndex) {
-  return "/avatar_red.png";
+  return "/avatar.png";
 }
 
 function buildBotSeat(tableId, seatIndex) {
@@ -1177,6 +1177,7 @@ function createTable(mode = "classic") {
     id,
     mode,
     seats: [null, null, null, null],
+    visitors: [],
     botsEnabled: false,
     game: createEmptyServerGame(),
   });
@@ -1229,6 +1230,8 @@ function tablesArray() {
   return Array.from(tablesMap.values()).map((t) => {
     const seats = t.seats.map((x) => x || null);
     const seatsInfo = seats.map((pseudo) => seatInfoFromPseudo(pseudo));
+    const visitors = Array.isArray(t.visitors) ? t.visitors.filter(Boolean) : [];
+    const visitorsInfo = visitors.map((pseudo) => seatInfoFromPseudo(pseudo));
     const count = seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
 
     return {
@@ -1236,6 +1239,8 @@ function tablesArray() {
       mode: t.mode,
       seats,
       seatsInfo,
+      visitors,
+      visitorsInfo,
       count,
 game: {
   status: t.game?.status || "WAITING_FOR_PLAYERS",
@@ -2621,6 +2626,36 @@ function isPlayerInTable(tableId, pseudo) {
   if (!t) return false;
   return t.seats.some((p) => p === pseudo);
 }
+
+function isVisitorInTable(tableId, pseudo) {
+  const t = tablesMap.get(Number(tableId));
+  if (!t || !Array.isArray(t.visitors)) return false;
+  return t.visitors.some((p) => p === pseudo);
+}
+
+function isTableParticipant(tableId, pseudo) {
+  return isPlayerInTable(tableId, pseudo) || isVisitorInTable(tableId, pseudo);
+}
+
+function removeVisitorFromAnyTable(pseudo) {
+  let leftTableId = null;
+
+  for (const t of tablesMap.values()) {
+    if (!Array.isArray(t.visitors)) {
+      t.visitors = [];
+      continue;
+    }
+
+    const before = t.visitors.length;
+    t.visitors = t.visitors.filter((p) => p !== pseudo);
+
+    if (t.visitors.length !== before) {
+      leftTableId = t.id;
+    }
+  }
+
+  return leftTableId;
+}
 function removePlayerFromAnyTable(pseudo) {
   const found = findPlayerTable(pseudo);
   if (!found) return null;
@@ -2631,6 +2666,7 @@ function removePlayerFromAnyTable(pseudo) {
 wss.on("connection", (ws) => {
   ws.pseudo = null;
   ws.tableId = null;
+  ws.tableRole = null;
 
   // Ã©tat initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
@@ -2688,7 +2724,8 @@ wss.on("connection", (ws) => {
   if (!ws.tableId) return;
 
   // ne pas faire confiance au seul ws.tableId
-  if (!isPlayerInTable(ws.tableId, pseudo)) return;
+  // Un joueur assis ou un visiteur peut tchater sur la table.
+  if (!isTableParticipant(ws.tableId, pseudo)) return;
 
   broadcastToTable(ws.tableId, {
     type: "table_message",
@@ -2985,10 +3022,49 @@ if (msg.type === "start_with_bots") {
   return;
 }
 
+if (msg.type === "watch_table") {
+  const tableId = normalizeTableId(msg.tableId);
+  const t = tableId ? tablesMap.get(tableId) : null;
+  if (!t) return;
+
+  removeVisitorFromAnyTable(pseudo);
+
+  if (!Array.isArray(t.visitors)) {
+    t.visitors = [];
+  }
+
+  if (!isPlayerInTable(t.id, pseudo) && !t.visitors.includes(pseudo)) {
+    t.visitors.push(pseudo);
+  }
+
+  ws.tableId = t.id;
+  ws.tableRole = "visitor";
+
+  broadcastTables();
+
+  broadcastToTable(t.id, {
+    type: "table_system",
+    tableId: t.id,
+    text: `${pseudo} regarde la table`,
+  });
+
+  ws.send(
+    JSON.stringify({
+      type: "watching_table",
+      tableId: t.id,
+      mode: t.mode,
+    })
+  );
+
+  return;
+}
+
 if (msg.type === "join_table") {
   const tableId = normalizeTableId(msg.tableId);
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
+
+  removeVisitorFromAnyTable(pseudo);
 
   const prev = findPlayerTable(pseudo);
   const wasAlreadyInTargetTable =
@@ -3201,6 +3277,7 @@ if (msg.type === "choose_seat") {
           resumeTableAfterSeatChange(t);
           if (Number(ws.tableId) === Number(t.id)) {
             ws.tableId = null;
+            ws.tableRole = null;
           }
 
           broadcastTables();
@@ -3208,7 +3285,22 @@ if (msg.type === "choose_seat") {
           broadcastToTable(t.id, {
             type: "table_system",
             tableId: t.id,
-            text: `${pseudo} a quittÃ© la table`,
+            text: `${pseudo} a quitt\u00E9 la table`,
+          });
+        } else if (Array.isArray(t.visitors) && t.visitors.includes(pseudo)) {
+          t.visitors = t.visitors.filter((p) => p !== pseudo);
+
+          if (Number(ws.tableId) === Number(t.id)) {
+            ws.tableId = null;
+            ws.tableRole = null;
+          }
+
+          broadcastTables();
+
+          broadcastToTable(t.id, {
+            type: "table_system",
+            tableId: t.id,
+            text: `${pseudo} ne regarde plus la table`,
           });
         }
         return;
@@ -3250,6 +3342,8 @@ if (leftTable) {
       playersMap.delete(pseudo);
 
       const leftTableId = removePlayerFromAnyTable(pseudo);
+      const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
+
       const leftTable = tablesMap.get(leftTableId);
       if (leftTable) {
         refreshServerGameForTable(leftTable);
@@ -3263,6 +3357,14 @@ if (leftTable) {
           type: "table_system",
           tableId: leftTableId,
           text: `${pseudo} a quittÃ© la table`,
+        });
+      }
+
+      if (leftVisitorTableId && Number(leftVisitorTableId) !== Number(leftTableId)) {
+        broadcastToTable(leftVisitorTableId, {
+          type: "table_system",
+          tableId: leftVisitorTableId,
+          text: `${pseudo} ne regarde plus la table`,
         });
       }
 

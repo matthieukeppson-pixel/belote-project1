@@ -172,6 +172,7 @@ export default function Table() {
  const navigate = useNavigate();
 const location = useLocation();
 const initialRouteMode = location.state?.mode || null;
+const tableRole = location.state?.role === "visitor" ? "visitor" : "player";
 const { id } = useParams();
   const tableId = Number(id);
 
@@ -222,6 +223,11 @@ function _chooseSeat(seatIndex) {
   const ws = wsTableRef.current;
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     pushTemporarySystemMessage("Connexion WS non ouverte");
+    return;
+  }
+
+  if (tableRole === "visitor") {
+    pushTemporarySystemMessage("Mode visiteur : vous regardez la table");
     return;
   }
 
@@ -287,6 +293,8 @@ const normalizePseudo = (value) =>
 const mySeatIndex = tableSeatPseudos.findIndex(
   (seatPseudo) => normalizePseudo(seatPseudo) === normalizePseudo(pseudo)
 );
+
+const viewSeatIndex = tableRole === "visitor" ? -1 : mySeatIndex;
 const humanSeatIndices = seatsInfo.reduce((acc, seat, index) => {
   if (seat?.name && !seat?.isBot) acc.push(index);
   return acc;
@@ -294,21 +302,23 @@ const humanSeatIndices = seatsInfo.reduce((acc, seat, index) => {
 
 const primaryHumanSeatIndex = humanSeatIndices[0] ?? -1;
 const isPrimaryTableDriver =
-  mySeatIndex !== -1 && mySeatIndex === primaryHumanSeatIndex;
+  tableRole !== "visitor" &&
+  mySeatIndex !== -1 &&
+  mySeatIndex === primaryHumanSeatIndex;
 
 // POSITION DE RENDU LOCALE
 // - bottom / left / top / right = vue du joueur local
 // - ce n'est pas le siège réel serveur
 // - le joueur local reste toujours affiché en bas
 function seatIndexForPosition(position) {
-  if (mySeatIndex === -1) {
+  if (viewSeatIndex === -1) {
     return UNSEATED_POSITION_TO_SEAT_INDEX[position] ?? null;
   }
 
-  if (position === "bottom") return mySeatIndex;
-  if (position === "left") return (mySeatIndex + 1) % 4;
-  if (position === "top") return (mySeatIndex + 2) % 4;
-  if (position === "right") return (mySeatIndex + 3) % 4;
+  if (position === "bottom") return viewSeatIndex;
+  if (position === "left") return (viewSeatIndex + 1) % 4;
+  if (position === "top") return (viewSeatIndex + 2) % 4;
+  if (position === "right") return (viewSeatIndex + 3) % 4;
 
   return null;
 }
@@ -347,7 +357,7 @@ function seatForPosition(position) {
 function seatAvatarForPosition(position) {
   const seat = seatForPosition(position);
 
-  if (position === "bottom" && mySeatIndex !== -1) {
+  if (position === "bottom" && viewSeatIndex !== -1) {
     return seat?.avatar || avatar;
   }
 
@@ -357,7 +367,7 @@ function seatAvatarForPosition(position) {
 function seatNameForPosition(position) {
   const seat = seatForPosition(position);
 
-  if (position === "bottom" && mySeatIndex !== -1) {
+  if (position === "bottom" && viewSeatIndex !== -1) {
     return seat?.name || pseudo;
   }
 
@@ -365,6 +375,8 @@ function seatNameForPosition(position) {
 }
 
 function canChoosePosition(position) {
+  if (tableRole === "visitor") return false;
+
   const idx = seatIndexForPosition(position);
   if (idx == null) return false;
   if (idx === mySeatIndex) return false;
@@ -394,7 +406,12 @@ useEffect(() => {
 }
 
     ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
-    ws.send(JSON.stringify({ type: "join_table", tableId }));
+    ws.send(
+      JSON.stringify({
+        type: tableRole === "visitor" ? "watch_table" : "join_table",
+        tableId,
+      })
+    );
   };
 
   ws.onmessage = (event) => {
@@ -459,7 +476,7 @@ useEffect(() => {
 
     if (wsTableRef.current === ws) wsTableRef.current = null;
   };
-}, [tableId, pseudo, avatar]);
+}, [tableId, pseudo, avatar, tableRole]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
@@ -1223,6 +1240,7 @@ function startWithBots() {
 }
 
 const canStartWithBots =
+  tableRole !== "visitor" &&
   mySeatIndex !== -1 &&
   humanSeatIndices.length > 0 &&
   humanSeatIndices.length < 4 &&
@@ -1321,7 +1339,8 @@ const canStartWithBots =
               </div>
             )}
 
- {mode === "contree" &&
+ {tableRole !== "visitor" &&
+  mode === "contree" &&
   effectivePhaseLabel === STATES.ENCHERES &&
   isServerBiddingPhase && (
   <div
@@ -1484,7 +1503,7 @@ const canStartWithBots =
   </div>
 )}
             
-{showModernAnnouncementPanel && (
+{tableRole !== "visitor" && showModernAnnouncementPanel && (
   <div
     className="atout-panel modern-announcement-panel"
     style={{
@@ -1705,7 +1724,7 @@ const canStartWithBots =
     position === "left" || position === "right" ? 6 : 10;
   const backCardInwardBase =
     position === "left" ? -14 : position === "right" ? 14 : 0;
-  const isLocalDisplayedPlayer = position === "bottom";
+  const isLocalDisplayedPlayer = tableRole !== "visitor" && position === "bottom";
  const isActiveDisplayedPlayer =
   serverTurnSeatIndex != null
     ? displayedSeatIndex === serverTurnSeatIndex
@@ -1730,7 +1749,7 @@ const canStartWithBots =
                 
                   <img
                    src={displayedSeatAvatar}
-                    alt={isLocalDisplayedPlayer ? pseudo || "Avatar" : "Avatar"}
+                    alt={isLocalDisplayedPlayer ? pseudo || "Avatar" : displayedSeatName || "Avatar"}
                     className="player-avatar"
                   />
 
@@ -1787,7 +1806,7 @@ const canStartWithBots =
               );
             })}
 
-               {localHand.length > 0 && (
+               {tableRole !== "visitor" && localHand.length > 0 && (
   <div className="player-bottom">
     {sortHandForDisplay(localHand).map((card, index) => {
   const total = localHand.length;
@@ -1822,7 +1841,8 @@ const canStartWithBots =
   </div>
 )}
 
-            {(mode === "classic" || mode === "moderne") &&
+            {tableRole !== "visitor" &&
+  (mode === "classic" || mode === "moderne") &&
   serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_1 &&
     showServerBiddingHint && (
                 <div className="atout-panel atout-panel--glass">
@@ -1884,7 +1904,8 @@ const canStartWithBots =
                 </div>
               )}
 
-           {(mode === "classic" || mode === "moderne") &&
+           {tableRole !== "visitor" &&
+  (mode === "classic" || mode === "moderne") &&
   serverPhaseLabel === STATES.ANNOUNCE_ATOUT_TOUR_2 &&
   showServerBiddingHint &&
   authoritativeAtoutPropose && (
