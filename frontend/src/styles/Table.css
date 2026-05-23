@@ -1021,8 +1021,8 @@ body {
 
 .table-animation-btn {
   position: absolute;
-  top: 20px;
-  left: 190px;
+  top: 32px;
+  left: 960px;
   padding: 8px 16px;
   border-radius: 20px;
   border: 1px solid rgba(220, 180, 120, 0.8);
