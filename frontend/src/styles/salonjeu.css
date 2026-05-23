@@ -5,6 +5,7 @@
 .salon-wrapper {
   min-height: 100vh;
   padding: 15px;
+  position: relative;
   background-image: url("/salon_star.png");
   background-size: cover;
   background-position: center;
@@ -1010,4 +1011,28 @@
   padding-right: 8px;
   font-size: 1rem;
   white-space: nowrap;
+}
+
+
+/* ===============================
+   BOUTON ANIMATION SALON
+================================ */
+
+.salon-animation-btn {
+  position: absolute;
+  top: 24px;
+  right: 36px;
+  padding: 10px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(150, 210, 255, 0.9);
+  background: linear-gradient(180deg, #2f7cff, #1f58c8);
+  color: white;
+  font-weight: 700;
+  cursor: default;
+  box-shadow: 0 0 12px rgba(55, 140, 255, 0.55);
+  z-index: 20;
+}
+
+.salon-animation-btn:hover {
+  filter: brightness(1.08);
 }

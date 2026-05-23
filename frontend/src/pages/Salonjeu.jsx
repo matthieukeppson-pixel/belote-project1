@@ -337,6 +337,14 @@ return () => {
   ================================ */
   return (
     <div className="salon-wrapper">
+      <button
+        type="button"
+        className="salon-animation-btn"
+        title="Animation bientot disponible"
+      >
+        {String.fromCodePoint(0x1F399) + " Animation"}
+      </button>
+
       <div className="salon-grid">
         {/* TABLES */}
         <div className="panel panel-side">

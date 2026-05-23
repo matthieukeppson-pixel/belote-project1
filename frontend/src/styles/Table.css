@@ -1013,3 +1013,27 @@ body {
   filter: brightness(1.08);
   border-color: rgba(255, 235, 150, 0.75);
 }
+
+
+/* ============================================
+   BOUTON ANIMATION TABLE
+============================================ */
+
+.table-animation-btn {
+  position: absolute;
+  top: 20px;
+  left: 190px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(220, 180, 120, 0.8);
+  background: linear-gradient(180deg, #7a1f1f, #5a1414);
+  color: white;
+  font-weight: 600;
+  cursor: default;
+  box-shadow: 0 0 10px rgba(180, 40, 40, 0.6);
+  z-index: 10;
+}
+
+.table-animation-btn:hover {
+  filter: brightness(1.08);
+}

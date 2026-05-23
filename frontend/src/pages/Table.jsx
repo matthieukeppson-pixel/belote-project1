@@ -1261,6 +1261,13 @@ const canStartWithBots =
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
+      <button
+        type="button"
+        className="table-animation-btn"
+        title="Animation bientot disponible"
+      >
+        {String.fromCodePoint(0x1F399) + " Animation"}
+      </button>
       <div className="table-mode-pill">Mode : {modeLabel}</div>
 
       {canStartWithBots && (
