@@ -342,7 +342,7 @@ return () => {
         className="salon-animation-btn"
         title="Animation bientot disponible"
       >
-        {String.fromCodePoint(0x1F399) + " Animation"}
+        <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Animation</>
       </button>
 
       <div className="salon-grid">

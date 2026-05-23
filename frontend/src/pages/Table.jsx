@@ -1266,7 +1266,7 @@ const canStartWithBots =
         className="table-animation-btn"
         title="Animation bientot disponible"
       >
-        {String.fromCodePoint(0x1F399) + " Animation"}
+        <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Animation</>
       </button>
       <div className="table-mode-pill">Mode : {modeLabel}</div>
 

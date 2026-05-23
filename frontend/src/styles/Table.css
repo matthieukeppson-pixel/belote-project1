@@ -1037,3 +1037,14 @@ body {
 .table-animation-btn:hover {
   filter: brightness(1.08);
 }
+
+
+.animation-music-icon {
+  color: #ffffff;
+  display: inline-block;
+  font-size: 1.25em;
+  font-weight: 900;
+  line-height: 1;
+  margin-right: 7px;
+  transform: translateY(1px);
+}
