@@ -96,6 +96,11 @@ export default function SalonJeu({ user }) {
   const [isMusicListening, setIsMusicListening] = useState(false);
   const [musicVolume, setMusicVolume] = useState(50);
   const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
+  const [animationState, setAnimationState] = useState({
+    mode: "playlist",
+    hostPseudo: null,
+    title: "Playlist en continu",
+  });
 
   // ✅ Tables viennent du serveur WS (plus de mock)
   // format attendu depuis serveur: { id, mode, seats, count }
@@ -235,6 +240,16 @@ ws.onmessage = (event) => {
       setTables(Array.isArray(data.tables) ? data.tables : []);
       return;
 
+    case "animation_state":
+      setAnimationState({
+        mode: data.mode === "live" ? "live" : "playlist",
+        hostPseudo: data.hostPseudo || null,
+        title:
+          data.title ||
+          (data.mode === "live" ? "Direct DJ" : "Playlist en continu"),
+      });
+      return;
+
     case "joined_table":
       navigate(`/table/${data.tableId}`, {
         state: {
@@ -344,7 +359,7 @@ return () => {
         <button
           type="button"
           className="salon-animation-btn"
-          title="Musique"
+          title={animationState.title || "Musique"}
           onClick={() => setIsMusicMenuOpen((open) => !open)}
           aria-expanded={isMusicMenuOpen}
         >

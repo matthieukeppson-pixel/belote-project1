@@ -232,6 +232,26 @@ const tablesMap = new Map();
 let nextTableId = 1;
 const BOT_PREFIX = "__bot__";
 
+const animationState = {
+  mode: "playlist",
+  hostPseudo: null,
+  title: "Playlist en continu",
+};
+
+function animationStatePayload() {
+  return {
+    type: "animation_state",
+    mode: animationState.mode,
+    hostPseudo: animationState.hostPseudo,
+    title: animationState.title,
+  };
+}
+
+function isAnimationHost(pseudo) {
+  const normalized = String(pseudo || "").trim().toLowerCase();
+  return ["v?ro", "vero"].includes(normalized);
+}
+
 function isBotPseudo(pseudo) {
   return typeof pseudo === "string" && pseudo.startsWith(BOT_PREFIX);
 }
@@ -1274,6 +1294,10 @@ function broadcastPlayers() {
 
 function broadcastTables() {
   broadcast({ type: "tables", tables: tablesArray() });
+}
+
+function broadcastAnimationState() {
+  broadcast(animationStatePayload());
 }
 
 function broadcastToTable(tableId, obj) {
@@ -2671,6 +2695,7 @@ wss.on("connection", (ws) => {
   // Ã©tat initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
   ws.send(JSON.stringify({ type: "tables", tables: tablesArray() }));
+  ws.send(JSON.stringify(animationStatePayload()));
 
   ws.on("message", (raw) => {
     let msg;
@@ -2711,6 +2736,11 @@ wss.on("connection", (ws) => {
     // ===============================
     // CHAT
     // ===============================
+    if (msg.type === "get_animation_state") {
+      ws.send(JSON.stringify(animationStatePayload()));
+      return;
+    }
+
     if (msg.type === "message") {
       const text = String(msg.text || "").trim();
       if (!text) return;

@@ -424,6 +424,17 @@ useEffect(() => {
         return;
       }
 
+      if (msg.type === "animation_state") {
+        setAnimationState({
+          mode: msg.mode === "live" ? "live" : "playlist",
+          hostPseudo: msg.hostPseudo || null,
+          title:
+            msg.title ||
+            (msg.mode === "live" ? "Direct DJ" : "Playlist en continu"),
+        });
+        return;
+      }
+
 
       if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
         pushTemporarySystemMessage(msg.text);
@@ -601,6 +612,11 @@ const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
 const [isMusicListening, setIsMusicListening] = useState(false);
 const [musicVolume, setMusicVolume] = useState(50);
 const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
+const [animationState, setAnimationState] = useState({
+  mode: "playlist",
+  hostPseudo: null,
+  title: "Playlist en continu",
+});
 const [announcementFading, setAnnouncementFading] = useState(false);
 
   function handleNouvellePartie() {
@@ -1268,7 +1284,7 @@ const canStartWithBots =
         <button
           type="button"
           className="table-animation-btn"
-          title="Musique"
+          title={animationState.title || "Musique"}
           onClick={() => setIsMusicMenuOpen((open) => !open)}
           aria-expanded={isMusicMenuOpen}
         >
