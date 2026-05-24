@@ -1019,9 +1019,6 @@
 ================================ */
 
 .salon-animation-btn {
-  position: absolute;
-  top: 24px;
-  right: 36px;
   padding: 10px 18px;
   border-radius: 22px;
   border: 1px solid rgba(150, 210, 255, 0.9);
@@ -1030,11 +1027,73 @@
   font-weight: 700;
   cursor: default;
   box-shadow: 0 0 12px rgba(55, 140, 255, 0.55);
-  z-index: 20;
 }
 
 .salon-animation-btn:hover {
   filter: brightness(1.08);
+}
+
+.salon-music-controls {
+  position: absolute;
+  top: 49px;
+  right: auto;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  left: calc(50% + 720px);
+  transform: translateX(-50%);
+
+}
+
+.salon-music-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.salon-music-action-btn {
+  min-width: 104px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(150, 210, 255, 0.85);
+  background: transparent;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.salon-music-action-btn:hover {
+  filter: brightness(1.08);
+}
+
+.salon-music-volume-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 124px;
+}
+
+.salon-music-volume-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(150, 210, 255, 0.8);
+  background: rgba(31, 88, 200, 0.8);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.salon-music-volume-slider {
+  width: 82px;
+  accent-color: #1b6cf8;
+
 }
 
 

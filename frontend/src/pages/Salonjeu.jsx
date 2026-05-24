@@ -93,6 +93,9 @@ export default function SalonJeu({ user }) {
   const [inputMessage, setInputMessage] = useState("");
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [showProfil, setShowProfil] = useState(false);
+  const [isMusicListening, setIsMusicListening] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(50);
+  const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
 
   // ✅ Tables viennent du serveur WS (plus de mock)
   // format attendu depuis serveur: { id, mode, seats, count }
@@ -337,13 +340,66 @@ return () => {
   ================================ */
   return (
     <div className="salon-wrapper">
-      <button
-        type="button"
-        className="salon-animation-btn"
-        title="Musique bientot disponible"
-      >
-        <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
-      </button>
+      <div className="salon-music-controls" aria-label="Musique">
+        <button
+          type="button"
+          className="salon-animation-btn"
+          title="Musique"
+          onClick={() => setIsMusicMenuOpen((open) => !open)}
+          aria-expanded={isMusicMenuOpen}
+        >
+          <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
+        </button>
+        {isMusicMenuOpen && (
+          <div className="salon-music-menu" aria-label="Actions musique">
+            <button
+              type="button"
+              className="salon-music-action-btn"
+              onClick={() => setIsMusicListening(true)}
+              aria-pressed={isMusicListening}
+              title="Ecouter les animations"
+            >
+              {"\u00C9couter"}
+            </button>
+            <button
+              type="button"
+              className="salon-music-action-btn"
+              onClick={() => setIsMusicListening(false)}
+              aria-pressed={!isMusicListening}
+              title="Couper les animations"
+            >
+              Couper
+            </button>
+          </div>
+        )}
+        <div className="salon-music-volume-wrap" aria-label="Volume musique">
+          <button
+            type="button"
+            className="salon-music-volume-btn"
+            onClick={() => setMusicVolume((volume) => Math.max(0, volume - 10))}
+            aria-label="Baisser le volume"
+          >
+            -
+          </button>
+          <input
+            className="salon-music-volume-slider"
+            type="range"
+            min="0"
+            max="100"
+            value={musicVolume}
+            onChange={(event) => setMusicVolume(Number(event.target.value))}
+            aria-label="Volume musique"
+          />
+          <button
+            type="button"
+            className="salon-music-volume-btn"
+            onClick={() => setMusicVolume((volume) => Math.min(100, volume + 10))}
+            aria-label="Monter le volume"
+          >
+            +
+          </button>
+        </div>
+      </div>
 
       <div className="salon-grid">
         {/* TABLES */}

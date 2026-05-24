@@ -598,6 +598,9 @@ useEffect(() => {
 const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 const [partieTerminee, setPartieTerminee] = useState(false);
 const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
+const [isMusicListening, setIsMusicListening] = useState(false);
+const [musicVolume, setMusicVolume] = useState(50);
+const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
 const [announcementFading, setAnnouncementFading] = useState(false);
 
   function handleNouvellePartie() {
@@ -1261,13 +1264,67 @@ const canStartWithBots =
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
-      <button
-        type="button"
-        className="table-animation-btn"
-        title="Musique bientot disponible"
-      >
-        <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
-      </button>
+      <div className="table-music-controls" aria-label="Musique">
+        <button
+          type="button"
+          className="table-animation-btn"
+          title="Musique"
+          onClick={() => setIsMusicMenuOpen((open) => !open)}
+          aria-expanded={isMusicMenuOpen}
+        >
+          <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
+        </button>
+        {isMusicMenuOpen && (
+          <div className="table-music-menu" aria-label="Actions musique">
+            <button
+              type="button"
+              className="table-music-action-btn"
+              onClick={() => setIsMusicListening(true)}
+              aria-pressed={isMusicListening}
+              title="Ecouter les animations"
+            >
+              {"\u00C9couter"}
+            </button>
+            <button
+              type="button"
+              className="table-music-action-btn"
+              onClick={() => setIsMusicListening(false)}
+              aria-pressed={!isMusicListening}
+              title="Couper les animations"
+            >
+              Couper
+            </button>
+          </div>
+        )}
+        <div className="table-music-volume-wrap" aria-label="Volume musique">
+          <button
+            type="button"
+            className="table-music-volume-btn"
+            onClick={() => setMusicVolume((volume) => Math.max(0, volume - 10))}
+            aria-label="Baisser le volume"
+          >
+            -
+          </button>
+          <input
+            className="table-music-volume-slider"
+            type="range"
+            min="0"
+            max="100"
+            value={musicVolume}
+            onChange={(event) => setMusicVolume(Number(event.target.value))}
+            aria-label="Volume musique"
+          />
+          <button
+            type="button"
+            className="table-music-volume-btn"
+            onClick={() => setMusicVolume((volume) => Math.min(100, volume + 10))}
+            aria-label="Monter le volume"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
       <div className="table-mode-pill">Mode : {modeLabel}</div>
 
       {canStartWithBots && (

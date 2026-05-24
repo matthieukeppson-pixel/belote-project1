@@ -1020,9 +1020,6 @@ body {
 ============================================ */
 
 .table-animation-btn {
-  position: absolute;
-  top: 32px;
-  left: 960px;
   padding: 8px 16px;
   border-radius: 20px;
   border: 1px solid rgba(220, 180, 120, 0.8);
@@ -1031,11 +1028,71 @@ body {
   font-weight: 600;
   cursor: default;
   box-shadow: 0 0 10px rgba(180, 40, 40, 0.6);
-  z-index: 10;
 }
 
 .table-animation-btn:hover {
   filter: brightness(1.08);
+}
+
+.table-music-controls {
+  position: absolute;
+  top: 58px;
+  left: 1000px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-music-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.table-music-action-btn {
+  min-width: 96px;
+  padding: 6px 11px;
+  border-radius: 16px;
+  border: 1px solid rgba(220, 180, 120, 0.8);
+  background: transparent;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.table-music-action-btn:hover {
+  filter: brightness(1.08);
+}
+
+.table-music-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 120px;
+  justify-content: center;
+
+}
+
+.table-music-volume-btn {
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 180, 120, 0.8);
+  background: rgba(90, 20, 20, 0.88);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.table-music-volume-slider {
+  width: 78px;
+  accent-color: #5a1414;
+
 }
 
 
