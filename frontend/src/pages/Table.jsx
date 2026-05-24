@@ -188,6 +188,8 @@ const avatar =
   "/avatar_blue.png";
 
 const wsTableRef = useRef(null);
+const musicAudioRef = useRef(null);
+const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
 const systemTimersRef = useRef(new Map());
 const previousBiddingStateRef = useRef(null);
 const modernAnnouncementSentKeyRef = useRef(null);
@@ -618,6 +620,28 @@ const [animationState, setAnimationState] = useState({
   title: "Playlist en continu",
 });
 const [announcementFading, setAnnouncementFading] = useState(false);
+
+useEffect(() => {
+  const audio = musicAudioRef.current;
+  if (!audio) return;
+
+  audio.volume = Math.max(0, Math.min(1, musicVolume / 100));
+
+  const shouldPlayPlaylist =
+    isMusicListening &&
+    animationState.mode === "playlist" &&
+    Boolean(playlistAudioUrl);
+
+  if (!shouldPlayPlaylist) {
+    audio.pause();
+    return;
+  }
+
+  audio.play().catch(() => {
+    // Le navigateur peut bloquer la lecture automatique.
+    // L'utilisateur pourra relancer avec le bouton Ecouter.
+  });
+}, [animationState.mode, isMusicListening, musicVolume, playlistAudioUrl]);
 
   function handleNouvellePartie() {
     if (hasServerHand) return;
@@ -1281,6 +1305,7 @@ const canStartWithBots =
         ← Retour au salon
       </button>
       <div className="table-music-controls" aria-label="Musique">
+        <audio ref={musicAudioRef} src={playlistAudioUrl} loop preload="none" />
         <button
           type="button"
           className="table-animation-btn"

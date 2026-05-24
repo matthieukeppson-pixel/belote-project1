@@ -108,7 +108,31 @@ export default function SalonJeu({ user }) {
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
+  const musicAudioRef = useRef(null);
   const navigate = useNavigate();
+  const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
+
+  useEffect(() => {
+    const audio = musicAudioRef.current;
+    if (!audio) return;
+
+    audio.volume = Math.max(0, Math.min(1, musicVolume / 100));
+
+    const shouldPlayPlaylist =
+      isMusicListening &&
+      animationState.mode === "playlist" &&
+      Boolean(playlistAudioUrl);
+
+    if (!shouldPlayPlaylist) {
+      audio.pause();
+      return;
+    }
+
+    audio.play().catch(() => {
+      // Le navigateur peut bloquer la lecture automatique.
+      // L'utilisateur pourra relancer avec le bouton Ecouter.
+    });
+  }, [animationState.mode, isMusicListening, musicVolume, playlistAudioUrl]);
 
   // ==========================
   // MENU MODE (PORTAL)
@@ -356,6 +380,7 @@ return () => {
   return (
     <div className="salon-wrapper">
       <div className="salon-music-controls" aria-label="Musique">
+        <audio ref={musicAudioRef} src={playlistAudioUrl} loop preload="none" />
         <button
           type="button"
           className="salon-animation-btn"
