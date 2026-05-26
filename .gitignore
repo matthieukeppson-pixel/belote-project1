@@ -48,3 +48,4 @@ diff_*.txt
 *_diff.txt
 rapport-avancement-git.txt
 backend/ws-test.mjs
+frontend/public/audio/*.mp3
