@@ -176,10 +176,13 @@ const tableRole = location.state?.role === "visitor" ? "visitor" : "player";
 const { id } = useParams();
   const tableId = Number(id);
 
+const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
 const pseudo =
   location.state?.pseudo ||
   localStorage.getItem("pseudo") ||
-  JSON.parse(localStorage.getItem("user") || "{}").pseudo ||
+  storedUser.pseudo ||
+  storedUser.username ||
   "Joueur";
 
 const avatar =
@@ -624,6 +627,35 @@ const [animationState, setAnimationState] = useState({
   hostPseudo: null,
   title: "Playlist en continu",
 });
+
+const normalizeAnimationPseudo = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+const canUseAnimationLive = ["vero", "matt"].includes(
+  normalizeAnimationPseudo(pseudo)
+);
+
+const isCurrentAnimationHost =
+  animationState.mode === "live" &&
+  normalizeAnimationPseudo(animationState.hostPseudo) === normalizeAnimationPseudo(pseudo);
+
+function sendAnimationCommand(type) {
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type }));
+}
+
+function startLiveAnimation() {
+  sendAnimationCommand("start_live_animation");
+}
+
+function stopLiveAnimation() {
+  sendAnimationCommand("stop_live_animation");
+}
 const [announcementFading, setAnnouncementFading] = useState(false);
 
 useEffect(() => {
@@ -1340,6 +1372,22 @@ const canStartWithBots =
             >
               Couper
             </button>
+            {canUseAnimationLive && (
+              <button
+                type="button"
+                className="table-music-action-btn"
+                onClick={
+                  isCurrentAnimationHost ? stopLiveAnimation : startLiveAnimation
+                }
+                title={
+                  isCurrentAnimationHost
+                    ? "Arrêter le direct DJ"
+                    : "Prendre le direct DJ"
+                }
+              >
+                {isCurrentAnimationHost ? "Arrêter le direct" : "Prendre le direct"}
+              </button>
+            )}
           </div>
         )}
         <div className="table-music-volume-wrap" aria-label="Volume musique">

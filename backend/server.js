@@ -248,8 +248,13 @@ function animationStatePayload() {
 }
 
 function isAnimationHost(pseudo) {
-  const normalized = String(pseudo || "").trim().toLowerCase();
-  return ["v?ro", "vero", "matt"].includes(normalized);
+  const normalized = String(pseudo || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+  return ["vero", "matt"].includes(normalized);
 }
 
 function isBotPseudo(pseudo) {

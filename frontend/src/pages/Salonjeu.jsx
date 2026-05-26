@@ -86,7 +86,14 @@ function renderSalonMessageContent(text) {
 
 
 export default function SalonJeu({ user }) {
-  const currentName = user?.pseudo || "Joueur";
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentName =
+    user?.pseudo ||
+    user?.username ||
+    localStorage.getItem("pseudo") ||
+    storedUser.pseudo ||
+    storedUser.username ||
+    "Joueur";
 
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -377,6 +384,30 @@ return () => {
     setIsEmojiPanelOpen(false);
   };
 
+  const normalizeAnimationPseudo = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+  const canUseAnimationLive = ["vero", "matt"].includes(
+    normalizeAnimationPseudo(currentName)
+  );
+
+  const isCurrentAnimationHost =
+    animationState.mode === "live" &&
+    normalizeAnimationPseudo(animationState.hostPseudo) ===
+      normalizeAnimationPseudo(currentName);
+
+  const startLiveAnimation = () => {
+    sendWS({ type: "start_live_animation" });
+  };
+
+  const stopLiveAnimation = () => {
+    sendWS({ type: "stop_live_animation" });
+  };
+
   /* ===============================
      CHAT TOUJOURS EN BAS
   ================================ */
@@ -421,6 +452,22 @@ return () => {
             >
               Couper
             </button>
+            {canUseAnimationLive && (
+              <button
+                type="button"
+                className="salon-music-action-btn"
+                onClick={
+                  isCurrentAnimationHost ? stopLiveAnimation : startLiveAnimation
+                }
+                title={
+                  isCurrentAnimationHost
+                    ? "Arrêter le direct DJ"
+                    : "Prendre le direct DJ"
+                }
+              >
+                {isCurrentAnimationHost ? "Arrêter le direct" : "Prendre le direct"}
+              </button>
+            )}
           </div>
         )}
         <div className="salon-music-volume-wrap" aria-label="Volume musique">
