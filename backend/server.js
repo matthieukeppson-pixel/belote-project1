@@ -249,7 +249,7 @@ function animationStatePayload() {
 
 function isAnimationHost(pseudo) {
   const normalized = String(pseudo || "").trim().toLowerCase();
-  return ["v?ro", "vero"].includes(normalized);
+  return ["v?ro", "vero", "matt"].includes(normalized);
 }
 
 function isBotPseudo(pseudo) {
@@ -2738,6 +2738,52 @@ wss.on("connection", (ws) => {
     // ===============================
     if (msg.type === "get_animation_state") {
       ws.send(JSON.stringify(animationStatePayload()));
+      return;
+    }
+
+    if (msg.type === "start_live_animation") {
+      if (!isAnimationHost(pseudo)) {
+        ws.send(
+          JSON.stringify({
+            type: "animation_denied",
+            reason: "NOT_ANIMATION_HOST",
+          })
+        );
+        return;
+      }
+
+      animationState.mode = "live";
+      animationState.hostPseudo = pseudo;
+      animationState.title = `Direct DJ - ${pseudo}`;
+      broadcastAnimationState();
+      return;
+    }
+
+    if (msg.type === "stop_live_animation") {
+      if (!isAnimationHost(pseudo)) {
+        ws.send(
+          JSON.stringify({
+            type: "animation_denied",
+            reason: "NOT_ANIMATION_HOST",
+          })
+        );
+        return;
+      }
+
+      if (animationState.hostPseudo && animationState.hostPseudo !== pseudo) {
+        ws.send(
+          JSON.stringify({
+            type: "animation_denied",
+            reason: "NOT_CURRENT_HOST",
+          })
+        );
+        return;
+      }
+
+      animationState.mode = "playlist";
+      animationState.hostPseudo = null;
+      animationState.title = "Playlist en continu";
+      broadcastAnimationState();
       return;
     }
 

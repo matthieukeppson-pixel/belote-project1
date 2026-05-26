@@ -454,6 +454,11 @@ useEffect(() => {
         return;
       }
 
+      if (msg.type === "animation_denied") {
+        pushTemporarySystemMessage("Animation refusée : seuls Véro ou Matt peuvent prendre le direct.");
+        return;
+      }
+
       if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
         setTableChatMessages((prev) => [
           ...prev,

@@ -284,6 +284,17 @@ ws.onmessage = (event) => {
       });
       return;
 
+case "animation_denied":
+  setMessages((prev) => [
+    ...prev,
+    {
+      id: `${Date.now()}-${Math.random()}`,
+      user: "Système",
+      text: "Animation refusée : seuls Véro ou Matt peuvent prendre le direct.",
+    },
+  ]);
+  return;
+
 case "message":
   if (data.user === "Système") return;
 
