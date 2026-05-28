@@ -115,6 +115,9 @@ export default function SalonJeu({ user }) {
   const musicAudioRef = useRef(null);
   const navigate = useNavigate();
   const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
+  const djStreamUrl = import.meta.env.VITE_DJ_STREAM_URL || "";
+  const currentAudioUrl =
+    animationState.mode === "live" ? djStreamUrl : playlistAudioUrl;
 
   useEffect(() => {
     const audio = musicAudioRef.current;
@@ -122,12 +125,9 @@ export default function SalonJeu({ user }) {
 
     audio.volume = Math.max(0, Math.min(1, musicVolume / 100));
 
-    const shouldPlayPlaylist =
-      isMusicListening &&
-      animationState.mode === "playlist" &&
-      Boolean(playlistAudioUrl);
+    const shouldPlayAudio = isMusicListening && Boolean(currentAudioUrl);
 
-    if (!shouldPlayPlaylist) {
+    if (!shouldPlayAudio) {
       audio.pause();
       return;
     }
@@ -136,7 +136,7 @@ export default function SalonJeu({ user }) {
       // Le navigateur peut bloquer la lecture automatique.
       // L'utilisateur pourra relancer avec le bouton Ecouter.
     });
-  }, [animationState.mode, isMusicListening, musicVolume, playlistAudioUrl]);
+  }, [currentAudioUrl, isMusicListening, musicVolume]);
 
   // ==========================
   // MENU MODE (PORTAL)
@@ -419,7 +419,12 @@ return () => {
   return (
     <div className="salon-wrapper">
       <div className="salon-music-controls" aria-label="Musique">
-        <audio ref={musicAudioRef} src={playlistAudioUrl} loop preload="none" />
+        <audio
+          ref={musicAudioRef}
+          src={currentAudioUrl}
+          loop={animationState.mode === "playlist"}
+          preload="none"
+        />
         <button
           type="button"
           className="salon-animation-btn"
