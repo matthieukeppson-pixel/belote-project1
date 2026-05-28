@@ -12,7 +12,6 @@ const SIMPLE_EMOJIS = [
   { code: ":cafe:", src: "/emojis/cafe.png", alt: "cafe" },
   { code: ":cadeau:", src: "/emojis/cadeau.png", alt: "cadeau" },
   { code: ":facepalm:", src: "/emojis/facepalm.png", alt: "facepalm" },
-  { code: ":merci:", src: "/emojis/merci.png", alt: "merci" },
   { code: ":clinoeil:", src: "/emojis/clinoeil.png", alt: "clinoeil" },
   { code: ":attention:", src: "/emojis/attention.png", alt: "attention" },
   { code: ":rougir:", src: "/emojis/rougir.png", alt: "rougir" },
@@ -30,7 +29,6 @@ const SIMPLE_EMOJIS = [
   { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
   { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
   { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
-  { code: ":singe_chut:", src: "/emojis/singe_chut.png", alt: "singe chut" },
   { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
   { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
   { code: ":dj:", src: "/emojis/dj.png", alt: "dj" },
@@ -38,7 +36,6 @@ const SIMPLE_EMOJIS = [
   { code: ":cookie:", src: "/emojis/cookie.png", alt: "cookie" },
   { code: ":telephone:", src: "/emojis/telephone.png", alt: "telephone" },
   { code: ":jus_orange:", src: "/emojis/jus_orange.png", alt: "jus orange" },
-  { code: ":ange:", src: "/emojis/ange.png", alt: "ange" },
   { code: ":bonbon:", src: "/emojis/bonbon.png", alt: "bonbon" },
   { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
 
