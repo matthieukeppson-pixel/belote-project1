@@ -1162,12 +1162,12 @@ useEffect(() => {
 
   const fadeTimer = setTimeout(() => {
     setAnnouncementFading(true);
-  }, 1700);
+  }, 4200);
 
   const hideTimer = setTimeout(() => {
     setVisibleAnnouncement(null);
     setAnnouncementFading(false);
-  }, 2200);
+  }, 5000);
 
   return () => {
     clearTimeout(fadeTimer);
