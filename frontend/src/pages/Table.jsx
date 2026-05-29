@@ -1050,13 +1050,13 @@ const serverDisplayPli = Array.isArray(serverHand?.trickCards)
   : [];
 
 const effectiveDisplayPli = serverHand ? serverDisplayPli : displayPli;
-const displayedPli =
-  showLastTrick && lastTrickPli.length > 0 ? lastTrickPli : effectiveDisplayPli;
+const displayedPli = effectiveDisplayPli;
 
 const shouldShowPli =
   displayedPli.length > 0 &&
-  !(effectivePhaseLabel === STATES.FIN_DE_MANCHE && hideLastPli && !showLastTrick);
+  !(effectivePhaseLabel === STATES.FIN_DE_MANCHE && hideLastPli);
 const canShowLastTrickButton = lastTrickPli.length > 0;
+const canShowLastTrickPanel = showLastTrick && lastTrickPli.length > 0;
 
 useEffect(() => {
   if (!serverHand) return;
@@ -1467,14 +1467,36 @@ const canStartWithBots =
       <div className="table-mode-pill">Mode : {modeLabel}</div>
 
       {canShowLastTrickButton && (
-        <button
-          type="button"
-          className={`last-trick-btn${showLastTrick ? " active" : ""}`}
-          onClick={() => setShowLastTrick((visible) => !visible)}
-          title="Revoir le dernier pli"
-        >
-          {showLastTrick ? "Masquer" : "Dernier pli"}
-        </button>
+        <>
+          <button
+            type="button"
+            className={`last-trick-btn${showLastTrick ? " active" : ""}`}
+            onClick={() => setShowLastTrick((visible) => !visible)}
+            title="Revoir le dernier pli"
+          >
+            {showLastTrick ? "Masquer" : "Dernier pli"}
+          </button>
+
+          {canShowLastTrickPanel && (
+            <div className="last-trick-mini-table" aria-label="Dernier pli">
+              {lastTrickPli.map((play, index) =>
+                play?.card ? (
+                  <div
+                    key={`${play.playerId || "player"}-${play.card.suit}-${play.card.value}-${index}`}
+                    className={`last-trick-mini-card ${pliClassForPlayerId(play.playerId)}`}
+                  >
+                    <img
+                      src={cardImgSrc(play.card)}
+                      alt={`${play.card.value} ${play.card.suit}`}
+                      className="last-trick-mini-img"
+                      draggable={false}
+                    />
+                  </div>
+                ) : null
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {canStartWithBots && (
