@@ -192,6 +192,7 @@ const avatar =
 
 const wsTableRef = useRef(null);
 const musicAudioRef = useRef(null);
+const lastTrickKeyRef = useRef("");
 const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
 const djStreamUrl = import.meta.env.VITE_DJ_STREAM_URL || "";
 const systemTimersRef = useRef(new Map());
@@ -596,6 +597,9 @@ useEffect(() => {
 
   setDisplayPli([]);
   setHideLastPli(false);
+  setLastTrickPli([]);
+  setShowLastTrick(false);
+  lastTrickKeyRef.current = "";
 
   finDeMancheCompteeRef.current = false;
   finDeMancheRef.current = null;
@@ -615,6 +619,8 @@ useEffect(() => {
   // ============================================
   const [displayPli, setDisplayPli] = useState([]);
   const [hideLastPli, setHideLastPli] = useState(false);
+  const [lastTrickPli, setLastTrickPli] = useState([]);
+  const [showLastTrick, setShowLastTrick] = useState(false);
   const [beloteToast, setBeloteToast] = useState(null);
 
 const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
@@ -686,6 +692,9 @@ useEffect(() => {
 
     setDisplayPli([]);
     setHideLastPli(false);
+    setLastTrickPli([]);
+    setShowLastTrick(false);
+    lastTrickKeyRef.current = "";
 
     finDeMancheCompteeRef.current = false;
     finDeMancheRef.current = null;
@@ -1041,10 +1050,40 @@ const serverDisplayPli = Array.isArray(serverHand?.trickCards)
   : [];
 
 const effectiveDisplayPli = serverHand ? serverDisplayPli : displayPli;
+const displayedPli =
+  showLastTrick && lastTrickPli.length > 0 ? lastTrickPli : effectiveDisplayPli;
 
 const shouldShowPli =
-  effectiveDisplayPli.length > 0 &&
-  !(effectivePhaseLabel === STATES.FIN_DE_MANCHE && hideLastPli);
+  displayedPli.length > 0 &&
+  !(effectivePhaseLabel === STATES.FIN_DE_MANCHE && hideLastPli && !showLastTrick);
+const canShowLastTrickButton = lastTrickPli.length > 0;
+
+useEffect(() => {
+  if (!serverHand) return;
+  if (effectivePhaseLabel !== STATES.PLI_TERMINE) return;
+
+  const completedPli = Array.isArray(serverHand.trickCards)
+    ? serverHand.trickCards.filter((play) => play && play.card)
+    : [];
+
+  if (completedPli.length !== 4) return;
+
+  const completedPliKey = `${sharedRoundId}:${completedPli
+    .map(
+      (play) =>
+        `${play.playerId || ""}:${play.card?.suit || ""}:${String(
+          play.card?.value || ""
+        ).toUpperCase()}`
+    )
+    .join("|")}`;
+
+  if (lastTrickKeyRef.current === completedPliKey) return;
+
+  lastTrickKeyRef.current = completedPliKey;
+  setLastTrickPli(completedPli);
+  setShowLastTrick(false);
+}, [serverHand, effectivePhaseLabel, sharedRoundId]);
+
 const serverLocalHand =
   localDisplayedPlayerId &&
   Array.isArray(serverHand?.hands?.[localDisplayedPlayerId])
@@ -1426,6 +1465,17 @@ const canStartWithBots =
       </div>
 
       <div className="table-mode-pill">Mode : {modeLabel}</div>
+
+      {canShowLastTrickButton && (
+        <button
+          type="button"
+          className={`last-trick-btn${showLastTrick ? " active" : ""}`}
+          onClick={() => setShowLastTrick((visible) => !visible)}
+          title="Revoir le dernier pli"
+        >
+          {showLastTrick ? "Masquer" : "Dernier pli"}
+        </button>
+      )}
 
       {canStartWithBots && (
         <button
@@ -1857,7 +1907,7 @@ const canStartWithBots =
             )}
 
             {shouldShowPli &&
-             effectiveDisplayPli.map((play, index) =>
+             displayedPli.map((play, index) =>
                 play?.card ? (
                   <div key={index} className={`pli-card ${pliClassForPlayerId(play.playerId)}`}>
                     <img

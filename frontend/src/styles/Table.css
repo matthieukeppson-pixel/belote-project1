@@ -984,6 +984,35 @@ body {
   pointer-events: none;
 }
 
+.last-trick-btn {
+  position: absolute;
+  top: 102px;
+  left: 20px;
+  z-index: 12;
+
+  padding: 6px 13px;
+  border-radius: 999px;
+
+  border: 1px solid rgba(220, 180, 120, 0.45);
+  background: rgba(40, 10, 10, 0.55);
+  color: #f0e6d2;
+
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+
+  box-shadow:
+    0 0 0 1px rgba(255, 170, 90, 0.14),
+    0 6px 14px rgba(0, 0, 0, 0.30);
+}
+
+.last-trick-btn:hover,
+.last-trick-btn.active {
+  filter: brightness(1.12);
+  border-color: rgba(255, 235, 150, 0.75);
+}
+
+
 
 
 
