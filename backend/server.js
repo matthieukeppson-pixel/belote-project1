@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import http from "http";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
@@ -153,15 +153,23 @@ app.post("/api/register", async (req, res) => {
 
     const result = await dbRun(
       `
-        INSERT INTO users (username, email, password_hash, avatar_url)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (
+          username,
+          email,
+          password_hash,
+          avatar_url,
+          role,
+          is_approved,
+          is_banned
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      [username, email, passwordHash, avatarUrl]
+      [username, email, passwordHash, avatarUrl, "player", 0, 0]
     );
 
     const created = await dbGet(
       `
-        SELECT id, username, email, avatar_url
+        SELECT id, username, email, avatar_url, role, is_approved, is_banned
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -171,6 +179,9 @@ app.post("/api/register", async (req, res) => {
 
     return res.status(201).json({
       user: publicUserFromDb(created),
+      pendingApproval: true,
+      message:
+        "Votre demande d'inscription a bien été envoyée. Elle devra être validée par Matt ou Véro.",
     });
   } catch (err) {
     console.error("Erreur /api/register", err);
