@@ -111,6 +111,76 @@ function publicUserFromDb(row) {
   };
 }
 
+const authSessions = new Map();
+
+function getAuthTokenFromRequest(req) {
+  const authorization = String(req.headers.authorization || "").trim();
+
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    return authorization.slice(7).trim();
+  }
+
+  return String(req.headers["x-auth-token"] || "").trim();
+}
+
+function createAuthSession(user) {
+  const token = randomBytes(32).toString("hex");
+
+  authSessions.set(token, {
+    userId: user.id,
+    createdAt: Date.now(),
+  });
+
+  return token;
+}
+
+async function getAuthUserFromRequest(req) {
+  const token = getAuthTokenFromRequest(req);
+  if (!token) return null;
+
+  const session = authSessions.get(token);
+  if (!session?.userId) return null;
+
+  const user = await dbGet(
+    `
+      SELECT id, username, email, avatar_url, role, is_approved, is_banned
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [session.userId]
+  );
+
+  if (!user) {
+    authSessions.delete(token);
+    return null;
+  }
+
+  if (Number(user.is_banned) === 1) return null;
+
+  if (String(user.role || "player") !== "admin" && Number(user.is_approved) !== 1) {
+    return null;
+  }
+
+  return user;
+}
+
+async function requireAdminUser(req, res) {
+  const user = await getAuthUserFromRequest(req);
+
+  if (!user) {
+    res.status(401).json({ error: "Connexion admin requise" });
+    return null;
+  }
+
+  if (String(user.role || "player") !== "admin") {
+    res.status(403).json({ error: "Accès réservé à Matt et Véro." });
+    return null;
+  }
+
+  return user;
+}
+
 app.post("/api/register", async (req, res) => {
   try {
     const username = normalizeUsername(req.body?.username || req.body?.pseudo);
@@ -236,7 +306,7 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    const token = randomBytes(32).toString("hex");
+    const token = createAuthSession(user);
 
     return res.json({
       token,
@@ -244,6 +314,20 @@ app.post("/api/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Erreur /api/login", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/admin/me", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    return res.json({
+      user: publicUserFromDb(admin),
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/me", err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
