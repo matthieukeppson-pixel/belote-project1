@@ -262,12 +262,16 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const email = normalizeEmail(req.body?.email);
+    const login = String(
+      req.body?.username || req.body?.pseudo || req.body?.email || ""
+    ).trim();
     const password = String(req.body?.password || "");
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email et mot de passe obligatoires" });
+    if (!login || !password) {
+      return res.status(400).json({ error: "Pseudo et mot de passe obligatoires" });
     }
+
+    const loginEmail = normalizeEmail(login);
 
     const user = await dbGet(
       `
@@ -282,10 +286,11 @@ app.post("/api/login", async (req, res) => {
           is_banned,
           ban_reason
         FROM users
-        WHERE lower(email) = lower(?)
+        WHERE lower(username) = lower(?)
+           OR lower(email) = lower(?)
         LIMIT 1
       `,
-      [email]
+      [login, loginEmail || login]
     );
 
     if (!user || !verifyPassword(password, user.password_hash)) {
