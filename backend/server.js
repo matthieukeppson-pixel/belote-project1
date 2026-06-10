@@ -107,6 +107,7 @@ function publicUserFromDb(row) {
     pseudo: row.username,
     email: row.email,
     avatar_url: row.avatar_url || "/avatar_blue.png",
+    role: row.role || "player",
   };
 }
 
