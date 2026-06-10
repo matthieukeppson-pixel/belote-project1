@@ -200,7 +200,16 @@ app.post("/api/login", async (req, res) => {
 
     const user = await dbGet(
       `
-        SELECT id, username, email, password_hash, avatar_url
+        SELECT
+          id,
+          username,
+          email,
+          password_hash,
+          avatar_url,
+          role,
+          is_approved,
+          is_banned,
+          ban_reason
         FROM users
         WHERE lower(email) = lower(?)
         LIMIT 1
@@ -210,6 +219,20 @@ app.post("/api/login", async (req, res) => {
 
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ error: "Identifiants invalides" });
+    }
+
+    if (Number(user.is_banned) === 1) {
+      return res.status(403).json({
+        error: "Ce compte est désactivé. Contactez Matt ou Véro si besoin.",
+        banned: true,
+      });
+    }
+
+    if (String(user.role || "player") !== "admin" && Number(user.is_approved) !== 1) {
+      return res.status(403).json({
+        error: "Votre compte est en attente de validation par Matt ou Véro.",
+        pendingApproval: true,
+      });
     }
 
     const token = randomBytes(32).toString("hex");
