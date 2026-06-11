@@ -51,6 +51,14 @@ function dbGet(sql, params = []) {
   });
 }
 
+function dbAll(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function onRun(err) {
@@ -111,6 +119,23 @@ function publicUserFromDb(row) {
   };
 }
 
+function adminUserFromDb(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    username: row.username,
+    pseudo: row.username,
+    email: row.email,
+    avatar_url: row.avatar_url || "/avatar_blue.png",
+    role: row.role || "player",
+    is_approved: Number(row.is_approved) === 1,
+    approved_at: row.approved_at || null,
+    is_banned: Number(row.is_banned) === 1,
+    ban_reason: row.ban_reason || null,
+    banned_at: row.banned_at || null,
+  };
+}
 const authSessions = new Map();
 
 function getAuthTokenFromRequest(req) {
@@ -323,6 +348,180 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const status = String(req.query?.status || "pending").trim().toLowerCase();
+    const allowedStatuses = new Set(["pending", "approved", "banned", "all"]);
+
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "Statut invalide" });
+    }
+
+    let statusCondition = "";
+
+    if (status === "pending") {
+      statusCondition =
+        "AND COALESCE(is_approved, 0) <> 1 AND COALESCE(is_banned, 0) <> 1";
+    } else if (status === "approved") {
+      statusCondition =
+        "AND COALESCE(is_approved, 0) = 1 AND COALESCE(is_banned, 0) <> 1";
+    } else if (status === "banned") {
+      statusCondition = "AND COALESCE(is_banned, 0) = 1";
+    }
+
+    const users = await dbAll(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE COALESCE(role, 'player') <> 'admin'
+        ${statusCondition}
+        ORDER BY id DESC
+      `
+    );
+
+    return res.json({
+      status,
+      users: users.map(adminUserFromDb),
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/admin/users/:id/approve", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          is_approved = 1,
+          approved_at = CURRENT_TIMESTAMP,
+          is_banned = 0,
+          ban_reason = NULL,
+          banned_at = NULL
+        WHERE id = ?
+          AND COALESCE(role, 'player') <> 'admin'
+      `,
+      [userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Joueur introuvable" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Compte joueur validé.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/approve", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/admin/users/:id/reject", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+    const reason =
+      String(req.body?.reason || "").trim() || "Demande refusée par Matt ou Véro.";
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          is_approved = 0,
+          is_banned = 1,
+          ban_reason = ?,
+          banned_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND COALESCE(role, 'player') <> 'admin'
+      `,
+      [reason, userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Joueur introuvable" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Compte joueur désactivé.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/reject", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 app.get("/api/admin/me", async (req, res) => {
   try {
     const admin = await requireAdminUser(req, res);
