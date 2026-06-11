@@ -1,0 +1,147 @@
+.admin-root {
+  min-height: 100vh;
+  padding: 36px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at top, rgba(38, 92, 180, 0.5), transparent 38%),
+    linear-gradient(180deg, #061138, #020617);
+  color: #ffffff;
+}
+
+.admin-card {
+  width: min(1100px, 94vw);
+  margin: 0 auto;
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(120, 180, 255, 0.28);
+  background: rgba(0, 22, 75, 0.82);
+  box-shadow:
+    0 20px 55px rgba(0, 0, 0, 0.45),
+    inset 0 0 16px rgba(120, 180, 255, 0.12);
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 34px;
+}
+
+.admin-header p {
+  margin: 8px 0 0;
+  color: #cfe2ff;
+  font-weight: 700;
+}
+
+.admin-back-btn,
+.admin-error-actions button,
+.admin-approve-btn,
+.admin-reject-btn {
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-back-btn {
+  padding: 11px 18px;
+  background: linear-gradient(180deg, #2f7cff, #1f58c8);
+}
+
+.admin-user-line,
+.admin-info,
+.admin-empty,
+.admin-message,
+.admin-error {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+.admin-user-line,
+.admin-info,
+.admin-empty {
+  background: rgba(0, 35, 110, 0.62);
+  border: 1px solid rgba(120, 180, 255, 0.22);
+}
+
+.admin-message {
+  background: rgba(30, 150, 75, 0.25);
+  border: 1px solid rgba(118, 255, 166, 0.38);
+  color: #c9ffd9;
+}
+
+.admin-error {
+  background: rgba(170, 30, 45, 0.28);
+  border: 1px solid rgba(255, 118, 118, 0.42);
+  color: #ffd1d1;
+}
+
+.admin-error-actions {
+  margin-top: 14px;
+}
+
+.admin-error-actions button {
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #2f7cff, #1f58c8);
+}
+
+.admin-section h2 {
+  margin: 24px 0 14px;
+  font-size: 24px;
+}
+
+.admin-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(0, 35, 110, 0.62);
+  border: 1px solid rgba(120, 180, 255, 0.22);
+}
+
+.admin-user-pseudo {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.admin-user-email {
+  margin-top: 4px;
+  color: #cfe2ff;
+  font-weight: 700;
+}
+
+.admin-user-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-approve-btn,
+.admin-reject-btn {
+  padding: 10px 16px;
+}
+
+.admin-approve-btn {
+  background: linear-gradient(180deg, #48d663, #0f742b);
+}
+
+.admin-reject-btn {
+  background: linear-gradient(180deg, #e55353, #9f1717);
+}

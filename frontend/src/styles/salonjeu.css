@@ -1106,3 +1106,22 @@
   margin-right: 7px;
   transform: translateY(1px);
 }
+
+.salon-admin-btn {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 25;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(150, 210, 255, 0.85);
+  background: linear-gradient(180deg, #2f7cff, #1f58c8);
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.salon-admin-btn:hover {
+  filter: brightness(1.08);
+}

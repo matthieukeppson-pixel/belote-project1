@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Accueil from "./pages/Accueil.jsx";
 import SalonJeu from "./pages/Salonjeu.jsx";
 import Table from "./pages/Table.jsx";
+import Admin from "./pages/Admin.jsx";
 
 export default function App() {
   // État central utilisateur (pseudo + avatar_url)
@@ -34,8 +35,13 @@ export default function App() {
   };
 
   // ✅ Compatibilité: Accueil veut setPseudo(pseudo)
-  const setPseudo = (pseudo) => {
-    updateUser({ pseudo });
+  const setPseudo = (pseudo, fullUser = null) => {
+    if (fullUser) {
+      updateUser({ ...fullUser, pseudo });
+    } else {
+      updateUser({ pseudo });
+    }
+
     // On garde aussi l'ancien storage pour ne rien casser tant que tout n'est pas migré
     localStorage.setItem("pseudo", pseudo);
   };
@@ -48,6 +54,9 @@ export default function App() {
 
         {/* Salon moderne */}
         <Route path="/salon" element={<SalonJeu user={user} />} />
+
+        {/* Administration */}
+        <Route path="/admin" element={<Admin />} />
 
         {/* Table statique */}
         <Route path="/table" element={<Table />} />

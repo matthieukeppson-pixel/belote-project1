@@ -74,7 +74,7 @@ export default function Accueil({ setPseudo }) {
       localStorage.setItem("pseudo", pseudo);
 
       if (setPseudo) {
-        setPseudo(pseudo);
+        setPseudo(pseudo, user);
       }
 
       navigate("/salon");
