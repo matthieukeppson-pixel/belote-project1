@@ -1,11 +1,19 @@
 import sqlite3 from "sqlite3";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, "belote.db");
+const defaultDbPath = path.join(__dirname, "belote.db");
+const dbPath = process.env.BELOTE_DB_PATH
+  ? path.resolve(process.env.BELOTE_DB_PATH)
+  : defaultDbPath;
+
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+console.log(`Base SQLite utilisée : ${dbPath}`);
 
 const db = new sqlite3.Database(dbPath);
 

@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs/
 *.log
 npm-debug.log*
@@ -49,3 +49,5 @@ diff_*.txt
 rapport-avancement-git.txt
 backend/ws-test.mjs
 frontend/public/audio/*.mp3
+# Base SQLite persistante locale / production
+backend/data/
