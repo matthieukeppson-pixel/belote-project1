@@ -133,7 +133,9 @@ Remove-Item (Join-Path $script:LogDir "*.log") -ErrorAction SilentlyContinue
 
 Write-Step "Lancement backend"
 $backendDir = Join-Path $ProjectRoot "backend"
-Start-BeloteWindow "Belote - Backend" $backendDir @("node server.js")
+$dbPath = Join-Path $backendDir "data\belote-local.db"
+$backendCommand = '$env:BELOTE_DB_PATH = ' + (Quote-PowerShellString $dbPath) + '; node server.js'
+Start-BeloteWindow "Belote - Backend" $backendDir @($backendCommand)
 Wait-For-Port 4001 "Backend HTTP"
 Wait-For-Port 4000 "Backend WebSocket"
 
@@ -162,7 +164,7 @@ $frontendDir = Join-Path $ProjectRoot "frontend"
 
 $frontendLines = New-Object "System.Collections.Generic.List[string]"
 [void]$frontendLines.Add('$env:NODE_OPTIONS = ' + (Quote-PowerShellString "--max-old-space-size=4096"))
-[void]$frontendLines.Add('$env:VITE_API_URL = ' + (Quote-PowerShellString $apiUrl))
+[void]$frontendLines.Add('$env:VITE_API_BASE_URL = ' + (Quote-PowerShellString $apiUrl))
 [void]$frontendLines.Add('$env:VITE_WS_URL = ' + (Quote-PowerShellString $wsUrl))
 [void]$frontendLines.Add('$env:__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS = ' + (Quote-PowerShellString $frontendHost))
 [void]$frontendLines.Add("npm run dev -- --host 0.0.0.0")
@@ -178,5 +180,5 @@ Write-Host "Ne donne pas les liens API/WebSocket."
 Write-Host "Garde ouvertes les fenetres lancees."
 Write-Host "Pour tout arreter apres le test: Ctrl+C dans chaque fenetre."
 Write-Host ""
-Write-Host "API_URL: $apiUrl"
+Write-Host "API_BASE_URL: $apiUrl"
 Write-Host "WS_URL : $wsUrl"
