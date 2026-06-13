@@ -522,6 +522,126 @@ app.post("/api/admin/users/:id/reject", async (req, res) => {
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+app.post("/api/admin/users/:id/ban", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+    const reason =
+      String(req.body?.reason || "").trim() || "Compte banni par Matt ou Véro.";
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          is_approved = 0,
+          is_banned = 1,
+          ban_reason = ?,
+          banned_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND COALESCE(role, 'player') <> 'admin'
+      `,
+      [reason, userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Joueur introuvable ou protégé" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+      `,
+      [userId]
+    );
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Compte joueur banni.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/ban", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/admin/users/:id/unban", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          is_approved = 1,
+          approved_at = CURRENT_TIMESTAMP,
+          is_banned = 0,
+          ban_reason = NULL,
+          banned_at = NULL
+        WHERE id = ?
+          AND COALESCE(role, 'player') <> 'admin'
+      `,
+      [userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Joueur introuvable ou protégé" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+      `,
+      [userId]
+    );
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Compte joueur débanni.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/unban", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 app.get("/api/admin/me", async (req, res) => {
   try {
     const admin = await requireAdminUser(req, res);

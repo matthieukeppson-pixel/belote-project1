@@ -42,7 +42,9 @@
 .admin-back-btn,
 .admin-error-actions button,
 .admin-approve-btn,
-.admin-reject-btn {
+.admin-reject-btn,
+.admin-ban-btn,
+.admin-unban-btn {
   border: 0;
   border-radius: 999px;
   color: #ffffff;
@@ -77,6 +79,12 @@
   background: rgba(30, 150, 75, 0.25);
   border: 1px solid rgba(118, 255, 166, 0.38);
   color: #c9ffd9;
+}
+
+.admin-message-danger {
+  background: rgba(170, 30, 45, 0.28);
+  border: 1px solid rgba(255, 118, 118, 0.42);
+  color: #ffd1d1;
 }
 
 .admin-error {
@@ -116,6 +124,10 @@
   border: 1px solid rgba(120, 180, 255, 0.22);
 }
 
+.admin-user-main {
+  min-width: 0;
+}
+
 .admin-user-pseudo {
   font-size: 20px;
   font-weight: 900;
@@ -127,21 +139,33 @@
   font-weight: 700;
 }
 
+.admin-user-extra {
+  margin-top: 6px;
+  color: #ffd1d1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .admin-user-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin-approve-btn,
-.admin-reject-btn {
+.admin-reject-btn,
+.admin-ban-btn,
+.admin-unban-btn {
   padding: 10px 16px;
 }
 
-.admin-approve-btn {
+.admin-approve-btn,
+.admin-unban-btn {
   background: linear-gradient(180deg, #48d663, #0f742b);
 }
 
-.admin-reject-btn {
+.admin-reject-btn,
+.admin-ban-btn {
   background: linear-gradient(180deg, #e55353, #9f1717);
 }

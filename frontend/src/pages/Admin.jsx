@@ -29,13 +29,23 @@ export default function Admin() {
   const navigate = useNavigate();
   const [adminUser, setAdminUser] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [approvedUsers, setApprovedUsers] = useState([]);
+  const [bannedUsers, setBannedUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
   const [error, setError] = useState("");
 
-  const loadPendingUsers = async () => {
-    const usersData = await apiRequest("/api/admin/users?status=pending");
-    setPendingUsers(Array.isArray(usersData.users) ? usersData.users : []);
+  const loadUsers = async () => {
+    const [pendingData, approvedData, bannedData] = await Promise.all([
+      apiRequest("/api/admin/users?status=pending"),
+      apiRequest("/api/admin/users?status=approved"),
+      apiRequest("/api/admin/users?status=banned"),
+    ]);
+
+    setPendingUsers(Array.isArray(pendingData.users) ? pendingData.users : []);
+    setApprovedUsers(Array.isArray(approvedData.users) ? approvedData.users : []);
+    setBannedUsers(Array.isArray(bannedData.users) ? bannedData.users : []);
   };
 
   useEffect(() => {
@@ -47,13 +57,19 @@ export default function Admin() {
       setMessage("");
 
       try {
-        const meData = await apiRequest("/api/admin/me");
-        const usersData = await apiRequest("/api/admin/users?status=pending");
+        const [meData, pendingData, approvedData, bannedData] = await Promise.all([
+          apiRequest("/api/admin/me"),
+          apiRequest("/api/admin/users?status=pending"),
+          apiRequest("/api/admin/users?status=approved"),
+          apiRequest("/api/admin/users?status=banned"),
+        ]);
 
         if (cancelled) return;
 
         setAdminUser(meData.user || null);
-        setPendingUsers(Array.isArray(usersData.users) ? usersData.users : []);
+        setPendingUsers(Array.isArray(pendingData.users) ? pendingData.users : []);
+        setApprovedUsers(Array.isArray(approvedData.users) ? approvedData.users : []);
+        setBannedUsers(Array.isArray(bannedData.users) ? bannedData.users : []);
       } catch (err) {
         if (cancelled) return;
         setError(err.message || "Accès administration impossible.");
@@ -80,8 +96,9 @@ export default function Admin() {
         method: "POST",
       });
 
+      setMessageType("success");
       setMessage(data.message || "Compte joueur validé.");
-      await loadPendingUsers();
+      await loadUsers();
     } catch (err) {
       setError(err.message || "Validation impossible.");
     }
@@ -99,12 +116,115 @@ export default function Admin() {
         }),
       });
 
+      setMessageType("danger");
       setMessage(data.message || "Compte joueur désactivé.");
-      await loadPendingUsers();
+      await loadUsers();
     } catch (err) {
       setError(err.message || "Refus impossible.");
     }
   };
+
+  const banUser = async (userId) => {
+    const confirmed = window.confirm("Bannir ce joueur ?");
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/api/admin/users/${userId}/ban`, {
+        method: "POST",
+        body: JSON.stringify({
+          reason: "Compte banni par Matt ou Véro.",
+        }),
+      });
+
+      setMessageType("danger");
+      setMessage(data.message || "Compte joueur banni.");
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Bannissement impossible.");
+    }
+  };
+
+  const unbanUser = async (userId) => {
+    const confirmed = window.confirm("Débannir ce joueur ?");
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/api/admin/users/${userId}/unban`, {
+        method: "POST",
+      });
+
+      setMessageType("success");
+      setMessage(data.message || "Compte joueur débanni.");
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Débannissement impossible.");
+    }
+  };
+
+  const renderUserRow = (player, section) => (
+    <div key={`${section}-${player.id}`} className="admin-user-row">
+      <div className="admin-user-main">
+        <div className="admin-user-pseudo">{player.pseudo || player.username}</div>
+        <div className="admin-user-email">{player.email}</div>
+        {section === "banned" && player.ban_reason && (
+          <div className="admin-user-extra">Motif : {player.ban_reason}</div>
+        )}
+      </div>
+
+      <div className="admin-user-actions">
+        {section === "pending" && (
+          <>
+            <button
+              type="button"
+              className="admin-approve-btn"
+              onClick={() => approveUser(player.id)}
+            >
+              Valider
+            </button>
+            <button
+              type="button"
+              className="admin-reject-btn"
+              onClick={() => rejectUser(player.id)}
+            >
+              Refuser
+            </button>
+          </>
+        )}
+
+        {section === "approved" && (
+          <button type="button" className="admin-ban-btn" onClick={() => banUser(player.id)}>
+            Bannir
+          </button>
+        )}
+
+        {section === "banned" && (
+          <button type="button" className="admin-unban-btn" onClick={() => unbanUser(player.id)}>
+            Débannir
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderUsersSection = (title, emptyText, users, section) => (
+    <section className="admin-section">
+      <h2>{title}</h2>
+
+      {users.length === 0 ? (
+        <div className="admin-empty">{emptyText}</div>
+      ) : (
+        <div className="admin-users-list">
+          {users.map((player) => renderUserRow(player, section))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <div className="admin-root">
@@ -112,7 +232,7 @@ export default function Admin() {
         <div className="admin-header">
           <div>
             <h1>Administration</h1>
-            <p>Demandes d'inscription Belote et Amis</p>
+            <p>Inscriptions et modération Belote et Amis</p>
           </div>
 
           <button type="button" className="admin-back-btn" onClick={() => navigate("/salon")}>
@@ -139,43 +259,15 @@ export default function Admin() {
               Connecté admin : <strong>{adminUser?.pseudo || adminUser?.username || "Admin"}</strong>
             </div>
 
-            {message && <div className="admin-message">{message}</div>}
+            {message && (
+              <div className={messageType === "danger" ? "admin-message admin-message-danger" : "admin-message"}>
+                {message}
+              </div>
+            )}
 
-            <section className="admin-section">
-              <h2>Demandes en attente</h2>
-
-              {pendingUsers.length === 0 ? (
-                <div className="admin-empty">Aucune demande en attente.</div>
-              ) : (
-                <div className="admin-users-list">
-                  {pendingUsers.map((player) => (
-                    <div key={player.id} className="admin-user-row">
-                      <div className="admin-user-main">
-                        <div className="admin-user-pseudo">{player.pseudo || player.username}</div>
-                        <div className="admin-user-email">{player.email}</div>
-                      </div>
-
-                      <div className="admin-user-actions">
-                        <button
-                          type="button"
-                          className="admin-approve-btn"
-                          onClick={() => approveUser(player.id)}
-                        >
-                          Valider
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-reject-btn"
-                          onClick={() => rejectUser(player.id)}
-                        >
-                          Refuser
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            {renderUsersSection("Demandes en attente", "Aucune demande en attente.", pendingUsers, "pending")}
+            {renderUsersSection("Joueurs validés", "Aucun joueur validé..", approvedUsers, "approved")}
+            {renderUsersSection("Joueurs bannis", "Aucun joueur banni.", bannedUsers, "banned")}
           </>
         )}
       </div>
