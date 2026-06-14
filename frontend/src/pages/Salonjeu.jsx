@@ -1,4 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
+
+function roleClassFromRole(role) {
+  if (role === "admin") return "role-admin";
+  if (role === "moderator") return "role-moderator";
+  return "";
+}
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import "../styles/salonjeu.css";
@@ -95,6 +101,15 @@ export default function SalonJeu({ user }) {
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
+
+  const roleClassForUser = (name, explicitRole) => {
+    const role =
+      explicitRole ||
+      players.find((player) => player.name === name)?.role ||
+      "player";
+
+    return roleClassFromRole(role);
+  };
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [showProfil, setShowProfil] = useState(false);
   const [isMusicListening, setIsMusicListening] = useState(false);
@@ -261,6 +276,7 @@ ws.onmessage = (event) => {
         (data.players || []).map((p) => ({
           name: p.name,
           avatar: p.avatar || "/avatar_blue.png",
+          role: p.role || "player",
         }))
       );
       return;
@@ -309,6 +325,7 @@ case "message":
       id: `${Date.now()}-${Math.random()}`,
       user: data.user,
       text: data.text,
+      role: data.role,
     },
   ]);
   return;
@@ -622,7 +639,7 @@ const statusText = isHumanFull
 
           <div className="chat-box" ref={chatBoxRef}>
             {messages.map((m) => (
-              <div key={m.id} className="chat-message">
+              <div key={m.id} className={`chat-message ${roleClassForUser(m.user, m.role)}`}>
                 <span className="chat-user">{m.user} :</span>
                 <span className="chat-text">{renderSalonMessageContent(m.text)}</span>
               </div>
@@ -732,7 +749,9 @@ const statusText = isHumanFull
                     cursor: p.name === currentName ? "pointer" : "default",
                   }}
                 />
-                <div className="player-name">{p.name}</div>
+                <div className={`player-name ${roleClassFromRole(p.role)}`}>
+                  {p.name}
+                </div>
               </div>
             ))}
           </div>

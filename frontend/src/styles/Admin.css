@@ -44,7 +44,9 @@
 .admin-approve-btn,
 .admin-reject-btn,
 .admin-ban-btn,
-.admin-unban-btn {
+.admin-unban-btn,
+.admin-promote-btn,
+.admin-demote-btn {
   border: 0;
   border-radius: 999px;
   color: #ffffff;
@@ -156,7 +158,9 @@
 .admin-approve-btn,
 .admin-reject-btn,
 .admin-ban-btn,
-.admin-unban-btn {
+.admin-unban-btn,
+.admin-promote-btn,
+.admin-demote-btn {
   padding: 10px 16px;
 }
 
@@ -185,4 +189,22 @@
 
 .admin-contact-line a:hover {
   text-decoration: underline;
+}
+
+
+.admin-promote-btn {
+  background: linear-gradient(180deg, #ffe27a, #c69222);
+  color: #1b1300;
+}
+
+.admin-demote-btn {
+  background: linear-gradient(180deg, #7f96c8, #3d568f);
+}
+
+
+
+.admin-user-pseudo.role-moderator {
+  color: #ffe27a;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }

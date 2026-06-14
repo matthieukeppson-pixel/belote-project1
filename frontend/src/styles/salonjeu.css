@@ -1125,3 +1125,22 @@
 .salon-admin-btn:hover {
   filter: brightness(1.08);
 }
+
+
+
+
+.player-name.role-admin,
+.chat-message.role-admin .chat-user,
+.chat-message.role-admin .chat-text {
+  color: #55dd6c;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.player-name.role-moderator,
+.chat-message.role-moderator .chat-user,
+.chat-message.role-moderator .chat-text {
+  color: #ffe27a;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}

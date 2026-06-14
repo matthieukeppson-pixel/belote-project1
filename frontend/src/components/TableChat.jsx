@@ -1,4 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
+
+function roleClassFromRole(role) {
+  if (role === "admin") return "role-admin";
+  if (role === "moderator") return "role-moderator";
+  return "";
+}
 import "../styles/TableChat.css";
 
 const SIMPLE_EMOJIS = [
@@ -117,7 +123,7 @@ const addEmoji = (code) => {
       {msg.text}
     </div>
   ) : (
-    <div key={msg.id} className={`tablechat-line ${msg.from || "other"}`}>
+    <div key={msg.id} className={`tablechat-line ${msg.from || "other"} ${roleClassFromRole(msg.role)}`}>
       <span className="tablechat-author">{msg.author} :</span>{" "}
       {renderCustomMessageContent(msg.text)}
     </div>

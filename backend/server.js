@@ -642,6 +642,130 @@ app.post("/api/admin/users/:id/unban", async (req, res) => {
   }
 });
 
+app.post("/api/admin/users/:id/promote-moderator", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          role = 'moderator',
+          is_approved = 1,
+          approved_at = CURRENT_TIMESTAMP,
+          is_banned = 0,
+          ban_reason = NULL,
+          banned_at = NULL
+        WHERE id = ?
+          AND COALESCE(role, 'player') <> 'admin'
+      `,
+      [userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Joueur introuvable ou protege" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+    syncOnlinePlayerRoleFromAdminUser(user);
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Joueur passe moderateur.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/promote-moderator", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/admin/users/:id/demote-moderator", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const result = await dbRun(
+      `
+        UPDATE users
+        SET
+          role = 'player',
+          is_approved = 1,
+          approved_at = CURRENT_TIMESTAMP,
+          is_banned = 0,
+          ban_reason = NULL,
+          banned_at = NULL
+        WHERE id = ?
+          AND COALESCE(role, 'player') = 'moderator'
+      `,
+      [userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Moderateur introuvable" });
+    }
+
+    const user = await dbGet(
+      `
+        SELECT
+          id,
+          username,
+          email,
+          avatar_url,
+          role,
+          is_approved,
+          approved_at,
+          is_banned,
+          ban_reason,
+          banned_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+    syncOnlinePlayerRoleFromAdminUser(user);
+
+    return res.json({
+      user: adminUserFromDb(user),
+      message: "Role moderateur retire.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/demote-moderator", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 app.get("/api/admin/me", async (req, res) => {
   try {
     const admin = await requireAdminUser(req, res);
@@ -1661,10 +1785,42 @@ function ensureDefaultTables() {
 
 ensureDefaultTables();
 
+function normalizePublicRole(role) {
+  return role === "admin" || role === "moderator" ? role : "player";
+}
+
+async function getUserRoleForPseudo(pseudo) {
+  if (!pseudo) return "player";
+
+  try {
+    const user = await dbGet(
+      "SELECT role FROM users WHERE username = ? LIMIT 1",
+      [pseudo]
+    );
+
+    return normalizePublicRole(user?.role);
+  } catch (err) {
+    console.error("Erreur getUserRoleForPseudo", err);
+    return "player";
+  }
+}
+
+function syncOnlinePlayerRoleFromAdminUser(user) {
+  if (!user?.username) return;
+
+  const onlinePlayer = playersMap.get(user.username);
+  if (!onlinePlayer) return;
+
+  onlinePlayer.role = normalizePublicRole(user.role);
+  broadcastPlayers();
+  broadcastTables();
+}
+
 function playersArray() {
   return Array.from(playersMap.values()).map((p) => ({
     name: p.name,
     avatar: p.avatar || "/avatar_blue.png",
+    role: normalizePublicRole(p.role),
   }));
 }
 
@@ -1689,6 +1845,7 @@ function seatInfoFromPseudo(pseudo) {
   return {
     name: pseudo,
     avatar: p?.avatar || "/avatar_blue.png",
+    role: normalizePublicRole(p?.role),
     isBot: false,
     pseudo,
   };
@@ -3145,7 +3302,7 @@ wss.on("connection", (ws) => {
   ws.send(JSON.stringify({ type: "tables", tables: tablesArray() }));
   ws.send(JSON.stringify(animationStatePayload()));
 
-  ws.on("message", (raw) => {
+  ws.on("message", async (raw) => {
     let msg;
     try {
       msg = JSON.parse(raw.toString());
@@ -3162,10 +3319,10 @@ wss.on("connection", (ws) => {
 
       const avatar =
         String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
-
+      const role = await getUserRoleForPseudo(pseudo);
       const existing = playersMap.get(pseudo);
       if (!existing) {
-        playersMap.set(pseudo, { name: pseudo, avatar, count: 1 });
+        playersMap.set(pseudo, { name: pseudo, avatar, role, count: 1 });
         system(`â­ Bienvenue ${pseudo} â­`);
       } else {
         existing.count += 1;

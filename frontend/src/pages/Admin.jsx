@@ -167,10 +167,52 @@ export default function Admin() {
     }
   };
 
+  const promoteModerator = async (userId) => {
+    const confirmed = window.confirm("Mettre ce joueur moderateur ?");
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/api/admin/users/${userId}/promote-moderator`, {
+        method: "POST",
+      });
+
+      setMessageType("success");
+      setMessage(data.message || "Joueur passe moderateur.");
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Promotion moderateur impossible.");
+    }
+  };
+
+  const demoteModerator = async (userId) => {
+    const confirmed = window.confirm("Retirer le role moderateur a ce joueur ?");
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/api/admin/users/${userId}/demote-moderator`, {
+        method: "POST",
+      });
+
+      setMessageType("success");
+      setMessage(data.message || "Role moderateur retire.");
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Retrait moderateur impossible.");
+    }
+  };
+
   const renderUserRow = (player, section) => (
     <div key={`${section}-${player.id}`} className="admin-user-row">
       <div className="admin-user-main">
-        <div className="admin-user-pseudo">{player.pseudo || player.username}</div>
+        <div className={`admin-user-pseudo ${player.role === "moderator" ? "role-moderator" : ""}`}>
+  {player.pseudo || player.username}
+</div>
         <div className="admin-user-email">{player.email}</div>
         {section === "banned" && player.ban_reason && (
           <div className="admin-user-extra">Motif : {player.ban_reason}</div>
@@ -198,9 +240,33 @@ export default function Admin() {
         )}
 
         {section === "approved" && (
-          <button type="button" className="admin-ban-btn" onClick={() => banUser(player.id)}>
-            Bannir
-          </button>
+          <>
+            {player.role === "moderator" ? (
+              <button
+                type="button"
+                className="admin-demote-btn"
+                onClick={() => demoteModerator(player.id)}
+              >
+                Retirer modo
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="admin-promote-btn"
+                onClick={() => promoteModerator(player.id)}
+              >
+                Mettre modo
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="admin-ban-btn"
+              onClick={() => banUser(player.id)}
+            >
+              Bannir
+            </button>
+          </>
         )}
 
         {section === "banned" && (
@@ -232,7 +298,7 @@ export default function Admin() {
         <div className="admin-header">
           <div>
             <h1>Administration</h1>
-            <p>Inscriptions, mod?ration et contact Belote et Amis</p>
+            <p>Inscriptions, moderation et contact Belote et Amis</p>
             <div className="admin-contact-line">
               Contact officiel : <a href="mailto:Belote.et.Amis@gmx.fr">Belote.et.Amis@gmx.fr</a>
             </div>
