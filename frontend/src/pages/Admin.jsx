@@ -232,7 +232,10 @@ export default function Admin() {
         <div className="admin-header">
           <div>
             <h1>Administration</h1>
-            <p>Inscriptions et modération Belote et Amis</p>
+            <p>Inscriptions, mod?ration et contact Belote et Amis</p>
+            <div className="admin-contact-line">
+              Contact officiel : <a href="mailto:Belote.et.Amis@gmx.fr">Belote.et.Amis@gmx.fr</a>
+            </div>
           </div>
 
           <button type="button" className="admin-back-btn" onClick={() => navigate("/salon")}>

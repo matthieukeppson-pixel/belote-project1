@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Accueil.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
+const CONTACT_EMAIL = "Belote.et.Amis@gmx.fr";
 
 async function postJson(path, payload) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -203,6 +204,11 @@ export default function Accueil({ setPseudo }) {
                   <button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? "Envoi..." : "Envoyer la demande"}
                   </button>
+
+                  <p className="accueil-contact-line">
+                    Contact, message ou chanson/karaoke :{" "}
+                    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+                  </p>
                 </form>
               )}
 

@@ -169,3 +169,20 @@
 .admin-ban-btn {
   background: linear-gradient(180deg, #e55353, #9f1717);
 }
+
+
+.admin-contact-line {
+  margin-top: 8px;
+  color: #cfe2ff;
+  font-weight: 800;
+}
+
+.admin-contact-line a {
+  color: #ffe27a;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.admin-contact-line a:hover {
+  text-decoration: underline;
+}

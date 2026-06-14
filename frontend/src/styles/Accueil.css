@@ -179,3 +179,22 @@
   border: 1px solid rgba(255, 118, 118, 0.42);
 }
 
+
+
+.accueil-contact-line {
+  margin: 12px 0 0;
+  color: #cfe2ff;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.accueil-contact-line a {
+  color: #ffe27a;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.accueil-contact-line a:hover {
+  text-decoration: underline;
+}
