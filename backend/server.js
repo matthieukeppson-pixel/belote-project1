@@ -1805,6 +1805,11 @@ async function getUserRoleForPseudo(pseudo) {
   }
 }
 
+function publicRoleForOnlinePseudo(pseudo) {
+  const onlinePlayer = playersMap.get(pseudo);
+  return normalizePublicRole(onlinePlayer?.role);
+}
+
 function syncOnlinePlayerRoleFromAdminUser(user) {
   if (!user?.username) return;
 
@@ -3408,10 +3413,13 @@ wss.on("connection", (ws) => {
   // Un joueur assis ou un visiteur peut tchater sur la table.
   if (!isTableParticipant(ws.tableId, pseudo)) return;
 
+  const role = await getUserRoleForPseudo(pseudo);
+
   broadcastToTable(ws.tableId, {
     type: "table_message",
     tableId: ws.tableId,
     user: pseudo,
+    role,
     text,
   });
   return;

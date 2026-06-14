@@ -472,6 +472,7 @@ useEffect(() => {
             type: "chat",
             author: msg.user,
             text: msg.text,
+            role: msg.role || "player",
             from: msg.user === pseudo ? "me" : "other",
           },
         ]);
