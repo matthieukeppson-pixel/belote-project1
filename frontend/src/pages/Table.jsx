@@ -1951,6 +1951,12 @@ const canStartWithBots =
   const displayedSeatAvatar = seatAvatarForPosition(position);
   const displayedSeatName = seatNameForPosition(position);
   const hasDisplayedSeat = !!displayedSeat?.name;
+  let displayedSeatRoleClass = "";
+  if (displayedSeat?.role === "admin") {
+    displayedSeatRoleClass = "role-admin";
+  } else if (displayedSeat?.role === "moderator") {
+    displayedSeatRoleClass = "role-moderator";
+  }
   const serverDisplayedHand = Array.isArray(serverHand?.hands?.[player])
     ? serverHand.hands[player]
     : null;
@@ -1990,27 +1996,8 @@ const canStartWithBots =
                     className="player-avatar"
                   />
 
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      top: position === "bottom" ? "100%" : "calc(100% + 6px)",
-                      transform: "translateX(-50%)",
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      background: "rgba(40, 8, 18, 0.78)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      lineHeight: 1,
-                      whiteSpace: "nowrap",
-                      pointerEvents: "none",
-                      zIndex: 6,
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
-                    }}
-                  >
-                   {displayedSeatName}
+                  <div className={`player-pseudo ${displayedSeatRoleClass}`.trim()}>
+                    {displayedSeatName}
                   </div>
 
                  {!isLocalDisplayedPlayer && (
