@@ -185,7 +185,7 @@ export default function Admin() {
   };
 
   const promoteModerator = async (userId) => {
-    const confirmed = window.confirm("Mettre ce joueur moderateur ?");
+    const confirmed = window.confirm("Mettre ce joueur modérateur ?");
     if (!confirmed) return;
 
     setError("");
@@ -205,7 +205,7 @@ export default function Admin() {
   };
 
   const demoteModerator = async (userId) => {
-    const confirmed = window.confirm("Retirer le role moderateur a ce joueur ?");
+    const confirmed = window.confirm("Retirer le rôle modérateur à ce joueur ?");
     if (!confirmed) return;
 
     setError("");
@@ -359,7 +359,7 @@ export default function Admin() {
 
             {isAdmin &&
               renderUsersSection("Demandes en attente", "Aucune demande en attente.", pendingUsers, "pending")}
-            {renderUsersSection("Joueurs validés", "Aucun joueur validé..", approvedUsers, "approved")}
+            {renderUsersSection("Joueurs validés", "Aucun joueur validé.", approvedUsers, "approved")}
             {renderUsersSection("Joueurs bannis", "Aucun joueur banni.", bannedUsers, "banned")}
           </>
         )}
