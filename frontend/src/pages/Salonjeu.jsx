@@ -133,7 +133,10 @@ export default function SalonJeu({ user }) {
   const djStreamUrl = import.meta.env.VITE_DJ_STREAM_URL || "";
   const currentAudioUrl =
     animationState.mode === "live" ? djStreamUrl : playlistAudioUrl;
-  const isAdminUser = String(user?.role || storedUser.role || "player") === "admin";
+  const currentUserRole = String(user?.role || storedUser.role || "player");
+  const isAdminUser = currentUserRole === "admin";
+  const isModeratorUser = currentUserRole === "moderator";
+  const isStaffUser = isAdminUser || isModeratorUser;
 
   useEffect(() => {
     const audio = musicAudioRef.current;
@@ -436,14 +439,14 @@ return () => {
   ================================ */
   return (
     <div className="salon-wrapper">
-      {isAdminUser && (
+      {isStaffUser && (
         <button
           type="button"
           className="salon-admin-btn"
           onClick={() => navigate("/admin")}
-          title="Administration Matt/Véro"
+          title={isAdminUser ? "Administration Matt/Véro" : "Modération"}
         >
-          Administration
+          {isAdminUser ? "Administration" : "Modération"}
         </button>
       )}
       <div className="salon-music-controls" aria-label="Musique">

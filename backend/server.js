@@ -206,6 +206,23 @@ async function requireAdminUser(req, res) {
   return user;
 }
 
+async function requireStaffUser(req, res) {
+  const user = await getAuthUserFromRequest(req);
+
+  if (!user) {
+    res.status(401).json({ error: "Connexion modération requise" });
+    return null;
+  }
+
+  const role = String(user.role || "player");
+
+  if (role !== "admin" && role !== "moderator") {
+    res.status(403).json({ error: "Accès réservé à l’équipe de modération." });
+    return null;
+  }
+
+  return user;
+}
 app.post("/api/register", async (req, res) => {
   try {
     const username = normalizeUsername(req.body?.username || req.body?.pseudo);
@@ -350,9 +367,10 @@ app.post("/api/login", async (req, res) => {
 
 app.get("/api/admin/users", async (req, res) => {
   try {
-    const admin = await requireAdminUser(req, res);
-    if (!admin) return;
+    const staff = await requireStaffUser(req, res);
+    if (!staff) return;
 
+    const staffRole = String(staff.role || "player");
     const status = String(req.query?.status || "pending").trim().toLowerCase();
     const allowedStatuses = new Set(["pending", "approved", "banned", "all"]);
 
@@ -360,7 +378,18 @@ app.get("/api/admin/users", async (req, res) => {
       return res.status(400).json({ error: "Statut invalide" });
     }
 
+    if (staffRole === "moderator" && status === "pending") {
+      return res.json({
+        status,
+        users: [],
+      });
+    }
+
     let statusCondition = "";
+    const roleCondition =
+      staffRole === "admin"
+        ? "AND COALESCE(role, 'player') <> 'admin'"
+        : "AND COALESCE(role, 'player') = 'player'";
 
     if (status === "pending") {
       statusCondition =
@@ -386,7 +415,8 @@ app.get("/api/admin/users", async (req, res) => {
           ban_reason,
           banned_at
         FROM users
-        WHERE COALESCE(role, 'player') <> 'admin'
+        WHERE 1 = 1
+        ${roleCondition}
         ${statusCondition}
         ORDER BY id DESC
       `
@@ -525,8 +555,14 @@ app.post("/api/admin/users/:id/reject", async (req, res) => {
 
 app.post("/api/admin/users/:id/ban", async (req, res) => {
   try {
-    const admin = await requireAdminUser(req, res);
-    if (!admin) return;
+    const staff = await requireStaffUser(req, res);
+    if (!staff) return;
+
+    const staffRole = String(staff.role || "player");
+    const targetRoleCondition =
+      staffRole === "admin"
+        ? "AND COALESCE(role, 'player') <> 'admin'"
+        : "AND COALESCE(role, 'player') = 'player'";
 
     const userId = Number.parseInt(req.params.id, 10);
     const reason =
@@ -545,7 +581,7 @@ app.post("/api/admin/users/:id/ban", async (req, res) => {
           ban_reason = ?,
           banned_at = CURRENT_TIMESTAMP
         WHERE id = ?
-          AND COALESCE(role, 'player') <> 'admin'
+          ${targetRoleCondition}
       `,
       [reason, userId]
     );
@@ -585,8 +621,14 @@ app.post("/api/admin/users/:id/ban", async (req, res) => {
 
 app.post("/api/admin/users/:id/unban", async (req, res) => {
   try {
-    const admin = await requireAdminUser(req, res);
-    if (!admin) return;
+    const staff = await requireStaffUser(req, res);
+    if (!staff) return;
+
+    const staffRole = String(staff.role || "player");
+    const targetRoleCondition =
+      staffRole === "admin"
+        ? "AND COALESCE(role, 'player') <> 'admin'"
+        : "AND COALESCE(role, 'player') = 'player'";
 
     const userId = Number.parseInt(req.params.id, 10);
 
@@ -604,7 +646,7 @@ app.post("/api/admin/users/:id/unban", async (req, res) => {
           ban_reason = NULL,
           banned_at = NULL
         WHERE id = ?
-          AND COALESCE(role, 'player') <> 'admin'
+          ${targetRoleCondition}
       `,
       [userId]
     );
@@ -768,11 +810,11 @@ app.post("/api/admin/users/:id/demote-moderator", async (req, res) => {
 
 app.get("/api/admin/me", async (req, res) => {
   try {
-    const admin = await requireAdminUser(req, res);
-    if (!admin) return;
+    const staff = await requireStaffUser(req, res);
+    if (!staff) return;
 
     return res.json({
-      user: publicUserFromDb(admin),
+      user: publicUserFromDb(staff),
     });
   } catch (err) {
     console.error("Erreur /api/admin/me", err);

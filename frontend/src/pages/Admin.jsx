@@ -36,9 +36,17 @@ export default function Admin() {
   const [messageType, setMessageType] = useState("success");
   const [error, setError] = useState("");
 
-  const loadUsers = async () => {
+  const currentRole = String(adminUser?.role || "player");
+  const isAdmin = currentRole === "admin";
+  const isModerator = currentRole === "moderator";
+
+  const loadUsers = async (role = currentRole) => {
+    const canManageRegistrations = String(role || "player") === "admin";
+
     const [pendingData, approvedData, bannedData] = await Promise.all([
-      apiRequest("/api/admin/users?status=pending"),
+      canManageRegistrations
+        ? apiRequest("/api/admin/users?status=pending")
+        : Promise.resolve({ users: [] }),
       apiRequest("/api/admin/users?status=approved"),
       apiRequest("/api/admin/users?status=banned"),
     ]);
@@ -57,9 +65,14 @@ export default function Admin() {
       setMessage("");
 
       try {
-        const [meData, pendingData, approvedData, bannedData] = await Promise.all([
-          apiRequest("/api/admin/me"),
-          apiRequest("/api/admin/users?status=pending"),
+        const meData = await apiRequest("/api/admin/me");
+        const role = String(meData.user?.role || "player");
+        const canManageRegistrations = role === "admin";
+
+        const [pendingData, approvedData, bannedData] = await Promise.all([
+          canManageRegistrations
+            ? apiRequest("/api/admin/users?status=pending")
+            : Promise.resolve({ users: [] }),
           apiRequest("/api/admin/users?status=approved"),
           apiRequest("/api/admin/users?status=banned"),
         ]);
@@ -98,7 +111,7 @@ export default function Admin() {
 
       setMessageType("success");
       setMessage(data.message || "Compte joueur validé.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Validation impossible.");
     }
@@ -118,7 +131,7 @@ export default function Admin() {
 
       setMessageType("danger");
       setMessage(data.message || "Compte joueur désactivé.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Refus impossible.");
     }
@@ -135,13 +148,17 @@ export default function Admin() {
       const data = await apiRequest(`/api/admin/users/${userId}/ban`, {
         method: "POST",
         body: JSON.stringify({
-          reason: "Compte banni par Matt ou Véro.",
+          reason: isAdmin
+
+            ? "Compte banni par Matt ou Véro."
+
+            : "Compte banni par un modérateur.",
         }),
       });
 
       setMessageType("danger");
       setMessage(data.message || "Compte joueur banni.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Bannissement impossible.");
     }
@@ -161,7 +178,7 @@ export default function Admin() {
 
       setMessageType("success");
       setMessage(data.message || "Compte joueur débanni.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Débannissement impossible.");
     }
@@ -181,7 +198,7 @@ export default function Admin() {
 
       setMessageType("success");
       setMessage(data.message || "Joueur passe moderateur.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Promotion moderateur impossible.");
     }
@@ -201,7 +218,7 @@ export default function Admin() {
 
       setMessageType("success");
       setMessage(data.message || "Role moderateur retire.");
-      await loadUsers();
+      await loadUsers(currentRole);
     } catch (err) {
       setError(err.message || "Retrait moderateur impossible.");
     }
@@ -220,7 +237,7 @@ export default function Admin() {
       </div>
 
       <div className="admin-user-actions">
-        {section === "pending" && (
+        {isAdmin && section === "pending" && (
           <>
             <button
               type="button"
@@ -241,23 +258,24 @@ export default function Admin() {
 
         {section === "approved" && (
           <>
-            {player.role === "moderator" ? (
-              <button
-                type="button"
-                className="admin-demote-btn"
-                onClick={() => demoteModerator(player.id)}
-              >
-                Retirer modo
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="admin-promote-btn"
-                onClick={() => promoteModerator(player.id)}
-              >
-                Mettre modo
-              </button>
-            )}
+            {isAdmin &&
+              (player.role === "moderator" ? (
+                <button
+                  type="button"
+                  className="admin-demote-btn"
+                  onClick={() => demoteModerator(player.id)}
+                >
+                  Retirer modo
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="admin-promote-btn"
+                  onClick={() => promoteModerator(player.id)}
+                >
+                  Mettre modo
+                </button>
+              ))}
 
             <button
               type="button"
@@ -297,8 +315,12 @@ export default function Admin() {
       <div className="admin-card">
         <div className="admin-header">
           <div>
-            <h1>Administration</h1>
-            <p>Inscriptions, moderation et contact Belote et Amis</p>
+            <h1>{isModerator ? "Modération" : "Administration"}</h1>
+            <p>
+              {isModerator
+                ? "Modération des joueurs Belote et Amis"
+                : "Inscriptions, modération et contact Belote et Amis"}
+            </p>
             <div className="admin-contact-line">
               Contact officiel : <a href="mailto:Belote.et.Amis@gmx.fr">Belote.et.Amis@gmx.fr</a>
             </div>
@@ -325,7 +347,8 @@ export default function Admin() {
         {!isLoading && !error && (
           <>
             <div className="admin-user-line">
-              Connecté admin : <strong>{adminUser?.pseudo || adminUser?.username || "Admin"}</strong>
+              Connecté {isModerator ? "modo" : "admin"} :{" "}
+              <strong>{adminUser?.pseudo || adminUser?.username || "Admin"}</strong>
             </div>
 
             {message && (
@@ -334,7 +357,8 @@ export default function Admin() {
               </div>
             )}
 
-            {renderUsersSection("Demandes en attente", "Aucune demande en attente.", pendingUsers, "pending")}
+            {isAdmin &&
+              renderUsersSection("Demandes en attente", "Aucune demande en attente.", pendingUsers, "pending")}
             {renderUsersSection("Joueurs validés", "Aucun joueur validé..", approvedUsers, "approved")}
             {renderUsersSection("Joueurs bannis", "Aucun joueur banni.", bannedUsers, "banned")}
           </>
