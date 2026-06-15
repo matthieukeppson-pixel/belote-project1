@@ -4068,38 +4068,48 @@ if (leftTable) {
 
     p.count -= 1;
 
-    // derniÃ¨re connexion du pseudo -> on le sort aussi des tables
+    // Laisse le temps au meme pseudo de se reconnecter pendant une navigation
+    // salon -> table, pour ne pas sortir le joueur de la table trop tot.
     if (p.count <= 0) {
-      playersMap.delete(pseudo);
+      p.count = 0;
 
-      const leftTableId = removePlayerFromAnyTable(pseudo);
-      const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
+      setTimeout(() => {
+        const current = playersMap.get(pseudo);
+        if (!current || current.count > 0) return;
 
-      const leftTable = tablesMap.get(leftTableId);
-      if (leftTable) {
-        refreshServerGameForTable(leftTable);
-        resumeTableAfterSeatChange(leftTable);
-      }
-      broadcastPlayers();
-      broadcastTables();
+        playersMap.delete(pseudo);
 
-      if (leftTableId) {
-        broadcastToTable(leftTableId, {
-          type: "table_system",
-          tableId: leftTableId,
-          text: `${pseudo} a quittÃ© la table`,
-        });
-      }
+        const leftTableId = removePlayerFromAnyTable(pseudo);
+        const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
 
-      if (leftVisitorTableId && Number(leftVisitorTableId) !== Number(leftTableId)) {
-        broadcastToTable(leftVisitorTableId, {
-          type: "table_system",
-          tableId: leftVisitorTableId,
-          text: `${pseudo} ne regarde plus la table`,
-        });
-      }
+        const leftTable = tablesMap.get(leftTableId);
+        if (leftTable) {
+          refreshServerGameForTable(leftTable);
+          resumeTableAfterSeatChange(leftTable);
+        }
 
-      system(`â­ Ã€ bientÃ´t ${pseudo} â­`);
+        broadcastPlayers();
+        broadcastTables();
+
+        if (leftTableId) {
+          broadcastToTable(leftTableId, {
+            type: "table_system",
+            tableId: leftTableId,
+            text: `${pseudo} a quitt\u00e9 la table`,
+          });
+        }
+
+        if (leftVisitorTableId && Number(leftVisitorTableId) !== Number(leftTableId)) {
+          broadcastToTable(leftVisitorTableId, {
+            type: "table_system",
+            tableId: leftVisitorTableId,
+            text: `${pseudo} ne regarde plus la table`,
+          });
+        }
+
+        system(`\u2b50 \u00c0 bient\u00f4t ${pseudo} \u2b50`);
+      }, 800);
+
       return;
     }
 
