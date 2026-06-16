@@ -4,7 +4,7 @@
 // WebSocket    : ws://localhost:4000
 // ================================================
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
 
 async function postJson(path, body) {
   try {
