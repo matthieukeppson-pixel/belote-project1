@@ -34,8 +34,13 @@ import db from "./db.js";
  *   - choose_seat_denied { tableId, reason }
  */
 
-const HTTP_PORT = 4001;
-const WS_PORT = 4000;
+function getPortFromEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+const HTTP_PORT = getPortFromEnv("HTTP_PORT", 4001);
+const WS_PORT = getPortFromEnv("WS_PORT", 4000);
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
