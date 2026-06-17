@@ -1,6 +1,8 @@
 .admin-root {
+  height: 100vh;
   min-height: 100vh;
-  padding: 36px;
+  overflow-y: auto;
+  padding: 36px 36px 90px;
   box-sizing: border-box;
   background:
     radial-gradient(circle at top, rgba(38, 92, 180, 0.5), transparent 38%),
