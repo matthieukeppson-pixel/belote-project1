@@ -165,17 +165,17 @@
 }
 
 .admin-approve-btn,
-.admin-unban-btn {
-  background: linear-gradient(180deg, #d94848, #8f1717);
-  color: #ffffff;
-  border: 1px solid rgba(255, 170, 170, 0.65);
-}
-
-.admin-reject-btn,
 .admin-ban-btn {
   background: linear-gradient(180deg, #48d663, #0f742b);
   color: #ffffff;
   border: 1px solid rgba(150, 255, 175, 0.65);
+}
+
+.admin-reject-btn,
+.admin-unban-btn {
+  background: linear-gradient(180deg, #d94848, #8f1717);
+  color: #ffffff;
+  border: 1px solid rgba(255, 170, 170, 0.65);
 }
 
 

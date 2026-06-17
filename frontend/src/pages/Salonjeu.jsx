@@ -10,6 +10,8 @@ import { createPortal } from "react-dom";
 import "../styles/salonjeu.css";
 import Profil from "./Profil.jsx";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
+
 const SALON_EMOJIS = [
   { code: ":langue:", src: "/emojis/langue.png", alt: "langue" },
   { code: ":pouce:", src: "/emojis/pouce.png", alt: "pouce" },
@@ -124,6 +126,7 @@ export default function SalonJeu({ user }) {
   // ✅ Tables viennent du serveur WS (plus de mock)
   // format attendu depuis serveur: { id, mode, seats, count }
   const [tables, setTables] = useState([]);
+  const [hasPendingRegistrationRequests, setHasPendingRegistrationRequests] = useState(false);
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
@@ -137,6 +140,58 @@ export default function SalonJeu({ user }) {
   const isAdminUser = currentUserRole === "admin";
   const isModeratorUser = currentUserRole === "moderator";
   const isStaffUser = isAdminUser || isModeratorUser;
+
+  useEffect(() => {
+    if (!isAdminUser) {
+      setHasPendingRegistrationRequests(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadPendingRegistrationRequests = async () => {
+      const token = localStorage.getItem("token") || "";
+
+      if (!token) {
+        if (!cancelled) {
+          setHasPendingRegistrationRequests(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/users?status=pending`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Demandes en attente indisponibles.");
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!cancelled) {
+          setHasPendingRegistrationRequests(
+            Array.isArray(data.users) && data.users.length > 0
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setHasPendingRegistrationRequests(false);
+        }
+      }
+    };
+
+    loadPendingRegistrationRequests();
+    const intervalId = window.setInterval(loadPendingRegistrationRequests, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isAdminUser]);
 
   useEffect(() => {
     const audio = musicAudioRef.current;
@@ -446,7 +501,14 @@ return () => {
           onClick={() => navigate("/admin")}
           title={isAdminUser ? "Administration Matt/Véro" : "Modération"}
         >
-          {isAdminUser ? "Administration" : "Modération"}
+          <span>{isAdminUser ? "Administration" : "Mod\u00e9ration"}</span>
+          {isAdminUser && hasPendingRegistrationRequests && (
+            <span
+              className="salon-admin-pending-dot"
+              aria-label="Demande d'activation en attente"
+              title="Demande d'activation en attente"
+            />
+          )}
         </button>
       )}
       <div className="salon-music-controls" aria-label="Musique">

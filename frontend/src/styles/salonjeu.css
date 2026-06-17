@@ -1108,6 +1108,10 @@
 }
 
 .salon-admin-btn {
+  white-space: nowrap;
+  gap: 8px;
+  align-items: center;
+  display: inline-flex;
   position: absolute;
   top: 18px;
   left: 18px;
@@ -1124,6 +1128,20 @@
 
 .salon-admin-btn:hover {
   filter: brightness(1.08);
+}
+
+.salon-admin-pending-dot {
+  display: inline-block;
+  flex: 0 0 12px;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 999px;
+  background: #ff3b3b;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 59, 59, 0.35), 0 0 10px rgba(255, 59, 59, 0.85);
 }
 
 
