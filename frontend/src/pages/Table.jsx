@@ -191,10 +191,7 @@ const avatar =
   "/avatar_blue.png";
 
 const wsTableRef = useRef(null);
-const musicAudioRef = useRef(null);
 const lastTrickKeyRef = useRef("");
-const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
-const djStreamUrl = import.meta.env.VITE_DJ_STREAM_URL || "";
 const systemTimersRef = useRef(new Map());
 const previousBiddingStateRef = useRef(null);
 const modernAnnouncementSentKeyRef = useRef(null);
@@ -431,18 +428,6 @@ useEffect(() => {
         return;
       }
 
-      if (msg.type === "animation_state") {
-        setAnimationState({
-          mode: msg.mode === "live" ? "live" : "playlist",
-          hostPseudo: msg.hostPseudo || null,
-          title:
-            msg.title ||
-            (msg.mode === "live" ? "Direct DJ" : "Playlist en continu"),
-        });
-        return;
-      }
-
-
       if (msg.type === "table_system" && Number(msg.tableId) === Number(tableId)) {
         pushTemporarySystemMessage(msg.text);
         return;
@@ -627,66 +612,7 @@ useEffect(() => {
 const [scorePartie, setScorePartie] = useState({ nous: 0, eux: 0 });
 const [partieTerminee, setPartieTerminee] = useState(false);
 const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
-const [isMusicListening, setIsMusicListening] = useState(false);
-const [musicVolume, setMusicVolume] = useState(50);
-const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
-const [animationState, setAnimationState] = useState({
-  mode: "playlist",
-  hostPseudo: null,
-  title: "Playlist en continu",
-});
-
-const currentAudioUrl =
-  animationState.mode === "live" ? djStreamUrl : playlistAudioUrl;
-
-const normalizeAnimationPseudo = (value) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-
-const canUseAnimationLive = ["vero", "matt"].includes(
-  normalizeAnimationPseudo(pseudo)
-);
-
-const isCurrentAnimationHost =
-  animationState.mode === "live" &&
-  normalizeAnimationPseudo(animationState.hostPseudo) === normalizeAnimationPseudo(pseudo);
-
-function sendAnimationCommand(type) {
-  const ws = wsTableRef.current;
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ type }));
-}
-
-function startLiveAnimation() {
-  sendAnimationCommand("start_live_animation");
-}
-
-function stopLiveAnimation() {
-  sendAnimationCommand("stop_live_animation");
-}
 const [announcementFading, setAnnouncementFading] = useState(false);
-
-useEffect(() => {
-  const audio = musicAudioRef.current;
-  if (!audio) return;
-
-  audio.volume = Math.max(0, Math.min(1, musicVolume / 100));
-
-  const shouldPlayAudio = isMusicListening && Boolean(currentAudioUrl);
-
-  if (!shouldPlayAudio) {
-    audio.pause();
-    return;
-  }
-
-  audio.play().catch(() => {
-    // Le navigateur peut bloquer la lecture automatique.
-    // L'utilisateur pourra relancer avec le bouton Ecouter.
-  });
-}, [currentAudioUrl, isMusicListening, musicVolume]);
 
   function handleNouvellePartie() {
     if (hasServerHand) return;
@@ -1382,88 +1308,6 @@ const canStartWithBots =
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
-      <div className="table-music-controls" aria-label="Musique">
-        <audio
-          ref={musicAudioRef}
-          src={currentAudioUrl}
-          loop={animationState.mode === "playlist"}
-          preload="none"
-        />
-        <button
-          type="button"
-          className="table-animation-btn"
-          title={animationState.title || "Musique"}
-          onClick={() => setIsMusicMenuOpen((open) => !open)}
-          aria-expanded={isMusicMenuOpen}
-        >
-          <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
-        </button>
-        {isMusicMenuOpen && (
-          <div className="table-music-menu" aria-label="Actions musique">
-            <button
-              type="button"
-              className="table-music-action-btn"
-              onClick={() => setIsMusicListening(true)}
-              aria-pressed={isMusicListening}
-              title="Ecouter les animations"
-            >
-              {"\u00C9couter"}
-            </button>
-            <button
-              type="button"
-              className="table-music-action-btn"
-              onClick={() => setIsMusicListening(false)}
-              aria-pressed={!isMusicListening}
-              title="Couper les animations"
-            >
-              Couper
-            </button>
-            {canUseAnimationLive && (
-              <button
-                type="button"
-                className="table-music-action-btn"
-                onClick={
-                  isCurrentAnimationHost ? stopLiveAnimation : startLiveAnimation
-                }
-                title={
-                  isCurrentAnimationHost
-                    ? "Arrêter le direct DJ"
-                    : "Prendre le direct DJ"
-                }
-              >
-                {isCurrentAnimationHost ? "Arrêter le direct" : "Prendre le direct"}
-              </button>
-            )}
-          </div>
-        )}
-        <div className="table-music-volume-wrap" aria-label="Volume musique">
-          <button
-            type="button"
-            className="table-music-volume-btn"
-            onClick={() => setMusicVolume((volume) => Math.max(0, volume - 10))}
-            aria-label="Baisser le volume"
-          >
-            -
-          </button>
-          <input
-            className="table-music-volume-slider"
-            type="range"
-            min="0"
-            max="100"
-            value={musicVolume}
-            onChange={(event) => setMusicVolume(Number(event.target.value))}
-            aria-label="Volume musique"
-          />
-          <button
-            type="button"
-            className="table-music-volume-btn"
-            onClick={() => setMusicVolume((volume) => Math.min(100, volume + 10))}
-            aria-label="Monter le volume"
-          >
-            +
-          </button>
-        </div>
-      </div>
 
       <div className="table-mode-pill">Mode : {modeLabel}</div>
 
