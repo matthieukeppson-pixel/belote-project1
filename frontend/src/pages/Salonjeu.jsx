@@ -114,14 +114,6 @@ export default function SalonJeu({ user }) {
   };
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [showProfil, setShowProfil] = useState(false);
-  const [isMusicListening, setIsMusicListening] = useState(false);
-  const [musicVolume, setMusicVolume] = useState(50);
-  const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
-  const [animationState, setAnimationState] = useState({
-    mode: "playlist",
-    hostPseudo: null,
-    title: "Playlist en continu",
-  });
 
   // ✅ Tables viennent du serveur WS (plus de mock)
   // format attendu depuis serveur: { id, mode, seats, count }
@@ -130,12 +122,7 @@ export default function SalonJeu({ user }) {
 
   const wsRef = useRef(null);
   const chatBoxRef = useRef(null);
-  const musicAudioRef = useRef(null);
   const navigate = useNavigate();
-  const playlistAudioUrl = import.meta.env.VITE_PLAYLIST_AUDIO_URL || "";
-  const djStreamUrl = import.meta.env.VITE_DJ_STREAM_URL || "";
-  const currentAudioUrl =
-    animationState.mode === "live" ? djStreamUrl : playlistAudioUrl;
   const currentUserRole = String(user?.role || storedUser.role || "player");
   const isAdminUser = currentUserRole === "admin";
   const isModeratorUser = currentUserRole === "moderator";
@@ -193,24 +180,6 @@ export default function SalonJeu({ user }) {
     };
   }, [isAdminUser]);
 
-  useEffect(() => {
-    const audio = musicAudioRef.current;
-    if (!audio) return;
-
-    audio.volume = Math.max(0, Math.min(1, musicVolume / 100));
-
-    const shouldPlayAudio = isMusicListening && Boolean(currentAudioUrl);
-
-    if (!shouldPlayAudio) {
-      audio.pause();
-      return;
-    }
-
-    audio.play().catch(() => {
-      // Le navigateur peut bloquer la lecture automatique.
-      // L'utilisateur pourra relancer avec le bouton Ecouter.
-    });
-  }, [currentAudioUrl, isMusicListening, musicVolume]);
 
   // ==========================
   // MENU MODE (PORTAL)
@@ -344,13 +313,7 @@ ws.onmessage = (event) => {
       return;
 
     case "animation_state":
-      setAnimationState({
-        mode: data.mode === "live" ? "live" : "playlist",
-        hostPseudo: data.hostPseudo || null,
-        title:
-          data.title ||
-          (data.mode === "live" ? "Direct DJ" : "Playlist en continu"),
-      });
+      // Capacit? DJ conserv?e c?t? serveur pour les soir?es programm?es.
       return;
 
     case "joined_table":
@@ -457,29 +420,6 @@ return () => {
     setIsEmojiPanelOpen(false);
   };
 
-  const normalizeAnimationPseudo = (value) =>
-    String(value || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .toLowerCase();
-
-  const canUseAnimationLive = ["vero", "matt"].includes(
-    normalizeAnimationPseudo(currentName)
-  );
-
-  const isCurrentAnimationHost =
-    animationState.mode === "live" &&
-    normalizeAnimationPseudo(animationState.hostPseudo) ===
-      normalizeAnimationPseudo(currentName);
-
-  const startLiveAnimation = () => {
-    sendWS({ type: "start_live_animation" });
-  };
-
-  const stopLiveAnimation = () => {
-    sendWS({ type: "stop_live_animation" });
-  };
 
   /* ===============================
      CHAT TOUJOURS EN BAS
@@ -511,89 +451,6 @@ return () => {
           )}
         </button>
       )}
-      <div className="salon-music-controls" aria-label="Musique">
-        <audio
-          ref={musicAudioRef}
-          src={currentAudioUrl}
-          loop={animationState.mode === "playlist"}
-          preload="none"
-        />
-        <button
-          type="button"
-          className="salon-animation-btn"
-          title={animationState.title || "Musique"}
-          onClick={() => setIsMusicMenuOpen((open) => !open)}
-          aria-expanded={isMusicMenuOpen}
-        >
-          <><span className="animation-music-icon">{String.fromCodePoint(0x266A)}</span> Musique</>
-        </button>
-        {isMusicMenuOpen && (
-          <div className="salon-music-menu" aria-label="Actions musique">
-            <button
-              type="button"
-              className="salon-music-action-btn"
-              onClick={() => setIsMusicListening(true)}
-              aria-pressed={isMusicListening}
-              title="Ecouter les animations"
-            >
-              {"\u00C9couter"}
-            </button>
-            <button
-              type="button"
-              className="salon-music-action-btn"
-              onClick={() => setIsMusicListening(false)}
-              aria-pressed={!isMusicListening}
-              title="Couper les animations"
-            >
-              Couper
-            </button>
-            {canUseAnimationLive && (
-              <button
-                type="button"
-                className="salon-music-action-btn"
-                onClick={
-                  isCurrentAnimationHost ? stopLiveAnimation : startLiveAnimation
-                }
-                title={
-                  isCurrentAnimationHost
-                    ? "Arrêter le direct DJ"
-                    : "Prendre le direct DJ"
-                }
-              >
-                {isCurrentAnimationHost ? "Arrêter le direct" : "Prendre le direct"}
-              </button>
-            )}
-          </div>
-        )}
-        <div className="salon-music-volume-wrap" aria-label="Volume musique">
-          <button
-            type="button"
-            className="salon-music-volume-btn"
-            onClick={() => setMusicVolume((volume) => Math.max(0, volume - 10))}
-            aria-label="Baisser le volume"
-          >
-            -
-          </button>
-          <input
-            className="salon-music-volume-slider"
-            type="range"
-            min="0"
-            max="100"
-            value={musicVolume}
-            onChange={(event) => setMusicVolume(Number(event.target.value))}
-            aria-label="Volume musique"
-          />
-          <button
-            type="button"
-            className="salon-music-volume-btn"
-            onClick={() => setMusicVolume((volume) => Math.min(100, volume + 10))}
-            aria-label="Monter le volume"
-          >
-            +
-          </button>
-        </div>
-      </div>
-
       <div className="salon-grid">
         {/* TABLES */}
         <div className="panel panel-side">
