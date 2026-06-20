@@ -1140,3 +1140,36 @@ body {
   filter: brightness(1.08);
   border-color: rgba(255, 235, 150, 0.75);
 }
+
+/* ============================================
+   MICRO DE TABLE ? INTERFACE PREPARATOIRE
+   ============================================ */
+
+.table-board .table-micro-btn {
+  position: absolute;
+  top: 34px;
+  right: -11.2rem;
+  left: auto;
+  z-index: 12;
+
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 180, 120, 0.45);
+  background: rgba(40, 10, 10, 0.55);
+  color: #f0e6d2;
+
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+
+  box-shadow:
+    0 0 0 1px rgba(255, 170, 90, 0.14),
+    0 6px 14px rgba(0, 0, 0, 0.30);
+}
+
+.table-board .table-micro-btn:hover,
+.table-board .table-micro-btn.active {
+  filter: brightness(1.12);
+  border-color: rgba(255, 235, 150, 0.75);
+}

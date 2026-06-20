@@ -206,6 +206,7 @@ const modeLabel =
   mode === "moderne" ? "Moderne" :
   "Classique";
 const [tableChatMessages, setTableChatMessages] = useState([]);
+const [isTableMicroUiReady, setIsTableMicroUiReady] = useState(false);
 
 function sendTableMessage(text) {
   const clean = String(text || "").trim();
@@ -1296,7 +1297,11 @@ const canStartWithBots =
   // ============================================
   // RENDER
   // ============================================
-  const showTableDebug = false;
+  const canUseTableMicro =
+  tableRole !== "visitor" &&
+  mySeatIndex !== -1;
+
+const showTableDebug = false;
 
   return (
     <div
@@ -1399,6 +1404,18 @@ const canStartWithBots =
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+            {canUseTableMicro && (
+              <button
+                type="button"
+                className={`table-micro-btn${isTableMicroUiReady ? " active" : ""}`}
+                onClick={() => setIsTableMicroUiReady((ready) => !ready)}
+                aria-pressed={isTableMicroUiReady}
+                title={isTableMicroUiReady ? "Interface micro pr\u00eate : audio \u00e0 venir." : "Micro coup\u00e9"}
+              >
+                <span aria-hidden="true">{"\u{1F399}"}</span>
+                {isTableMicroUiReady ? " Micro pr\u00eat" : " Micro coup\u00e9"}
+              </button>
+            )}
 
             {beloteToast && (
               <div
