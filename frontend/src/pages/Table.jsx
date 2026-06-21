@@ -410,11 +410,12 @@ useEffect(() => {
   return;
 }
 
-    ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
     ws.send(
       JSON.stringify({
-        type: tableRole === "visitor" ? "watch_table" : "join_table",
-        tableId,
+        type: "join_salon",
+        pseudo,
+        avatar,
+        token: localStorage.getItem("token") || "",
       })
     );
   };
@@ -422,6 +423,18 @@ useEffect(() => {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
+
+      if (msg.type === "joined_salon") {
+        if (isCancelled || ws.readyState !== 1) return;
+
+        ws.send(
+          JSON.stringify({
+            type: tableRole === "visitor" ? "watch_table" : "join_table",
+            tableId,
+          })
+        );
+        return;
+      }
 
       if (msg.type === "tables" && Array.isArray(msg.tables)) {
         const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
