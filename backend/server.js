@@ -4,6 +4,7 @@ import http from "http";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { WebSocketServer } from "ws";
 import db from "./db.js";
+import { createTurnCredentials } from "./turnCredentials.js";
 
 /**
  * BACKEND
@@ -367,6 +368,55 @@ app.post("/api/login", async (req, res) => {
   } catch (err) {
     console.error("Erreur /api/login", err);
     return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.post("/api/audio/credentials", async (req, res) => {
+  try {
+    const user = await getAuthUserFromRequest(req);
+
+    if (!user) {
+      return res.status(401).json({
+        error: "Connexion requise pour activer le microphone.",
+      });
+    }
+
+    const tableId = normalizeTableId(req.body?.tableId);
+    const table = tableId ? tablesMap.get(tableId) : null;
+    const username = String(user.username || "").trim();
+    const playerLocation = username ? findPlayerTable(username) : null;
+
+    const isPlayer = Boolean(
+      playerLocation &&
+      Number(playerLocation.table.id) === Number(tableId)
+    );
+
+    const isVisitor = Boolean(
+      table &&
+      username &&
+      Array.isArray(table.visitors) &&
+      table.visitors.includes(username)
+    );
+
+    if (!table || (!isPlayer && !isVisitor)) {
+      return res.status(403).json({
+        error: "Vous devez etre present dans cette table pour activer le microphone.",
+      });
+    }
+
+    const turn = createTurnCredentials(user.id);
+
+    return res.json({
+      tableId,
+      iceServers: turn.iceServers,
+      turnExpiresAt: turn.expiresAt,
+    });
+  } catch (error) {
+    console.error("Audio credentials unavailable", error?.code || "unknown");
+
+    return res.status(503).json({
+      error: "Le microphone n'est pas encore configur\u00e9 sur ce serveur.",
+    });
   }
 });
 
