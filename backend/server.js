@@ -164,8 +164,8 @@ function createAuthSession(user) {
   return token;
 }
 
-async function getAuthUserFromToken(rawToken) {
-  const token = String(rawToken || "").trim();
+async function getAuthUserFromRequest(req) {
+  const token = getAuthTokenFromRequest(req);
   if (!token) return null;
 
   const session = authSessions.get(token);
@@ -193,10 +193,6 @@ async function getAuthUserFromToken(rawToken) {
   }
 
   return user;
-}
-
-async function getAuthUserFromRequest(req) {
-  return getAuthUserFromToken(getAuthTokenFromRequest(req));
 }
 
 async function requireAdminUser(req, res) {
@@ -3350,8 +3346,6 @@ function removePlayerFromAnyTable(pseudo) {
 
 wss.on("connection", (ws) => {
   ws.pseudo = null;
-  ws.authUserId = null;
-  ws.authenticatedPseudo = null;
   ws.tableId = null;
   ws.tableRole = null;
 
@@ -3372,25 +3366,12 @@ wss.on("connection", (ws) => {
     // JOIN SALON
     // ===============================
     if (msg.type === "join_salon") {
-      const requestedPseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
-      let authUser = null;
-
-      try {
-        authUser = await getAuthUserFromToken(msg.token);
-      } catch (err) {
-        console.error("Erreur auth WebSocket join_salon", err);
-      }
-
-      const pseudo = authUser?.username || requestedPseudo;
+      const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
       ws.pseudo = pseudo;
-      ws.authUserId = authUser?.id || null;
-      ws.authenticatedPseudo = authUser?.username || null;
 
       const avatar =
         String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
-      const role = authUser
-        ? normalizePublicRole(authUser.role)
-        : await getUserRoleForPseudo(pseudo);
+      const role = await getUserRoleForPseudo(pseudo);
       const existing = playersMap.get(pseudo);
       if (!existing) {
         playersMap.set(pseudo, { name: pseudo, avatar, role, count: 1 });
@@ -3402,8 +3383,6 @@ wss.on("connection", (ws) => {
 
       broadcastPlayers();
       broadcastTables();
-
-      ws.send(JSON.stringify({ type: "joined_salon" }));
       return;
     }
 
