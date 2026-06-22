@@ -1301,8 +1301,8 @@ const canStartWithBots =
   // RENDER
   // ============================================
   const canUseTableMicro =
-  tableRole !== "visitor" &&
-  mySeatIndex !== -1;
+    tableRole === "visitor" ||
+    mySeatIndex !== -1;
 
 const showTableDebug = false;
 
