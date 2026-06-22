@@ -98,6 +98,45 @@ export function createAudioTicketStore({
     return { ticket, expiresAt };
   }
 
+  function consumeFor({ ticket: rawTicket, username, tableId }) {
+    const ticket = String(rawTicket || "").trim();
+    const expectedUsername = String(username || "").trim();
+    const expectedTableId = Number(tableId);
+
+    if (
+      !ticket ||
+      !expectedUsername ||
+      !Number.isInteger(expectedTableId) ||
+      expectedTableId <= 0
+    ) {
+      return null;
+    }
+
+    const record = tickets.get(ticket);
+    if (!record) return null;
+
+    if (record.expiresAt <= now()) {
+      removeTicket(tickets, ticketBySubject, ticket);
+      return null;
+    }
+
+    if (
+      record.username !== expectedUsername ||
+      record.tableId !== expectedTableId
+    ) {
+      return null;
+    }
+
+    removeTicket(tickets, ticketBySubject, ticket);
+
+    return {
+      userId: record.userId,
+      username: record.username,
+      tableId: record.tableId,
+      expiresAt: record.expiresAt,
+    };
+  }
+
   function consume(rawTicket) {
     const ticket = String(rawTicket || "").trim();
     if (!ticket) return null;
@@ -116,6 +155,7 @@ export function createAudioTicketStore({
   return {
     issue,
     consume,
+    consumeFor,
     pruneExpired,
   };
 }
