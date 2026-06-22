@@ -3452,7 +3452,6 @@ wss.on("connection", (ws) => {
     if (!pseudo) return;
 
     if (msg.type === "audio_auth") {
-      ws.audioIdentity = null;
       const tableId = normalizeTableId(ws.tableId);
 
       if (!tableId || !isTableParticipant(tableId, pseudo)) {
@@ -3481,10 +3480,15 @@ wss.on("connection", (ws) => {
         return;
       }
 
+      ws.audioIdentity = null;
+
+      const audioPeerId = randomBytes(16).toString("base64url");
+
       ws.audioIdentity = {
         userId: audioIdentity.userId,
         username: audioIdentity.username,
         tableId: audioIdentity.tableId,
+        audioPeerId,
         expiresAt: audioIdentity.expiresAt,
       };
 
@@ -3492,6 +3496,7 @@ wss.on("connection", (ws) => {
         JSON.stringify({
           type: "audio_auth_ok",
           tableId,
+          audioPeerId,
           expiresAt: audioIdentity.expiresAt,
         })
       );
