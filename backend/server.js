@@ -5,6 +5,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { WebSocketServer } from "ws";
 import db from "./db.js";
 import { createTurnCredentials } from "./turnCredentials.js";
+import { createAudioTicketStore } from "./audioTickets.js";
 
 /**
  * BACKEND
@@ -143,6 +144,7 @@ function adminUserFromDb(row) {
   };
 }
 const authSessions = new Map();
+const audioTicketStore = createAudioTicketStore();
 
 function getAuthTokenFromRequest(req) {
   const authorization = String(req.headers.authorization || "").trim();
@@ -405,11 +407,18 @@ app.post("/api/audio/credentials", async (req, res) => {
     }
 
     const turn = createTurnCredentials(user.id);
+    const audioTicket = audioTicketStore.issue({
+      userId: user.id,
+      username,
+      tableId,
+    });
 
     return res.json({
       tableId,
       iceServers: turn.iceServers,
       turnExpiresAt: turn.expiresAt,
+      audioTicket: audioTicket.ticket,
+      audioTicketExpiresAt: audioTicket.expiresAt,
     });
   } catch (error) {
     console.error("Audio credentials unavailable", error?.code || "unknown");
