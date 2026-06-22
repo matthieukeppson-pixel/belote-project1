@@ -2026,6 +2026,87 @@ function broadcastToTable(tableId, obj) {
   });
 }
 
+function getAudioPeerFromSocket(client, tableId) {
+  if (!client || client.readyState !== 1) return null;
+
+  const audioIdentity = client.audioIdentity;
+  const pseudo = String(client.pseudo || "").trim();
+  const audioPeerId = String(audioIdentity?.audioPeerId || "").trim();
+
+  if (!audioIdentity || !pseudo || !audioPeerId) return null;
+  if (Number(client.tableId) !== Number(tableId)) return null;
+  if (Number(audioIdentity.tableId) !== Number(tableId)) return null;
+  if (!isTableParticipant(tableId, pseudo)) return null;
+
+  return { audioPeerId };
+}
+
+function getAudioPeersForTable(tableId, excludedClient = null) {
+  const normalizedTableId = normalizeTableId(tableId);
+  if (!normalizedTableId) return [];
+
+  const peers = [];
+
+  wss.clients.forEach((client) => {
+    if (client === excludedClient) return;
+
+    const peer = getAudioPeerFromSocket(client, normalizedTableId);
+    if (peer) peers.push(peer);
+  });
+
+  return peers;
+}
+
+function sendToAudioPeersInTable(tableId, obj, excludedClient = null) {
+  const normalizedTableId = normalizeTableId(tableId);
+  if (!normalizedTableId) return;
+
+  const payload = JSON.stringify(obj);
+
+  wss.clients.forEach((client) => {
+    if (client === excludedClient) return;
+    if (!getAudioPeerFromSocket(client, normalizedTableId)) return;
+    client.send(payload);
+  });
+}
+
+function clearAudioIdentity(ws) {
+  if (!ws) return;
+
+  const audioIdentity = ws.audioIdentity;
+
+  if (!audioIdentity) {
+    ws.audioIdentity = null;
+    return;
+  }
+
+  const tableId = normalizeTableId(audioIdentity.tableId);
+  const audioPeerId = String(audioIdentity.audioPeerId || "").trim();
+
+  ws.audioIdentity = null;
+
+  if (!tableId || !audioPeerId) return;
+
+  sendToAudioPeersInTable(
+    tableId,
+    {
+      type: "audio_peer_left",
+      tableId,
+      audioPeerId,
+    },
+    ws
+  );
+}
+
+function clearAudioIdentityForTable(ws, tableId) {
+  const audioTableId = normalizeTableId(ws?.audioIdentity?.tableId);
+
+  if (audioTableId == null) return;
+  if (Number(audioTableId) !== Number(tableId)) return;
+
+  clearAudioIdentity(ws);
+}
+
 function system(text) {
   broadcast({ type: "system", text });
 }
@@ -4450,7 +4531,7 @@ wss.on("connection", (ws) => {
     // JOIN SALON
     // ===============================
     if (msg.type === "join_salon") {
-      ws.audioIdentity = null;
+      clearAudioIdentity(ws);
       const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
       ws.pseudo = pseudo;
 
@@ -4504,7 +4585,7 @@ wss.on("connection", (ws) => {
         return;
       }
 
-      ws.audioIdentity = null;
+      clearAudioIdentity(ws);
 
       const audioPeerId = randomBytes(16).toString("base64url");
 
@@ -4516,14 +4597,28 @@ wss.on("connection", (ws) => {
         expiresAt: audioIdentity.expiresAt,
       };
 
+      const peers = getAudioPeersForTable(tableId, ws);
+
       ws.send(
         JSON.stringify({
           type: "audio_auth_ok",
           tableId,
           audioPeerId,
+          peers,
           expiresAt: audioIdentity.expiresAt,
         })
       );
+
+      sendToAudioPeersInTable(
+        tableId,
+        {
+          type: "audio_peer_joined",
+          tableId,
+          audioPeerId,
+        },
+        ws
+      );
+
       return;
     }
 
@@ -4910,7 +5005,7 @@ if (msg.type === "watch_table") {
   if (!t) return;
 
   if (Number(ws.tableId) !== Number(t.id)) {
-    ws.audioIdentity = null;
+    clearAudioIdentity(ws);
   }
 
   removeVisitorFromAnyTable(pseudo);
@@ -4950,7 +5045,10 @@ if (msg.type === "join_table") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
-  removeVisitorFromAnyTable(pseudo);
+  const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
+  if (leftVisitorTableId) {
+    clearAudioIdentity(ws);
+  }
 
   const prev = findPlayerTable(pseudo);
   const wasAlreadyInTargetTable =
@@ -5003,7 +5101,7 @@ if (msg.type === "join_table") {
   const replacedBot = isBotPseudo(t.seats[targetIdx]) ? t.seats[targetIdx] : null;
 
   // rattachement + installation dans la table
-  ws.audioIdentity = null;
+  clearAudioIdentity(ws);
   ws.tableId = t.id;
   t.seats[targetIdx] = pseudo;
   refreshServerGameForTable(t);
@@ -5150,7 +5248,6 @@ if (msg.type === "choose_seat") {
   return;
 }
     if (msg.type === "leave_table") {
-      ws.audioIdentity = null;
       // si tableId absent -> quitte n'importe quelle table
       const tableId = msg.tableId != null ? normalizeTableId(msg.tableId) : null;
 
@@ -5160,6 +5257,7 @@ if (msg.type === "choose_seat") {
 
         const idx = t.seats.findIndex((p) => p === pseudo);
         if (idx !== -1) {
+          clearAudioIdentityForTable(ws, t.id);
           t.seats[idx] = null;
          refreshServerGameForTable(t);
           resumeTableAfterSeatChange(t);
@@ -5176,6 +5274,7 @@ if (msg.type === "choose_seat") {
             text: `${pseudo} a quitt\u00E9 la table`,
           });
         } else if (Array.isArray(t.visitors) && t.visitors.includes(pseudo)) {
+          clearAudioIdentityForTable(ws, t.id);
           t.visitors = t.visitors.filter((p) => p !== pseudo);
 
           if (Number(ws.tableId) === Number(t.id)) {
@@ -5196,6 +5295,7 @@ if (msg.type === "choose_seat") {
 
       const left = removePlayerFromAnyTable(pseudo);
       if (left) {
+        clearAudioIdentityForTable(ws, left);
         if (Number(ws.tableId) === Number(left)) {
           ws.tableId = null;
         }
@@ -5217,6 +5317,7 @@ if (leftTable) {
   });
 
   ws.on("close", () => {
+    clearAudioIdentity(ws);
     if (!ws.pseudo) return;
 
     const pseudo = ws.pseudo;
