@@ -4431,6 +4431,7 @@ wss.on("connection", (ws) => {
   ws.pseudo = null;
   ws.tableId = null;
   ws.tableRole = null;
+  ws.audioIdentity = null;
 
   // Ã©tat initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
@@ -4449,6 +4450,7 @@ wss.on("connection", (ws) => {
     // JOIN SALON
     // ===============================
     if (msg.type === "join_salon") {
+      ws.audioIdentity = null;
       const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
       ws.pseudo = pseudo;
 
@@ -4472,6 +4474,53 @@ wss.on("connection", (ws) => {
     // tout le reste nÃ©cessite un pseudo
     const pseudo = String(ws.pseudo || "").trim();
     if (!pseudo) return;
+
+    if (msg.type === "audio_auth") {
+      ws.audioIdentity = null;
+      const tableId = normalizeTableId(ws.tableId);
+
+      if (!tableId || !isTableParticipant(tableId, pseudo)) {
+        ws.send(
+          JSON.stringify({
+            type: "audio_auth_denied",
+            reason: "NOT_TABLE_PARTICIPANT",
+          })
+        );
+        return;
+      }
+
+      const audioIdentity = audioTicketStore.consumeFor({
+        ticket: msg.ticket,
+        username: pseudo,
+        tableId,
+      });
+
+      if (!audioIdentity) {
+        ws.send(
+          JSON.stringify({
+            type: "audio_auth_denied",
+            reason: "INVALID_TICKET",
+          })
+        );
+        return;
+      }
+
+      ws.audioIdentity = {
+        userId: audioIdentity.userId,
+        username: audioIdentity.username,
+        tableId: audioIdentity.tableId,
+        expiresAt: audioIdentity.expiresAt,
+      };
+
+      ws.send(
+        JSON.stringify({
+          type: "audio_auth_ok",
+          tableId,
+          expiresAt: audioIdentity.expiresAt,
+        })
+      );
+      return;
+    }
 
     // ===============================
     // CHAT
@@ -4855,6 +4904,10 @@ if (msg.type === "watch_table") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
+  if (Number(ws.tableId) !== Number(t.id)) {
+    ws.audioIdentity = null;
+  }
+
   removeVisitorFromAnyTable(pseudo);
 
   if (!Array.isArray(t.visitors)) {
@@ -4945,6 +4998,7 @@ if (msg.type === "join_table") {
   const replacedBot = isBotPseudo(t.seats[targetIdx]) ? t.seats[targetIdx] : null;
 
   // rattachement + installation dans la table
+  ws.audioIdentity = null;
   ws.tableId = t.id;
   t.seats[targetIdx] = pseudo;
   refreshServerGameForTable(t);
@@ -5091,6 +5145,7 @@ if (msg.type === "choose_seat") {
   return;
 }
     if (msg.type === "leave_table") {
+      ws.audioIdentity = null;
       // si tableId absent -> quitte n'importe quelle table
       const tableId = msg.tableId != null ? normalizeTableId(msg.tableId) : null;
 
