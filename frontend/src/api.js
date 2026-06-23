@@ -70,3 +70,32 @@ export async function login(email, password) {
     password,
   });
 }
+
+export async function requestTableAudioCredentials(tableId) {
+  const token = String(localStorage.getItem("token") || "").trim();
+
+  if (!token) {
+    return { error: "Connexion requise pour activer le microphone." };
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/audio/credentials`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ tableId }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return { error: data?.error || "Erreur serveur" };
+    }
+
+    return data;
+  } catch {
+    return { error: "Erreur r\u00e9seau" };
+  }
+}
