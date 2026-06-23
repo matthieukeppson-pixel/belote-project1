@@ -6,6 +6,7 @@ import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 import Partie from "../game/Partie";
+import { requestTableAudioCredentials } from "../api";
 
 // ============================================
 // HELPERS ATTOUT — UI TABLE UNIQUEMENT
@@ -206,7 +207,12 @@ const modeLabel =
   mode === "moderne" ? "Moderne" :
   "Classique";
 const [tableChatMessages, setTableChatMessages] = useState([]);
-const [isTableMicroUiReady, setIsTableMicroUiReady] = useState(false);
+const [tableAudioState, setTableAudioState] = useState("off");
+const [tableAudioError, setTableAudioError] = useState("");
+const [tableAudioPeers, setTableAudioPeers] = useState([]);
+const tableAudioPeerIdRef = useRef(null);
+const tableAudioRequestIdRef = useRef(0);
+const tableAudioActivationRef = useRef(false);
 
 function sendTableMessage(text) {
   const clean = String(text || "").trim();
@@ -221,6 +227,62 @@ function sendTableMessage(text) {
       text: clean,
     })
   );
+}
+async function prepareTableAudio() {
+  if (
+    tableAudioActivationRef.current ||
+    tableAudioState === "requesting" ||
+    tableAudioState === "authorizing" ||
+    tableAudioState === "ready"
+  ) {
+    return;
+  }
+
+  const requestId = tableAudioRequestIdRef.current + 1;
+  tableAudioRequestIdRef.current = requestId;
+  tableAudioActivationRef.current = true;
+  setTableAudioState("requesting");
+  setTableAudioError("");
+  setTableAudioPeers([]);
+  tableAudioPeerIdRef.current = null;
+
+  const credentials = await requestTableAudioCredentials(tableId);
+
+  if (tableAudioRequestIdRef.current !== requestId) return;
+
+  const audioTicket = String(credentials?.audioTicket || "").trim();
+
+  if (credentials?.error) {
+    tableAudioActivationRef.current = false;
+    setTableAudioState("error");
+    setTableAudioError(String(credentials.error));
+    return;
+  }
+
+  if (Number(credentials?.tableId) !== Number(tableId) || !audioTicket) {
+    tableAudioActivationRef.current = false;
+    setTableAudioState("error");
+    setTableAudioError("R\u00e9ponse audio invalide.");
+    return;
+  }
+
+  const ws = wsTableRef.current;
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    tableAudioActivationRef.current = false;
+    setTableAudioState("error");
+    setTableAudioError("Connexion \u00e0 la table indisponible.");
+    return;
+  }
+
+  try {
+    ws.send(JSON.stringify({ type: "audio_auth", ticket: audioTicket }));
+    setTableAudioState("authorizing");
+  } catch {
+    tableAudioActivationRef.current = false;
+    setTableAudioState("error");
+    setTableAudioError("Envoi de l'autorisation audio impossible.");
+  }
 }
 function _chooseSeat(seatIndex) {
   pushTemporarySystemMessage(`Clic sur place ${seatIndex + 1}`);
@@ -393,6 +455,12 @@ useEffect(() => {
   if (!tableId) return;
 
   setTableChatMessages([]);
+  tableAudioRequestIdRef.current += 1;
+  tableAudioActivationRef.current = false;
+  tableAudioPeerIdRef.current = null;
+  setTableAudioState("off");
+  setTableAudioError("");
+  setTableAudioPeers([]);
 
   let isCancelled = false;
 
@@ -450,6 +518,72 @@ useEffect(() => {
         return;
       }
 
+      if (msg.type === "audio_auth_ok" && Number(msg.tableId) === Number(tableId)) {
+        const audioPeerId = String(msg.audioPeerId || "").trim();
+
+        if (!audioPeerId) {
+          tableAudioActivationRef.current = false;
+          setTableAudioState("error");
+          setTableAudioError("Identification audio invalide.");
+          return;
+        }
+
+        const peers = Array.isArray(msg.peers)
+          ? Array.from(
+              new Set(
+                msg.peers
+                  .map((peer) => String(peer?.audioPeerId || "").trim())
+                  .filter(Boolean)
+              )
+            )
+          : [];
+
+        tableAudioActivationRef.current = false;
+        tableAudioPeerIdRef.current = audioPeerId;
+        setTableAudioPeers(peers);
+        setTableAudioState("ready");
+        setTableAudioError("");
+        return;
+      }
+
+      if (msg.type === "audio_auth_denied") {
+        tableAudioActivationRef.current = false;
+        tableAudioPeerIdRef.current = null;
+        setTableAudioPeers([]);
+        setTableAudioState("error");
+        setTableAudioError(
+          msg.reason === "NOT_TABLE_PARTICIPANT"
+            ? "Vous n\u2019\u00eates plus pr\u00e9sent dans cette table."
+            : "Autorisation audio refus\u00e9e."
+        );
+        return;
+      }
+
+      if (msg.type === "audio_peer_joined" && Number(msg.tableId) === Number(tableId)) {
+        const audioPeerId = String(msg.audioPeerId || "").trim();
+
+        if (audioPeerId) {
+          setTableAudioPeers((previousPeers) =>
+            previousPeers.includes(audioPeerId)
+              ? previousPeers
+              : [...previousPeers, audioPeerId]
+          );
+        }
+
+        return;
+      }
+
+      if (msg.type === "audio_peer_left" && Number(msg.tableId) === Number(tableId)) {
+        const audioPeerId = String(msg.audioPeerId || "").trim();
+
+        if (audioPeerId) {
+          setTableAudioPeers((previousPeers) =>
+            previousPeers.filter((peerId) => peerId !== audioPeerId)
+          );
+        }
+
+        return;
+      }
       if (msg.type === "table_message" && Number(msg.tableId) === Number(tableId)) {
         setTableChatMessages((prev) => [
           ...prev,
@@ -470,6 +604,9 @@ useEffect(() => {
 
   return () => {
     isCancelled = true;
+    tableAudioRequestIdRef.current += 1;
+    tableAudioActivationRef.current = false;
+    tableAudioPeerIdRef.current = null;
 
     ws.onopen = null;
     ws.onmessage = null;
@@ -1300,6 +1437,25 @@ const canStartWithBots =
   const canUseTableMicro =
     tableRole === "visitor" ||
     mySeatIndex !== -1;
+  const tableAudioIsConnecting =
+    tableAudioState === "requesting" || tableAudioState === "authorizing";
+  const tableAudioIsReady = tableAudioState === "ready";
+  const tableMicroLabel =
+    tableAudioState === "requesting"
+      ? " Connexion audio..."
+      : tableAudioState === "authorizing"
+        ? " Validation audio..."
+        : tableAudioIsReady
+          ? " Audio pr\u00eat"
+          : tableAudioState === "error"
+            ? " Audio indisponible"
+            : " Pr\u00e9parer l\u2019audio";
+  const tableMicroTitle =
+    tableAudioIsReady
+      ? `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s). Le microphone reste coup\u00e9.`
+      : tableAudioState === "error"
+        ? tableAudioError || "Activation audio indisponible."
+        : "Pr\u00e9pare la session audio. Aucun microphone navigateur n\u2019est activ\u00e9.";
 
 const showTableDebug = false;
 
@@ -1407,16 +1563,17 @@ const showTableDebug = false;
             {canUseTableMicro && (
               <button
                 type="button"
-                className={`table-micro-btn${isTableMicroUiReady ? " active" : ""}`}
-                onClick={() => setIsTableMicroUiReady((ready) => !ready)}
-                aria-pressed={isTableMicroUiReady}
-                title={isTableMicroUiReady ? "Interface micro pr\u00eate : audio \u00e0 venir." : "Micro coup\u00e9"}
+                className={`table-micro-btn${tableAudioIsReady ? " active" : ""}`}
+                onClick={prepareTableAudio}
+                disabled={tableAudioIsConnecting || tableAudioIsReady}
+                aria-pressed={tableAudioIsReady}
+                aria-busy={tableAudioIsConnecting}
+                title={tableMicroTitle}
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
-                {isTableMicroUiReady ? " Micro pr\u00eat" : " Micro coup\u00e9"}
+                {tableMicroLabel}
               </button>
             )}
-
             {beloteToast && (
               <div
                 style={{
