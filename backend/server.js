@@ -44,6 +44,10 @@ function getPortFromEnv(name, fallback) {
 const HTTP_PORT = getPortFromEnv("HTTP_PORT", 4001);
 const WS_PORT = getPortFromEnv("WS_PORT", 4000);
 
+const AUDIO_SIGNAL_TYPES = new Set(["offer", "answer", "candidate"]);
+const AUDIO_PEER_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+const MAX_AUDIO_SIGNAL_BYTES = 16 * 1024;
+
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -2070,6 +2074,60 @@ function sendToAudioPeersInTable(tableId, obj, excludedClient = null) {
   });
 }
 
+function findAudioPeerSocketInTable(tableId, audioPeerId) {
+  const normalizedTableId = normalizeTableId(tableId);
+  if (!normalizedTableId) return null;
+  if (!AUDIO_PEER_ID_PATTERN.test(audioPeerId)) return null;
+
+  let targetSocket = null;
+
+  wss.clients.forEach((client) => {
+    if (targetSocket) return;
+
+    const peer = getAudioPeerFromSocket(client, normalizedTableId);
+    if (!peer) return;
+    if (peer.audioPeerId !== audioPeerId) return;
+
+    targetSocket = client;
+  });
+
+  return targetSocket;
+}
+
+function validateAudioSignal(rawSignal) {
+  if (!rawSignal || typeof rawSignal !== "object" || Array.isArray(rawSignal)) {
+    return { signal: null, reason: "INVALID_AUDIO_SIGNAL" };
+  }
+
+  const keys = Object.keys(rawSignal).sort();
+  if (keys.length !== 2 || keys[0] !== "data" || keys[1] !== "type") {
+    return { signal: null, reason: "INVALID_AUDIO_SIGNAL" };
+  }
+
+  const type = rawSignal.type;
+  const data = rawSignal.data;
+
+  if (typeof type !== "string" || !AUDIO_SIGNAL_TYPES.has(type)) {
+    return { signal: null, reason: "INVALID_AUDIO_SIGNAL" };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { signal: null, reason: "INVALID_AUDIO_SIGNAL" };
+  }
+
+  let serialized;
+  try {
+    serialized = JSON.stringify({ type, data });
+  } catch {
+    return { signal: null, reason: "INVALID_AUDIO_SIGNAL" };
+  }
+
+  if (Buffer.byteLength(serialized, "utf8") > MAX_AUDIO_SIGNAL_BYTES) {
+    return { signal: null, reason: "AUDIO_SIGNAL_TOO_LARGE" };
+  }
+
+  return { signal: { type, data }, reason: null };
+}
 function clearAudioIdentity(ws) {
   if (!ws) return;
 
@@ -3598,6 +3656,52 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (msg.type === "audio_signal") {
+      const tableId = normalizeTableId(ws.tableId);
+      const sourcePeer = getAudioPeerFromSocket(ws, tableId);
+
+      if (!sourcePeer) {
+        ws.send(JSON.stringify({ type: "audio_signal_denied", reason: "AUDIO_NOT_AUTHENTICATED" }));
+        return;
+      }
+
+      const toAudioPeerId = typeof msg.toAudioPeerId === "string" ? msg.toAudioPeerId.trim() : "";
+
+      if (!AUDIO_PEER_ID_PATTERN.test(toAudioPeerId)) {
+        ws.send(JSON.stringify({ type: "audio_signal_denied", reason: "INVALID_AUDIO_SIGNAL" }));
+        return;
+      }
+
+      if (toAudioPeerId === sourcePeer.audioPeerId) {
+        ws.send(JSON.stringify({ type: "audio_signal_denied", reason: "AUDIO_PEER_SELF" }));
+        return;
+      }
+
+      const { signal, reason } = validateAudioSignal(msg.signal);
+
+      if (!signal) {
+        ws.send(JSON.stringify({ type: "audio_signal_denied", reason }));
+        return;
+      }
+
+      const targetSocket = findAudioPeerSocketInTable(tableId, toAudioPeerId);
+
+      if (!targetSocket) {
+        ws.send(JSON.stringify({ type: "audio_signal_denied", reason: "AUDIO_PEER_NOT_FOUND" }));
+        return;
+      }
+
+      targetSocket.send(
+        JSON.stringify({
+          type: "audio_signal",
+          tableId,
+          fromAudioPeerId: sourcePeer.audioPeerId,
+          signal,
+        })
+      );
+
+      return;
+    }
     // ===============================
     // CHAT
     // ===============================
