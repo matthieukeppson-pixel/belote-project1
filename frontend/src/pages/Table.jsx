@@ -214,6 +214,11 @@ const [tableAudioPeers, setTableAudioPeers] = useState([]);
 const tableAudioPeerIdRef = useRef(null);
 const tableAudioRequestIdRef = useRef(0);
 const tableAudioActivationRef = useRef(false);
+const [tableMicroState, setTableMicroState] = useState("not_requested");
+const [tableMicroError, setTableMicroError] = useState("");
+const tableMicroStreamRef = useRef(null);
+const tableMicroRequestIdRef = useRef(0);
+const tableMicroActivationRef = useRef(false);
 
 function sendTableMessage(text) {
   const clean = String(text || "").trim();
@@ -229,6 +234,101 @@ function sendTableMessage(text) {
     })
   );
 }
+const stopTableMicroStream = useCallback(() => {
+  const stream = tableMicroStreamRef.current;
+  tableMicroStreamRef.current = null;
+
+  if (!stream) return;
+
+  stream.getTracks().forEach((track) => {
+    try {
+      track.stop();
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Micro cleanup error", error);
+    }
+  });
+}, []);
+
+const releaseTableMicro = useCallback(() => {
+  tableMicroRequestIdRef.current += 1;
+  tableMicroActivationRef.current = false;
+  stopTableMicroStream();
+}, [stopTableMicroStream]);
+
+const resetTableMicroUi = useCallback(() => {
+  releaseTableMicro();
+  setTableMicroState("not_requested");
+  setTableMicroError("");
+}, [releaseTableMicro]);
+async function requestMutedTableMicro() {
+  if (
+    tableAudioState !== "ready" ||
+    tableMicroActivationRef.current ||
+    tableMicroState === "requesting" ||
+    tableMicroState === "muted"
+  ) {
+    return;
+  }
+
+  const mediaDevices = typeof navigator === "undefined" ? null : navigator.mediaDevices;
+
+  if (!mediaDevices || typeof mediaDevices.getUserMedia !== "function") {
+    setTableMicroState("error");
+    setTableMicroError("Ce navigateur ne peut pas utiliser le microphone.");
+    return;
+  }
+
+  const requestId = tableMicroRequestIdRef.current + 1;
+  tableMicroRequestIdRef.current = requestId;
+  tableMicroActivationRef.current = true;
+  setTableMicroState("requesting");
+  setTableMicroError("");
+
+  try {
+    const stream = await mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+
+    const audioTracks = stream.getAudioTracks();
+
+    if (audioTracks.length === 0) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw new Error("NO_AUDIO_TRACK");
+    }
+
+    audioTracks.forEach((track) => {
+      track.enabled = false;
+    });
+
+    if (tableMicroRequestIdRef.current !== requestId) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+
+    stopTableMicroStream();
+    tableMicroStreamRef.current = stream;
+    tableMicroActivationRef.current = false;
+    setTableMicroState("muted");
+    setTableMicroError("");
+  } catch (error) {
+    if (tableMicroRequestIdRef.current !== requestId) return;
+
+    tableMicroActivationRef.current = false;
+    setTableMicroState("error");
+
+    const errorName = String(error?.name || "");
+    const errorMessage = String(error?.message || "");
+
+    if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+      setTableMicroError("Autorisation du microphone refus\u00e9e par le navigateur.");
+    } else if (errorName === "NotFoundError" || errorMessage === "NO_AUDIO_TRACK") {
+      setTableMicroError("Aucun microphone disponible sur cet appareil.");
+    } else {
+      setTableMicroError("Impossible de pr\u00e9parer le microphone.");
+    }
+  }
+}
 async function prepareTableAudio() {
   if (
     tableAudioActivationRef.current ||
@@ -238,6 +338,8 @@ async function prepareTableAudio() {
   ) {
     return;
   }
+
+  resetTableMicroUi();
 
   const requestId = tableAudioRequestIdRef.current + 1;
   tableAudioRequestIdRef.current = requestId;
@@ -456,6 +558,7 @@ useEffect(() => {
   if (!tableId) return;
 
   setTableChatMessages([]);
+  resetTableMicroUi();
   tableAudioRequestIdRef.current += 1;
   tableAudioActivationRef.current = false;
   tableAudioPeerIdRef.current = null;
@@ -539,6 +642,7 @@ useEffect(() => {
             )
           : [];
 
+        resetTableMicroUi();
         tableAudioActivationRef.current = false;
         tableAudioPeerIdRef.current = audioPeerId;
         setTableAudioPeers(peers);
@@ -548,6 +652,9 @@ useEffect(() => {
       }
 
       if (msg.type === "audio_auth_denied") {
+        releaseTableMicro();
+        setTableMicroState("not_requested");
+        setTableMicroError("");
         tableAudioActivationRef.current = false;
         tableAudioPeerIdRef.current = null;
         setTableAudioPeers([]);
@@ -608,6 +715,7 @@ useEffect(() => {
     tableAudioRequestIdRef.current += 1;
     tableAudioActivationRef.current = false;
     tableAudioPeerIdRef.current = null;
+    releaseTableMicro();
 
     ws.onopen = null;
     ws.onmessage = null;
@@ -624,7 +732,7 @@ useEffect(() => {
 
     if (wsTableRef.current === ws) wsTableRef.current = null;
   };
-}, [tableId, pseudo, avatar, tableRole]);
+}, [tableId, pseudo, avatar, tableRole, resetTableMicroUi, releaseTableMicro]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
@@ -1443,23 +1551,45 @@ const canStartWithBots =
   const tableAudioIsConnecting =
     tableAudioState === "requesting" || tableAudioState === "authorizing";
   const tableAudioIsReady = tableAudioState === "ready";
+  const tableMicroIsRequesting = tableMicroState === "requesting";
+  const tableMicroIsMuted = tableMicroState === "muted";
+  const tableMicroButtonIsBusy =
+    tableAudioIsConnecting || tableMicroIsRequesting;
+  const tableMicroButtonDisabled =
+    tableMicroButtonIsBusy || tableMicroIsMuted;
+  const tableMicroClickHandler = tableAudioIsReady
+    ? requestMutedTableMicro
+    : prepareTableAudio;
   const tableMicroLabel =
     tableAudioState === "requesting"
       ? " Connexion audio..."
       : tableAudioState === "authorizing"
         ? " Validation audio..."
-        : tableAudioIsReady
-          ? " Audio pr\u00eat"
-          : tableAudioState === "error"
-            ? " Audio indisponible"
-            : " Pr\u00e9parer l\u2019audio";
+        : tableAudioState === "error"
+          ? " Audio indisponible"
+          : !tableAudioIsReady
+            ? " Pr\u00e9parer l\u2019audio"
+            : tableMicroIsRequesting
+              ? " Autorisation micro..."
+              : tableMicroIsMuted
+                ? " Micro pr\u00eat (coup\u00e9)"
+                : tableMicroState === "error"
+                  ? " R\u00e9essayer le micro"
+                  : " Autoriser le micro";
   const tableMicroTitle =
-    tableAudioIsReady
-      ? `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s). Le microphone reste coup\u00e9.`
+    tableAudioIsConnecting
+      ? "Pr\u00e9paration de la session audio en cours."
       : tableAudioState === "error"
         ? tableAudioError || "Activation audio indisponible."
-        : "Pr\u00e9pare la session audio. Aucun microphone navigateur n\u2019est activ\u00e9.";
-
+        : !tableAudioIsReady
+          ? "Pr\u00e9pare la session audio. Aucun microphone navigateur n\u2019est activ\u00e9."
+          : tableMicroIsRequesting
+            ? `Le navigateur attend votre choix pour le microphone. ${tableAudioPeers.length} pair(s) audio d\u00e9tect\u00e9(s).`
+            : tableMicroIsMuted
+              ? `Micro autoris\u00e9 mais coup\u00e9. ${tableAudioPeers.length} pair(s) audio d\u00e9tect\u00e9(s) ; aucun son n\u2019est envoy\u00e9.`
+              : tableMicroState === "error"
+                ? tableMicroError || "Activation du microphone indisponible."
+                : `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s) d\u00e9tect\u00e9(s). Demande l\u2019autorisation du navigateur ; le microphone sera coup\u00e9 imm\u00e9diatement.`;
 const showTableDebug = false;
 
   return (
@@ -1567,10 +1697,9 @@ const showTableDebug = false;
               <button
                 type="button"
                 className={`table-micro-btn${tableAudioIsReady ? " active" : ""}`}
-                onClick={prepareTableAudio}
-                disabled={tableAudioIsConnecting || tableAudioIsReady}
-                aria-pressed={tableAudioIsReady}
-                aria-busy={tableAudioIsConnecting}
+                onClick={tableMicroClickHandler}
+                disabled={tableMicroButtonDisabled}
+                aria-busy={tableMicroButtonIsBusy}
                 title={tableMicroTitle}
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
