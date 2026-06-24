@@ -214,8 +214,11 @@ const tableAudioPeerIdRef = useRef(null);
 const tableAudioRequestIdRef = useRef(0);
 const tableAudioActivationRef = useRef(false);
 const tableAudioIceServersRef = useRef([]);
+const tableAudioPeerIdsRef = useRef(new Set());
 const tableRelayConnectionsRef = useRef(new Map());
 const tableRelayChannelsRef = useRef(new Map());
+const tableRelayPendingCandidatesRef = useRef(new Map());
+const tableRelaySignalQueueRef = useRef(new Map());
 const [tableMicroState, setTableMicroState] = useState("not_requested");
 const [tableMicroError, setTableMicroError] = useState("");
 const tableMicroStreamRef = useRef(null);
@@ -266,6 +269,9 @@ const closeTableRelayConnection = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
   if (!peerId) return;
 
+  tableRelayPendingCandidatesRef.current.delete(peerId);
+  tableRelaySignalQueueRef.current.delete(peerId);
+
   const channel = tableRelayChannelsRef.current.get(peerId);
   tableRelayChannelsRef.current.delete(peerId);
 
@@ -293,17 +299,384 @@ const closeAllTableRelayConnections = useCallback(() => {
   const peerIds = new Set([
     ...tableRelayChannelsRef.current.keys(),
     ...tableRelayConnectionsRef.current.keys(),
+    ...tableRelayPendingCandidatesRef.current.keys(),
+    ...tableRelaySignalQueueRef.current.keys(),
   ]);
 
   peerIds.forEach((peerId) => closeTableRelayConnection(peerId));
   tableRelayChannelsRef.current.clear();
   tableRelayConnectionsRef.current.clear();
+  tableRelayPendingCandidatesRef.current.clear();
+  tableRelaySignalQueueRef.current.clear();
 }, [closeTableRelayConnection]);
 
 const resetTableRelayState = useCallback(() => {
   closeAllTableRelayConnections();
   tableAudioIceServersRef.current = [];
+  tableAudioPeerIdsRef.current.clear();
 }, [closeAllTableRelayConnections]);
+const sendTableRelaySignal = useCallback((toAudioPeerId, signal) => {
+  const peerId = String(toAudioPeerId || "").trim();
+  const ws = wsTableRef.current;
+
+  if (!peerId || !ws || ws.readyState !== WebSocket.OPEN) return false;
+
+  try {
+    ws.send(
+      JSON.stringify({
+        type: "audio_signal",
+        toAudioPeerId: peerId,
+        signal,
+      })
+    );
+    return true;
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Relay signal send error", error);
+    return false;
+  }
+}, []);
+
+const attachTableRelayChannel = useCallback((audioPeerId, channel) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId || !channel) return;
+
+  const previousChannel = tableRelayChannelsRef.current.get(peerId);
+
+  if (previousChannel && previousChannel !== channel) {
+    try {
+      previousChannel.close();
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay previous channel cleanup error", error);
+    }
+  }
+
+  tableRelayChannelsRef.current.set(peerId, channel);
+
+  channel.onclose = () => {
+    if (tableRelayChannelsRef.current.get(peerId) === channel) {
+      tableRelayChannelsRef.current.delete(peerId);
+    }
+  };
+
+  channel.onerror = () => {
+    if (import.meta.env.DEV) console.warn("Relay data channel error", peerId);
+  };
+}, []);
+
+const createTableRelayConnection = useCallback((audioPeerId, initiator = false) => {
+  const peerId = String(audioPeerId || "").trim();
+
+  if (!peerId) return null;
+
+  const existingConnection = tableRelayConnectionsRef.current.get(peerId);
+  if (existingConnection) return existingConnection;
+
+  const iceServers = tableAudioIceServersRef.current;
+
+  if (
+    typeof RTCPeerConnection !== "function" ||
+    !Array.isArray(iceServers) ||
+    iceServers.length === 0
+  ) {
+    return null;
+  }
+
+  let connection;
+
+  try {
+    connection = new RTCPeerConnection({
+      iceServers,
+      iceTransportPolicy: "relay",
+    });
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Relay connection creation error", error);
+    return null;
+  }
+
+  tableRelayConnectionsRef.current.set(peerId, connection);
+
+  const closeIfCurrent = () => {
+    if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+      closeTableRelayConnection(peerId);
+    }
+  };
+
+  connection.onicecandidate = (event) => {
+    if (!event.candidate) return;
+
+    const candidate =
+      typeof event.candidate.toJSON === "function"
+        ? event.candidate.toJSON()
+        : {
+            candidate: event.candidate.candidate,
+            sdpMid: event.candidate.sdpMid,
+            sdpMLineIndex: event.candidate.sdpMLineIndex,
+            usernameFragment: event.candidate.usernameFragment,
+          };
+
+    if (!candidate || typeof candidate.candidate !== "string") return;
+
+    sendTableRelaySignal(peerId, {
+      type: "candidate",
+      data: { candidate },
+    });
+  };
+
+  connection.ondatachannel = (event) => {
+    attachTableRelayChannel(peerId, event.channel);
+  };
+
+  connection.onconnectionstatechange = () => {
+    if (connection.connectionState === "failed" || connection.connectionState === "closed") {
+      closeIfCurrent();
+    }
+  };
+
+  if (initiator) {
+    try {
+      const channel = connection.createDataChannel("belote-relay-probe", { ordered: true });
+      attachTableRelayChannel(peerId, channel);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay data channel creation error", error);
+      closeIfCurrent();
+      return null;
+    }
+  }
+
+  return connection;
+}, [attachTableRelayChannel, closeTableRelayConnection, sendTableRelaySignal]);
+
+const flushTableRelayCandidates = useCallback(async (audioPeerId, connection) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId || !connection) return;
+
+  const pendingCandidates = tableRelayPendingCandidatesRef.current.get(peerId) || [];
+  tableRelayPendingCandidatesRef.current.delete(peerId);
+
+  for (const candidate of pendingCandidates) {
+    if (tableRelayConnectionsRef.current.get(peerId) !== connection) return;
+
+    try {
+      await connection.addIceCandidate(candidate);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay pending candidate error", error);
+    }
+  }
+}, []);
+
+const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
+  const peerId = String(fromAudioPeerId || "").trim();
+  const localPeerId = String(tableAudioPeerIdRef.current || "").trim();
+
+  if (
+    !peerId ||
+    !localPeerId ||
+    peerId === localPeerId ||
+    !tableAudioPeerIdsRef.current.has(peerId)
+  ) {
+    return;
+  }
+
+  const signalType = String(signal?.type || "");
+  const data = signal?.data;
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) return;
+
+  if (signalType === "candidate") {
+    const candidate = data.candidate;
+
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
+
+    const connection = tableRelayConnectionsRef.current.get(peerId);
+
+    if (!connection || !connection.remoteDescription) {
+      const pendingCandidates = tableRelayPendingCandidatesRef.current.get(peerId) || [];
+
+      if (pendingCandidates.length < 64) {
+        pendingCandidates.push(candidate);
+        tableRelayPendingCandidatesRef.current.set(peerId, pendingCandidates);
+      }
+
+      return;
+    }
+
+    try {
+      await connection.addIceCandidate(candidate);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay candidate error", error);
+    }
+
+    return;
+  }
+
+  if (signalType !== "offer" && signalType !== "answer") return;
+
+  const description = data.description;
+
+  if (
+    !description ||
+    typeof description !== "object" ||
+    Array.isArray(description) ||
+    description.type !== signalType ||
+    typeof description.sdp !== "string" ||
+    !description.sdp
+  ) {
+    return;
+  }
+
+  if (signalType === "offer") {
+    if (localPeerId < peerId) return;
+
+    const currentConnection = tableRelayConnectionsRef.current.get(peerId);
+
+    if (
+      currentConnection &&
+      currentConnection.remoteDescription?.type === "offer" &&
+      currentConnection.remoteDescription?.sdp === description.sdp
+    ) {
+      return;
+    }
+
+    if (currentConnection) closeTableRelayConnection(peerId);
+
+    const connection = createTableRelayConnection(peerId, false);
+    if (!connection) return;
+
+    try {
+      await connection.setRemoteDescription(description);
+      await flushTableRelayCandidates(peerId, connection);
+
+      const answer = await connection.createAnswer();
+      await connection.setLocalDescription(answer);
+
+      const localDescription = connection.localDescription;
+
+      if (
+        !localDescription ||
+        localDescription.type !== "answer" ||
+        typeof localDescription.sdp !== "string" ||
+        !sendTableRelaySignal(peerId, {
+          type: "answer",
+          data: {
+            description: {
+              type: localDescription.type,
+              sdp: localDescription.sdp,
+            },
+          },
+        })
+      ) {
+        if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+          closeTableRelayConnection(peerId);
+        }
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay offer handling error", error);
+
+      if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+        closeTableRelayConnection(peerId);
+      }
+    }
+
+    return;
+  }
+
+  if (localPeerId >= peerId) return;
+
+  const connection = tableRelayConnectionsRef.current.get(peerId);
+  if (!connection) return;
+
+  try {
+    await connection.setRemoteDescription(description);
+    await flushTableRelayCandidates(peerId, connection);
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Relay answer handling error", error);
+
+    if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+      closeTableRelayConnection(peerId);
+    }
+  }
+}, [
+  closeTableRelayConnection,
+  createTableRelayConnection,
+  flushTableRelayCandidates,
+  sendTableRelaySignal,
+]);
+
+const queueTableRelaySignal = useCallback((fromAudioPeerId, signal) => {
+  const peerId = String(fromAudioPeerId || "").trim();
+  if (!peerId) return;
+
+  const previous = tableRelaySignalQueueRef.current.get(peerId) || Promise.resolve();
+  const next = previous
+    .catch(() => undefined)
+    .then(() => handleTableRelaySignal(peerId, signal))
+    .catch((error) => {
+      if (import.meta.env.DEV) console.warn("Relay signal queue error", error);
+    });
+
+  tableRelaySignalQueueRef.current.set(peerId, next);
+
+  void next.then(() => {
+    if (tableRelaySignalQueueRef.current.get(peerId) === next) {
+      tableRelaySignalQueueRef.current.delete(peerId);
+    }
+  });
+}, [handleTableRelaySignal]);
+
+const startTableRelayConnection = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  const localPeerId = String(tableAudioPeerIdRef.current || "").trim();
+
+  if (
+    !peerId ||
+    !localPeerId ||
+    localPeerId >= peerId ||
+    !tableAudioPeerIdsRef.current.has(peerId) ||
+    tableRelayConnectionsRef.current.has(peerId)
+  ) {
+    return;
+  }
+
+  const connection = createTableRelayConnection(peerId, true);
+  if (!connection) return;
+
+  void (async () => {
+    try {
+      const offer = await connection.createOffer();
+
+      if (tableRelayConnectionsRef.current.get(peerId) !== connection) return;
+
+      await connection.setLocalDescription(offer);
+
+      const localDescription = connection.localDescription;
+
+      if (
+        !localDescription ||
+        localDescription.type !== "offer" ||
+        typeof localDescription.sdp !== "string" ||
+        !sendTableRelaySignal(peerId, {
+          type: "offer",
+          data: {
+            description: {
+              type: localDescription.type,
+              sdp: localDescription.sdp,
+            },
+          },
+        })
+      ) {
+        if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+          closeTableRelayConnection(peerId);
+        }
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay offer creation error", error);
+
+      if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+        closeTableRelayConnection(peerId);
+      }
+    }
+  })();
+}, [createTableRelayConnection, closeTableRelayConnection, sendTableRelaySignal]);
 async function requestMutedTableMicro() {
   if (
     tableAudioState !== "ready" ||
@@ -698,12 +1071,15 @@ useEffect(() => {
           : [];
 
         closeAllTableRelayConnections();
+        tableAudioPeerIdsRef.current = new Set(peers);
         resetTableMicroUi();
         tableAudioActivationRef.current = false;
         tableAudioPeerIdRef.current = audioPeerId;
         setTableAudioPeers(peers);
         setTableAudioState("ready");
         setTableAudioError("");
+
+        peers.forEach((peerId) => startTableRelayConnection(peerId));
         return;
       }
 
@@ -727,12 +1103,16 @@ useEffect(() => {
       if (msg.type === "audio_peer_joined" && Number(msg.tableId) === Number(tableId)) {
         const audioPeerId = String(msg.audioPeerId || "").trim();
 
-        if (audioPeerId) {
+        if (audioPeerId && audioPeerId !== tableAudioPeerIdRef.current) {
+          tableAudioPeerIdsRef.current.add(audioPeerId);
+
           setTableAudioPeers((previousPeers) =>
             previousPeers.includes(audioPeerId)
               ? previousPeers
               : [...previousPeers, audioPeerId]
           );
+
+          startTableRelayConnection(audioPeerId);
         }
 
         return;
@@ -742,9 +1122,21 @@ useEffect(() => {
         const audioPeerId = String(msg.audioPeerId || "").trim();
 
         if (audioPeerId) {
+          tableAudioPeerIdsRef.current.delete(audioPeerId);
+          closeTableRelayConnection(audioPeerId);
+
           setTableAudioPeers((previousPeers) =>
             previousPeers.filter((peerId) => peerId !== audioPeerId)
           );
+        }
+
+        return;
+      }
+      if (msg.type === "audio_signal" && Number(msg.tableId) === Number(tableId)) {
+        const fromAudioPeerId = String(msg.fromAudioPeerId || "").trim();
+
+        if (fromAudioPeerId) {
+          queueTableRelaySignal(fromAudioPeerId, msg.signal);
         }
 
         return;
@@ -790,7 +1182,7 @@ useEffect(() => {
 
     if (wsTableRef.current === ws) wsTableRef.current = null;
   };
-}, [tableId, pseudo, avatar, tableRole, resetTableMicroUi, releaseTableMicro, resetTableRelayState, closeAllTableRelayConnections]);
+}, [tableId, pseudo, avatar, tableRole, resetTableMicroUi, releaseTableMicro, resetTableRelayState, closeAllTableRelayConnections, closeTableRelayConnection, queueTableRelaySignal, startTableRelayConnection]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
