@@ -217,8 +217,10 @@ const tableAudioIceServersRef = useRef([]);
 const tableAudioPeerIdsRef = useRef(new Set());
 const tableRelayConnectionsRef = useRef(new Map());
 const tableRelayChannelsRef = useRef(new Map());
+const tableRelayOpenPeerIdsRef = useRef(new Set());
 const tableRelayPendingCandidatesRef = useRef(new Map());
 const tableRelaySignalQueueRef = useRef(new Map());
+const [tableRelayOpenPeerCount, setTableRelayOpenPeerCount] = useState(0);
 const [tableMicroState, setTableMicroState] = useState("not_requested");
 const [tableMicroError, setTableMicroError] = useState("");
 const tableMicroStreamRef = useRef(null);
@@ -269,6 +271,9 @@ const closeTableRelayConnection = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
   if (!peerId) return;
 
+  tableRelayOpenPeerIdsRef.current.delete(peerId);
+  setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
+
   tableRelayPendingCandidatesRef.current.delete(peerId);
   tableRelaySignalQueueRef.current.delete(peerId);
 
@@ -299,6 +304,7 @@ const closeAllTableRelayConnections = useCallback(() => {
   const peerIds = new Set([
     ...tableRelayChannelsRef.current.keys(),
     ...tableRelayConnectionsRef.current.keys(),
+    ...tableRelayOpenPeerIdsRef.current.keys(),
     ...tableRelayPendingCandidatesRef.current.keys(),
     ...tableRelaySignalQueueRef.current.keys(),
   ]);
@@ -306,8 +312,10 @@ const closeAllTableRelayConnections = useCallback(() => {
   peerIds.forEach((peerId) => closeTableRelayConnection(peerId));
   tableRelayChannelsRef.current.clear();
   tableRelayConnectionsRef.current.clear();
+  tableRelayOpenPeerIdsRef.current.clear();
   tableRelayPendingCandidatesRef.current.clear();
   tableRelaySignalQueueRef.current.clear();
+  setTableRelayOpenPeerCount(0);
 }, [closeTableRelayConnection]);
 
 const resetTableRelayState = useCallback(() => {
@@ -343,6 +351,9 @@ const attachTableRelayChannel = useCallback((audioPeerId, channel) => {
   const previousChannel = tableRelayChannelsRef.current.get(peerId);
 
   if (previousChannel && previousChannel !== channel) {
+    tableRelayOpenPeerIdsRef.current.delete(peerId);
+    setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
+
     try {
       previousChannel.close();
     } catch (error) {
@@ -352,15 +363,29 @@ const attachTableRelayChannel = useCallback((audioPeerId, channel) => {
 
   tableRelayChannelsRef.current.set(peerId, channel);
 
-  channel.onclose = () => {
-    if (tableRelayChannelsRef.current.get(peerId) === channel) {
-      tableRelayChannelsRef.current.delete(peerId);
-    }
+  const markChannelOpen = () => {
+    if (tableRelayChannelsRef.current.get(peerId) !== channel) return;
+
+    tableRelayOpenPeerIdsRef.current.add(peerId);
+    setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
   };
+
+  const markChannelClosed = () => {
+    if (tableRelayChannelsRef.current.get(peerId) !== channel) return;
+
+    tableRelayChannelsRef.current.delete(peerId);
+    tableRelayOpenPeerIdsRef.current.delete(peerId);
+    setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
+  };
+
+  channel.onopen = markChannelOpen;
+  channel.onclose = markChannelClosed;
 
   channel.onerror = () => {
     if (import.meta.env.DEV) console.warn("Relay data channel error", peerId);
   };
+
+  if (channel.readyState === "open") markChannelOpen();
 }, []);
 
 const createTableRelayConnection = useCallback((audioPeerId, initiator = false) => {
@@ -1999,6 +2024,18 @@ const canStartWithBots =
   const tableAudioIsConnecting =
     tableAudioState === "requesting" || tableAudioState === "authorizing";
   const tableAudioIsReady = tableAudioState === "ready";
+  const tableRelayOpenPeerDisplayCount = Math.min(
+    tableRelayOpenPeerCount,
+    tableAudioPeers.length
+  );
+  const tableRelayStatusLabel =
+    tableAudioIsReady && tableAudioPeers.length > 0
+      ? ` ? Relais ${tableRelayOpenPeerDisplayCount}/${tableAudioPeers.length}`
+      : "";
+  const tableRelayStatusTitle =
+    tableAudioPeers.length > 0
+      ? `Relais : ${tableRelayOpenPeerDisplayCount}/${tableAudioPeers.length} liaison(s) de donn?es ouverte(s).`
+      : "Aucun autre participant audio d?tect?.";
   const tableMicroIsRequesting = tableMicroState === "requesting";
   const tableMicroIsMuted = tableMicroState === "muted";
   const tableMicroButtonIsBusy =
@@ -2148,10 +2185,15 @@ const showTableDebug = false;
                 onClick={tableMicroClickHandler}
                 disabled={tableMicroButtonDisabled}
                 aria-busy={tableMicroButtonIsBusy}
-                title={tableMicroTitle}
+                title={tableAudioIsReady ? `${tableMicroTitle} ${tableRelayStatusTitle}` : tableMicroTitle}
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
                 {tableMicroLabel}
+                {tableRelayStatusLabel && (
+                  <span aria-hidden="true" style={{ marginLeft: 4, fontSize: "0.78em", opacity: 0.82 }}>
+                    {tableRelayStatusLabel}
+                  </span>
+                )}
               </button>
             )}
             {beloteToast && (
