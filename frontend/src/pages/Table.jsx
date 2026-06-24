@@ -214,6 +214,9 @@ const [tableAudioPeers, setTableAudioPeers] = useState([]);
 const tableAudioPeerIdRef = useRef(null);
 const tableAudioRequestIdRef = useRef(0);
 const tableAudioActivationRef = useRef(false);
+const tableAudioIceServersRef = useRef([]);
+const tableRelayConnectionsRef = useRef(new Map());
+const tableRelayChannelsRef = useRef(new Map());
 const [tableMicroState, setTableMicroState] = useState("not_requested");
 const [tableMicroError, setTableMicroError] = useState("");
 const tableMicroStreamRef = useRef(null);
@@ -260,6 +263,48 @@ const resetTableMicroUi = useCallback(() => {
   setTableMicroState("not_requested");
   setTableMicroError("");
 }, [releaseTableMicro]);
+const closeTableRelayConnection = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return;
+
+  const channel = tableRelayChannelsRef.current.get(peerId);
+  tableRelayChannelsRef.current.delete(peerId);
+
+  if (channel) {
+    try {
+      channel.close();
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay channel cleanup error", error);
+    }
+  }
+
+  const connection = tableRelayConnectionsRef.current.get(peerId);
+  tableRelayConnectionsRef.current.delete(peerId);
+
+  if (connection) {
+    try {
+      connection.close();
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Relay connection cleanup error", error);
+    }
+  }
+}, []);
+
+const closeAllTableRelayConnections = useCallback(() => {
+  const peerIds = new Set([
+    ...tableRelayChannelsRef.current.keys(),
+    ...tableRelayConnectionsRef.current.keys(),
+  ]);
+
+  peerIds.forEach((peerId) => closeTableRelayConnection(peerId));
+  tableRelayChannelsRef.current.clear();
+  tableRelayConnectionsRef.current.clear();
+}, [closeTableRelayConnection]);
+
+const resetTableRelayState = useCallback(() => {
+  closeAllTableRelayConnections();
+  tableAudioIceServersRef.current = [];
+}, [closeAllTableRelayConnections]);
 async function requestMutedTableMicro() {
   if (
     tableAudioState !== "ready" ||
@@ -339,6 +384,7 @@ async function prepareTableAudio() {
     return;
   }
 
+  resetTableRelayState();
   resetTableMicroUi();
 
   const requestId = tableAudioRequestIdRef.current + 1;
@@ -354,6 +400,9 @@ async function prepareTableAudio() {
   if (tableAudioRequestIdRef.current !== requestId) return;
 
   const audioTicket = String(credentials?.audioTicket || "").trim();
+  const iceServers = Array.isArray(credentials?.iceServers)
+    ? credentials.iceServers
+    : [];
 
   if (credentials?.error) {
     tableAudioActivationRef.current = false;
@@ -362,12 +411,18 @@ async function prepareTableAudio() {
     return;
   }
 
-  if (Number(credentials?.tableId) !== Number(tableId) || !audioTicket) {
+  if (
+    Number(credentials?.tableId) !== Number(tableId) ||
+    !audioTicket ||
+    iceServers.length === 0
+  ) {
     tableAudioActivationRef.current = false;
     setTableAudioState("error");
-    setTableAudioError("R\u00e9ponse audio invalide.");
+    setTableAudioError("Configuration audio relay invalide.");
     return;
   }
+
+  tableAudioIceServersRef.current = iceServers;
 
   const ws = wsTableRef.current;
 
@@ -558,6 +613,7 @@ useEffect(() => {
   if (!tableId) return;
 
   setTableChatMessages([]);
+  resetTableRelayState();
   resetTableMicroUi();
   tableAudioRequestIdRef.current += 1;
   tableAudioActivationRef.current = false;
@@ -642,6 +698,7 @@ useEffect(() => {
             )
           : [];
 
+        closeAllTableRelayConnections();
         resetTableMicroUi();
         tableAudioActivationRef.current = false;
         tableAudioPeerIdRef.current = audioPeerId;
@@ -652,6 +709,7 @@ useEffect(() => {
       }
 
       if (msg.type === "audio_auth_denied") {
+        resetTableRelayState();
         releaseTableMicro();
         setTableMicroState("not_requested");
         setTableMicroError("");
@@ -715,6 +773,7 @@ useEffect(() => {
     tableAudioRequestIdRef.current += 1;
     tableAudioActivationRef.current = false;
     tableAudioPeerIdRef.current = null;
+    resetTableRelayState();
     releaseTableMicro();
 
     ws.onopen = null;
@@ -732,7 +791,7 @@ useEffect(() => {
 
     if (wsTableRef.current === ws) wsTableRef.current = null;
   };
-}, [tableId, pseudo, avatar, tableRole, resetTableMicroUi, releaseTableMicro]);
+}, [tableId, pseudo, avatar, tableRole, resetTableMicroUi, releaseTableMicro, resetTableRelayState, closeAllTableRelayConnections]);
 
   const [bidValue, setBidValue] = useState(80);
   const [, setScoreDebug] = useState(null);
