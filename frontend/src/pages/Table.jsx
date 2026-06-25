@@ -414,6 +414,8 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
       iceServers,
       iceTransportPolicy: "relay",
     });
+
+    connection.addTransceiver("audio", { direction: "recvonly" });
   } catch (error) {
     if (import.meta.env.DEV) console.warn("Relay connection creation error", error);
     return null;
