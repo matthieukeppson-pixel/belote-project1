@@ -217,6 +217,7 @@ const tableAudioActivationRef = useRef(false);
 const tableAudioIceServersRef = useRef([]);
 const tableAudioPeerIdsRef = useRef(new Set());
 const tableRelayConnectionsRef = useRef(new Map());
+const tableRemoteAudioTracksRef = useRef(new Map());
 const tableRelayChannelsRef = useRef(new Map());
 const tableRelayOpenPeerIdsRef = useRef(new Set());
 const tableRelayPendingCandidatesRef = useRef(new Map());
@@ -268,9 +269,85 @@ const resetTableMicroUi = useCallback(() => {
   setTableMicroState("not_requested");
   setTableMicroError("");
 }, [releaseTableMicro]);
+
+const clearTableRemoteAudioTracks = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return;
+
+  const remoteTracks = tableRemoteAudioTracksRef.current.get(peerId);
+  tableRemoteAudioTracksRef.current.delete(peerId);
+
+  if (!remoteTracks) return;
+
+  remoteTracks.forEach(({ track, onEnded }) => {
+    try {
+      track.removeEventListener("ended", onEnded);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Remote audio track cleanup error", error);
+    }
+  });
+}, []);
+
+const registerTableRemoteAudioTrack = useCallback((audioPeerId, connection, track) => {
+  const peerId = String(audioPeerId || "").trim();
+
+  if (
+    !peerId ||
+    !connection ||
+    !track ||
+    track.kind !== "audio" ||
+    tableRelayConnectionsRef.current.get(peerId) !== connection
+  ) {
+    return;
+  }
+
+  const remoteTracks = tableRemoteAudioTracksRef.current.get(peerId) || new Map();
+  const previousEntry = remoteTracks.get(track.id);
+
+  if (previousEntry?.track === track) return;
+
+  if (previousEntry) {
+    try {
+      previousEntry.track.removeEventListener("ended", previousEntry.onEnded);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Remote audio track replacement cleanup error", error);
+    }
+  }
+
+  const onEnded = () => {
+    const currentTracks = tableRemoteAudioTracksRef.current.get(peerId);
+    const currentEntry = currentTracks?.get(track.id);
+
+    if (!currentEntry || currentEntry.track !== track) return;
+
+    try {
+      track.removeEventListener("ended", onEnded);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Remote audio track ended cleanup error", error);
+    }
+
+    currentTracks.delete(track.id);
+
+    if (currentTracks.size === 0) {
+      tableRemoteAudioTracksRef.current.delete(peerId);
+    }
+  };
+
+  remoteTracks.set(track.id, { track, onEnded });
+  tableRemoteAudioTracksRef.current.set(peerId, remoteTracks);
+
+  try {
+    track.addEventListener("ended", onEnded, { once: true });
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Remote audio track listener error", error);
+  }
+}, []);
+
 const closeTableRelayConnection = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
   if (!peerId) return;
+
+  clearTableRemoteAudioTracks(peerId);
 
   tableRelayOpenPeerIdsRef.current.delete(peerId);
   setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
@@ -299,12 +376,13 @@ const closeTableRelayConnection = useCallback((audioPeerId) => {
       if (import.meta.env.DEV) console.warn("Relay connection cleanup error", error);
     }
   }
-}, []);
+}, [clearTableRemoteAudioTracks]);
 
 const closeAllTableRelayConnections = useCallback(() => {
   const peerIds = new Set([
     ...tableRelayChannelsRef.current.keys(),
     ...tableRelayConnectionsRef.current.keys(),
+    ...tableRemoteAudioTracksRef.current.keys(),
     ...tableRelayOpenPeerIdsRef.current.keys(),
     ...tableRelayPendingCandidatesRef.current.keys(),
     ...tableRelaySignalQueueRef.current.keys(),
@@ -313,6 +391,7 @@ const closeAllTableRelayConnections = useCallback(() => {
   peerIds.forEach((peerId) => closeTableRelayConnection(peerId));
   tableRelayChannelsRef.current.clear();
   tableRelayConnectionsRef.current.clear();
+  tableRemoteAudioTracksRef.current.clear();
   tableRelayOpenPeerIdsRef.current.clear();
   tableRelayPendingCandidatesRef.current.clear();
   tableRelaySignalQueueRef.current.clear();
@@ -423,6 +502,10 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
 
   tableRelayConnectionsRef.current.set(peerId, connection);
 
+  connection.ontrack = (event) => {
+    registerTableRemoteAudioTrack(peerId, connection, event?.track);
+  };
+
   const closeIfCurrent = () => {
     if (tableRelayConnectionsRef.current.get(peerId) === connection) {
       closeTableRelayConnection(peerId);
@@ -472,7 +555,12 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
   }
 
   return connection;
-}, [attachTableRelayChannel, closeTableRelayConnection, sendTableRelaySignal]);
+}, [
+  attachTableRelayChannel,
+  closeTableRelayConnection,
+  registerTableRemoteAudioTrack,
+  sendTableRelaySignal,
+]);
 
 const flushTableRelayCandidates = useCallback(async (audioPeerId, connection) => {
   const peerId = String(audioPeerId || "").trim();
