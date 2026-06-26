@@ -217,6 +217,7 @@ const tableAudioIceServersRef = useRef([]);
 const tableAudioPeerIdsRef = useRef(new Set());
 const tableRelayConnectionsRef = useRef(new Map());
 const tableRemoteAudioTracksRef = useRef(new Map());
+const tableRelayNegotiationStateRef = useRef(new Map());
 const tableRelayChannelsRef = useRef(new Map());
 const tableRelayOpenPeerIdsRef = useRef(new Set());
 const tableRelayPendingCandidatesRef = useRef(new Map());
@@ -268,6 +269,30 @@ const resetTableMicroUi = useCallback(() => {
   setTableMicroState("not_requested");
   setTableMicroError("");
 }, [releaseTableMicro]);
+
+const ensureTableRelayNegotiationState = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return null;
+
+  const existingState = tableRelayNegotiationStateRef.current.get(peerId);
+  if (existingState) return existingState;
+
+  const state = {
+    makingOffer: false,
+    ignoreOffer: false,
+    isSettingRemoteAnswerPending: false,
+  };
+
+  tableRelayNegotiationStateRef.current.set(peerId, state);
+  return state;
+}, []);
+
+const clearTableRelayNegotiationState = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return;
+
+  tableRelayNegotiationStateRef.current.delete(peerId);
+}, []);
 
 const clearTableRemoteAudioTracks = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
@@ -347,6 +372,7 @@ const closeTableRelayConnection = useCallback((audioPeerId) => {
   if (!peerId) return;
 
   clearTableRemoteAudioTracks(peerId);
+  clearTableRelayNegotiationState(peerId);
 
   tableRelayOpenPeerIdsRef.current.delete(peerId);
   setTableRelayOpenPeerCount(tableRelayOpenPeerIdsRef.current.size);
@@ -375,13 +401,14 @@ const closeTableRelayConnection = useCallback((audioPeerId) => {
       if (import.meta.env.DEV) console.warn("Relay connection cleanup error", error);
     }
   }
-}, [clearTableRemoteAudioTracks]);
+}, [clearTableRemoteAudioTracks, clearTableRelayNegotiationState]);
 
 const closeAllTableRelayConnections = useCallback(() => {
   const peerIds = new Set([
     ...tableRelayChannelsRef.current.keys(),
     ...tableRelayConnectionsRef.current.keys(),
     ...tableRemoteAudioTracksRef.current.keys(),
+    ...tableRelayNegotiationStateRef.current.keys(),
     ...tableRelayOpenPeerIdsRef.current.keys(),
     ...tableRelayPendingCandidatesRef.current.keys(),
     ...tableRelaySignalQueueRef.current.keys(),
@@ -391,6 +418,7 @@ const closeAllTableRelayConnections = useCallback(() => {
   tableRelayChannelsRef.current.clear();
   tableRelayConnectionsRef.current.clear();
   tableRemoteAudioTracksRef.current.clear();
+  tableRelayNegotiationStateRef.current.clear();
   tableRelayOpenPeerIdsRef.current.clear();
   tableRelayPendingCandidatesRef.current.clear();
   tableRelaySignalQueueRef.current.clear();
@@ -500,6 +528,7 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
   }
 
   tableRelayConnectionsRef.current.set(peerId, connection);
+  ensureTableRelayNegotiationState(peerId);
 
   connection.ontrack = (event) => {
     registerTableRemoteAudioTrack(peerId, connection, event?.track);
@@ -557,6 +586,7 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
 }, [
   attachTableRelayChannel,
   closeTableRelayConnection,
+  ensureTableRelayNegotiationState,
   registerTableRemoteAudioTrack,
   sendTableRelaySignal,
 ]);
