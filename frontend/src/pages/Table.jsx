@@ -632,6 +632,10 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
 
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return;
 
+    const negotiationState = ensureTableRelayNegotiationState(peerId);
+
+    if (!negotiationState || negotiationState.ignoreOffer) return;
+
     const connection = tableRelayConnectionsRef.current.get(peerId);
 
     if (!connection || !connection.remoteDescription) {
@@ -648,7 +652,9 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
     try {
       await connection.addIceCandidate(candidate);
     } catch (error) {
-      if (import.meta.env.DEV) console.warn("Relay candidate error", error);
+      if (!negotiationState.ignoreOffer && import.meta.env.DEV) {
+        console.warn("Relay candidate error", error);
+      }
     }
 
     return;
@@ -669,23 +675,41 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
     return;
   }
 
+  let connection = tableRelayConnectionsRef.current.get(peerId);
+
+  if (!connection && signalType === "offer") {
+    connection = createTableRelayConnection(peerId, false);
+  }
+
+  if (!connection) return;
+
+  const negotiationState = ensureTableRelayNegotiationState(peerId);
+
+  if (!negotiationState) return;
+
+  const isPolite = localPeerId > peerId;
+
   if (signalType === "offer") {
-    if (localPeerId < peerId) return;
-
-    const currentConnection = tableRelayConnectionsRef.current.get(peerId);
-
     if (
-      currentConnection &&
-      currentConnection.remoteDescription?.type === "offer" &&
-      currentConnection.remoteDescription?.sdp === description.sdp
+      connection.remoteDescription?.type === "offer" &&
+      connection.remoteDescription?.sdp === description.sdp
     ) {
       return;
     }
 
-    if (currentConnection) closeTableRelayConnection(peerId);
+    const readyForOffer =
+      !negotiationState.makingOffer &&
+      (connection.signalingState === "stable" ||
+        negotiationState.isSettingRemoteAnswerPending);
 
-    const connection = createTableRelayConnection(peerId, false);
-    if (!connection) return;
+    const offerCollision = !readyForOffer;
+
+    negotiationState.ignoreOffer = !isPolite && offerCollision;
+
+    if (negotiationState.ignoreOffer) {
+      tableRelayPendingCandidatesRef.current.delete(peerId);
+      return;
+    }
 
     try {
       await connection.setRemoteDescription(description);
@@ -725,10 +749,10 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
     return;
   }
 
-  if (localPeerId >= peerId) return;
+  if (connection.signalingState !== "have-local-offer") return;
 
-  const connection = tableRelayConnectionsRef.current.get(peerId);
-  if (!connection) return;
+  negotiationState.ignoreOffer = false;
+  negotiationState.isSettingRemoteAnswerPending = true;
 
   try {
     await connection.setRemoteDescription(description);
@@ -739,10 +763,13 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
     if (tableRelayConnectionsRef.current.get(peerId) === connection) {
       closeTableRelayConnection(peerId);
     }
+  } finally {
+    negotiationState.isSettingRemoteAnswerPending = false;
   }
 }, [
   closeTableRelayConnection,
   createTableRelayConnection,
+  ensureTableRelayNegotiationState,
   flushTableRelayCandidates,
   sendTableRelaySignal,
 ]);
@@ -785,8 +812,16 @@ const startTableRelayConnection = useCallback((audioPeerId) => {
   const connection = createTableRelayConnection(peerId, true);
   if (!connection) return;
 
+  const negotiationState = ensureTableRelayNegotiationState(peerId);
+  if (!negotiationState) {
+    closeTableRelayConnection(peerId);
+    return;
+  }
+
   void (async () => {
     try {
+      negotiationState.makingOffer = true;
+
       const offer = await connection.createOffer();
 
       if (tableRelayConnectionsRef.current.get(peerId) !== connection) return;
@@ -819,9 +854,17 @@ const startTableRelayConnection = useCallback((audioPeerId) => {
       if (tableRelayConnectionsRef.current.get(peerId) === connection) {
         closeTableRelayConnection(peerId);
       }
+    } finally {
+      negotiationState.makingOffer = false;
     }
   })();
-}, [createTableRelayConnection, closeTableRelayConnection, sendTableRelaySignal]);
+}, [
+  closeTableRelayConnection,
+  createTableRelayConnection,
+  ensureTableRelayNegotiationState,
+  sendTableRelaySignal,
+]);
+
 async function requestMutedTableMicro() {
   if (
     tableAudioState !== "ready" ||
