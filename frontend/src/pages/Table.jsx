@@ -865,6 +865,115 @@ const startTableRelayConnection = useCallback((audioPeerId) => {
   sendTableRelaySignal,
 ]);
 
+const linkMutedTableMicroToRelayConnections = useCallback(async (stream) => {
+  const localTrack =
+    stream?.getAudioTracks?.().find(
+      (track) =>
+        track &&
+        track.kind === "audio" &&
+        track.readyState === "live"
+    ) || null;
+
+  if (!localTrack) {
+    throw new Error("NO_AUDIO_TRACK");
+  }
+
+  localTrack.enabled = false;
+
+  const targets = [];
+
+  for (const [peerId, connection] of tableRelayConnectionsRef.current.entries()) {
+    if (!tableAudioPeerIdsRef.current.has(peerId)) continue;
+
+    if (!connection || connection.signalingState !== "stable") {
+      throw new Error("RELAY_MIC_LINK_NOT_READY");
+    }
+
+    const negotiationState = ensureTableRelayNegotiationState(peerId);
+
+    if (
+      !negotiationState ||
+      negotiationState.makingOffer ||
+      negotiationState.ignoreOffer ||
+      negotiationState.isSettingRemoteAnswerPending
+    ) {
+      throw new Error("RELAY_MIC_LINK_NOT_READY");
+    }
+
+    const audioTransceiver = connection
+      .getTransceivers()
+      .find(
+        (transceiver) =>
+          transceiver &&
+          transceiver.sender &&
+          transceiver.receiver?.track?.kind === "audio"
+      );
+
+    if (!audioTransceiver) {
+      throw new Error("RELAY_MIC_LINK_NOT_READY");
+    }
+
+    targets.push({ peerId, connection, negotiationState, audioTransceiver });
+  }
+
+  try {
+    for (const { peerId, connection, negotiationState, audioTransceiver } of targets) {
+      try {
+        negotiationState.makingOffer = true;
+
+        await audioTransceiver.sender.replaceTrack(localTrack);
+        audioTransceiver.direction = "sendrecv";
+
+        const offer = await connection.createOffer();
+
+        if (
+          tableRelayConnectionsRef.current.get(peerId) !== connection ||
+          connection.signalingState !== "stable"
+        ) {
+          throw new Error("RELAY_MIC_LINK_NOT_READY");
+        }
+
+        await connection.setLocalDescription(offer);
+
+        const localDescription = connection.localDescription;
+
+        if (
+          !localDescription ||
+          localDescription.type !== "offer" ||
+          typeof localDescription.sdp !== "string" ||
+          !sendTableRelaySignal(peerId, {
+            type: "offer",
+            data: {
+              description: {
+                type: localDescription.type,
+                sdp: localDescription.sdp,
+              },
+            },
+          })
+        ) {
+          throw new Error("RELAY_MIC_LINK_NOT_READY");
+        }
+      } finally {
+        negotiationState.makingOffer = false;
+      }
+    }
+  } catch (error) {
+    targets.forEach(({ peerId, connection }) => {
+      if (tableRelayConnectionsRef.current.get(peerId) === connection) {
+        closeTableRelayConnection(peerId);
+      }
+    });
+
+    throw error;
+  }
+
+  return targets.length;
+}, [
+  closeTableRelayConnection,
+  ensureTableRelayNegotiationState,
+  sendTableRelaySignal,
+]);
+
 async function requestMutedTableMicro() {
   if (
     tableAudioState !== "ready" ||
@@ -889,8 +998,10 @@ async function requestMutedTableMicro() {
   setTableMicroState("requesting");
   setTableMicroError("");
 
+  let stream = null;
+
   try {
-    const stream = await mediaDevices.getUserMedia({
+    stream = await mediaDevices.getUserMedia({
       audio: true,
       video: false,
     });
@@ -911,12 +1022,31 @@ async function requestMutedTableMicro() {
       return;
     }
 
+    await linkMutedTableMicroToRelayConnections(stream);
+
+    if (tableMicroRequestIdRef.current !== requestId) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+
     stopTableMicroStream();
     tableMicroStreamRef.current = stream;
     tableMicroActivationRef.current = false;
     setTableMicroState("muted");
     setTableMicroError("");
   } catch (error) {
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (cleanupError) {
+          if (import.meta.env.DEV) {
+            console.warn("Micro relay cleanup error", cleanupError);
+          }
+        }
+      });
+    }
+
     if (tableMicroRequestIdRef.current !== requestId) return;
 
     tableMicroActivationRef.current = false;
