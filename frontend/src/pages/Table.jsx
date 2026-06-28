@@ -218,12 +218,15 @@ const tableAudioIceServersRef = useRef([]);
 const tableAudioPeerIdsRef = useRef(new Set());
 const tableRelayConnectionsRef = useRef(new Map());
 const tableRemoteAudioTracksRef = useRef(new Map());
+const tableRemoteAudioStreamsRef = useRef(new Map());
+const tableRemoteAudioElementsRef = useRef(new Map());
 const tableRelayNegotiationStateRef = useRef(new Map());
 const tableRelayChannelsRef = useRef(new Map());
 const tableRelayOpenPeerIdsRef = useRef(new Set());
 const tableRelayPendingCandidatesRef = useRef(new Map());
 const tableRelaySignalQueueRef = useRef(new Map());
 const [tableRelayOpenPeerCount, setTableRelayOpenPeerCount] = useState(0);
+const [tableRemoteAudioPlaybackPeers, setTableRemoteAudioPlaybackPeers] = useState([]);
 const [tableMicroState, setTableMicroState] = useState("not_requested");
 const [tableMicroError, setTableMicroError] = useState("");
 const tableMicroStreamRef = useRef(null);
@@ -295,12 +298,131 @@ const clearTableRelayNegotiationState = useCallback((audioPeerId) => {
   tableRelayNegotiationStateRef.current.delete(peerId);
 }, []);
 
+const clearTableRemoteAudioPlayback = useCallback((audioPeerId) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return;
+
+  const audioElement = tableRemoteAudioElementsRef.current.get(peerId);
+  tableRemoteAudioElementsRef.current.delete(peerId);
+
+  tableRemoteAudioStreamsRef.current.delete(peerId);
+
+  setTableRemoteAudioPlaybackPeers((previous) =>
+    previous.filter((entry) => entry.peerId !== peerId)
+  );
+
+  if (!audioElement) return;
+
+  try {
+    audioElement.pause();
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Remote audio pause cleanup error", error);
+  }
+
+  try {
+    audioElement.srcObject = null;
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Remote audio source cleanup error", error);
+  }
+}, []);
+
+const syncTableRemoteAudioPlayback = useCallback((audioPeerId, remoteTracks) => {
+  const peerId = String(audioPeerId || "").trim();
+
+  const tracks =
+    remoteTracks instanceof Map
+      ? [...remoteTracks.values()]
+          .map((entry) => entry?.track)
+          .filter(
+            (track) =>
+              track &&
+              track.kind === "audio" &&
+              track.readyState !== "ended"
+          )
+      : [];
+
+  if (!peerId || tracks.length === 0 || typeof MediaStream !== "function") {
+    clearTableRemoteAudioPlayback(peerId);
+    return;
+  }
+
+  const stream = new MediaStream(tracks);
+
+  tableRemoteAudioStreamsRef.current.set(peerId, stream);
+
+  setTableRemoteAudioPlaybackPeers((previous) => {
+    const nextEntry = { peerId, stream };
+    const existingIndex = previous.findIndex(
+      (entry) => entry.peerId === peerId
+    );
+
+    if (existingIndex === -1) {
+      return [...previous, nextEntry];
+    }
+
+    return previous.map((entry) =>
+      entry.peerId === peerId ? nextEntry : entry
+    );
+  });
+}, [clearTableRemoteAudioPlayback]);
+
+const attachTableRemoteAudioElement = useCallback((audioPeerId, stream, element) => {
+  const peerId = String(audioPeerId || "").trim();
+  if (!peerId) return;
+
+  if (!element) {
+    tableRemoteAudioElementsRef.current.delete(peerId);
+    return;
+  }
+
+  tableRemoteAudioElementsRef.current.set(peerId, element);
+
+  try {
+    if (element.srcObject !== stream) {
+      element.srcObject = stream;
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Remote audio element attach error", error);
+  }
+}, []);
+
+const resumeTableRemoteAudioPlayback = useCallback(() => {
+  tableRemoteAudioPlaybackPeers.forEach(({ peerId, stream }) => {
+    const audioElement = tableRemoteAudioElementsRef.current.get(peerId);
+
+    if (!audioElement || !stream) return;
+
+    try {
+      if (audioElement.srcObject !== stream) {
+        audioElement.srcObject = stream;
+      }
+
+      const playback = audioElement.play();
+
+      if (playback && typeof playback.catch === "function") {
+        playback.catch((error) => {
+          if (import.meta.env.DEV) {
+            console.warn("Remote audio playback awaiting browser permission", error);
+          }
+        });
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Remote audio playback error", error);
+    }
+  });
+}, [tableRemoteAudioPlaybackPeers]);
+
+useEffect(() => {
+  resumeTableRemoteAudioPlayback();
+}, [resumeTableRemoteAudioPlayback]);
+
 const clearTableRemoteAudioTracks = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
   if (!peerId) return;
 
   const remoteTracks = tableRemoteAudioTracksRef.current.get(peerId);
   tableRemoteAudioTracksRef.current.delete(peerId);
+  clearTableRemoteAudioPlayback(peerId);
 
   if (!remoteTracks) return;
 
@@ -311,7 +433,7 @@ const clearTableRemoteAudioTracks = useCallback((audioPeerId) => {
       if (import.meta.env.DEV) console.warn("Remote audio track cleanup error", error);
     }
   });
-}, []);
+}, [clearTableRemoteAudioPlayback]);
 
 const registerTableRemoteAudioTrack = useCallback((audioPeerId, connection, track) => {
   const peerId = String(audioPeerId || "").trim();
@@ -356,17 +478,20 @@ const registerTableRemoteAudioTrack = useCallback((audioPeerId, connection, trac
     if (currentTracks.size === 0) {
       tableRemoteAudioTracksRef.current.delete(peerId);
     }
+
+    syncTableRemoteAudioPlayback(peerId, currentTracks);
   };
 
   remoteTracks.set(track.id, { track, onEnded });
   tableRemoteAudioTracksRef.current.set(peerId, remoteTracks);
+  syncTableRemoteAudioPlayback(peerId, remoteTracks);
 
   try {
     track.addEventListener("ended", onEnded, { once: true });
   } catch (error) {
     if (import.meta.env.DEV) console.warn("Remote audio track listener error", error);
   }
-}, []);
+}, [syncTableRemoteAudioPlayback]);
 
 const closeTableRelayConnection = useCallback((audioPeerId) => {
   const peerId = String(audioPeerId || "").trim();
@@ -409,6 +534,8 @@ const closeAllTableRelayConnections = useCallback(() => {
     ...tableRelayChannelsRef.current.keys(),
     ...tableRelayConnectionsRef.current.keys(),
     ...tableRemoteAudioTracksRef.current.keys(),
+    ...tableRemoteAudioStreamsRef.current.keys(),
+    ...tableRemoteAudioElementsRef.current.keys(),
     ...tableRelayNegotiationStateRef.current.keys(),
     ...tableRelayOpenPeerIdsRef.current.keys(),
     ...tableRelayPendingCandidatesRef.current.keys(),
@@ -419,7 +546,10 @@ const closeAllTableRelayConnections = useCallback(() => {
   tableRelayChannelsRef.current.clear();
   tableRelayConnectionsRef.current.clear();
   tableRemoteAudioTracksRef.current.clear();
+  tableRemoteAudioStreamsRef.current.clear();
+  tableRemoteAudioElementsRef.current.clear();
   tableRelayNegotiationStateRef.current.clear();
+  setTableRemoteAudioPlaybackPeers([]);
   tableRelayOpenPeerIdsRef.current.clear();
   tableRelayPendingCandidatesRef.current.clear();
   tableRelaySignalQueueRef.current.clear();
@@ -1035,6 +1165,7 @@ async function requestMutedTableMicro() {
     tableMicroActivationRef.current = false;
     setTableMicroState("muted");
     setTableMicroError("");
+    void resumeTableRemoteAudioPlayback();
   } catch (error) {
     if (stream) {
       stream.getTracks().forEach((track) => {
@@ -2332,6 +2463,19 @@ const canStartWithBots =
     tableAudioPeers.length > 0
       ? `Relais : ${tableRelayOpenPeerDisplayCount}/${tableAudioPeers.length} liaison(s) de donn?es ouverte(s).`
       : "Aucun autre participant audio d?tect?.";
+  const tableRemoteAudioPlaybackPeerDisplayCount = Math.min(
+    tableRemoteAudioPlaybackPeers.length,
+    tableAudioPeers.length
+  );
+  const tableRemoteAudioStatusLabel =
+    tableAudioIsReady && tableRemoteAudioPlaybackPeerDisplayCount > 0
+      ? ` - ?coute ${tableRemoteAudioPlaybackPeerDisplayCount}/${tableAudioPeers.length}`
+      : "";
+  const tableRemoteAudioStatusTitle =
+    tableRemoteAudioPlaybackPeerDisplayCount > 0
+      ? `?coute audio distante : ${tableRemoteAudioPlaybackPeerDisplayCount}/${tableAudioPeers.length} piste(s) re?ue(s).`
+      : "";
+
   const tableMicroIsRequesting = tableMicroState === "requesting";
   const tableMicroIsMuted = tableMicroState === "muted";
   const tableMicroButtonIsBusy =
@@ -2474,6 +2618,18 @@ const showTableDebug = false;
         <div className="table-zone">
           <div className="table-board">
             <div className="table-image" />
+            {tableRemoteAudioPlaybackPeers.map(({ peerId, stream }) => (
+              <audio
+                key={`table-remote-audio-${peerId}`}
+                autoPlay
+                playsInline
+                aria-hidden="true"
+                ref={(element) =>
+                  attachTableRemoteAudioElement(peerId, stream, element)
+                }
+                style={{ display: "none" }}
+              />
+            ))}
             {canUseTableMicro && (
               <button
                 type="button"
@@ -2481,13 +2637,18 @@ const showTableDebug = false;
                 onClick={tableMicroClickHandler}
                 disabled={tableMicroButtonDisabled}
                 aria-busy={tableMicroButtonIsBusy}
-                title={tableAudioIsReady ? `${tableMicroTitle} ${tableRelayStatusTitle}` : tableMicroTitle}
+                title={tableAudioIsReady ? `${tableMicroTitle} ${tableRelayStatusTitle} ${tableRemoteAudioStatusTitle}` : tableMicroTitle}
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
                 {tableMicroLabel}
                 {tableRelayStatusLabel && (
                   <span aria-hidden="true" style={{ marginLeft: 4, fontSize: "0.78em", opacity: 0.82 }}>
                     {tableRelayStatusLabel}
+                  </span>
+                )}
+                {tableRemoteAudioStatusLabel && (
+                  <span aria-hidden="true" style={{ marginLeft: 4, fontSize: "0.78em", opacity: 0.82 }}>
+                    {tableRemoteAudioStatusLabel}
                   </span>
                 )}
               </button>
