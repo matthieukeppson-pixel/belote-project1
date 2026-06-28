@@ -1104,12 +1104,49 @@ const linkMutedTableMicroToRelayConnections = useCallback(async (stream) => {
   sendTableRelaySignal,
 ]);
 
+function toggleTableMicroTransmission() {
+  if (
+    tableAudioState !== "ready" ||
+    tableMicroActivationRef.current ||
+    tableMicroState === "requesting"
+  ) {
+    return;
+  }
+
+  const stream = tableMicroStreamRef.current;
+  const track =
+    stream?.getAudioTracks?.().find(
+      (candidate) =>
+        candidate &&
+        candidate.kind === "audio" &&
+        candidate.readyState === "live"
+    ) || null;
+
+  if (!track) {
+    setTableMicroState("error");
+    setTableMicroError(
+      "Le microphone n’est plus disponible. Autorisez-le de nouveau."
+    );
+    return;
+  }
+
+  const shouldTransmit = !track.enabled;
+
+  track.enabled = shouldTransmit;
+
+  setTableMicroState(shouldTransmit ? "active" : "muted");
+  setTableMicroError("");
+
+  void resumeTableRemoteAudioPlayback();
+}
+
 async function requestMutedTableMicro() {
   if (
     tableAudioState !== "ready" ||
     tableMicroActivationRef.current ||
     tableMicroState === "requesting" ||
-    tableMicroState === "muted"
+    tableMicroState === "muted" ||
+    tableMicroState === "active"
   ) {
     return;
   }
@@ -2475,13 +2512,15 @@ const canStartWithBots =
 
   const tableMicroIsRequesting = tableMicroState === "requesting";
   const tableMicroIsMuted = tableMicroState === "muted";
+  const tableMicroIsActive = tableMicroState === "active";
   const tableMicroButtonIsBusy =
     tableAudioIsConnecting || tableMicroIsRequesting;
-  const tableMicroButtonDisabled =
-    tableMicroButtonIsBusy || tableMicroIsMuted;
-  const tableMicroClickHandler = tableAudioIsReady
-    ? requestMutedTableMicro
-    : prepareTableAudio;
+  const tableMicroButtonDisabled = tableMicroButtonIsBusy;
+  const tableMicroClickHandler = !tableAudioIsReady
+    ? prepareTableAudio
+    : tableMicroIsMuted || tableMicroIsActive
+      ? toggleTableMicroTransmission
+      : requestMutedTableMicro;
   const tableMicroLabel =
     tableAudioState === "requesting"
       ? " Connexion audio..."
@@ -2493,8 +2532,10 @@ const canStartWithBots =
             ? " Pr\u00e9parer l\u2019audio"
             : tableMicroIsRequesting
               ? " Autorisation micro..."
-              : tableMicroIsMuted
-                ? " Micro pr\u00eat (coup\u00e9)"
+              : tableMicroIsActive
+                ? " Micro activé"
+                : tableMicroIsMuted
+                  ? " Micro pr\u00eat (coup\u00e9)"
                 : tableMicroState === "error"
                   ? " R\u00e9essayer le micro"
                   : " Autoriser le micro";
@@ -2507,8 +2548,10 @@ const canStartWithBots =
           ? "Pr\u00e9pare la session audio. Aucun microphone navigateur n\u2019est activ\u00e9."
           : tableMicroIsRequesting
             ? `Le navigateur attend votre choix pour le microphone. ${tableAudioPeers.length} pair(s) audio d\u00e9tect\u00e9(s).`
-            : tableMicroIsMuted
-              ? `Micro autoris\u00e9 mais coup\u00e9. ${tableAudioPeers.length} pair(s) audio d\u00e9tect\u00e9(s) ; aucun son n\u2019est envoy\u00e9.`
+            : tableMicroIsActive
+              ? `Micro activé. ${tableAudioPeers.length} pair(s) audio détecté(s) ; votre voix est envoyée.`
+              : tableMicroIsMuted
+                ? `Micro autoris\u00e9 mais coup\u00e9. ${tableAudioPeers.length} pair(s) audio d\u00e9tect\u00e9(s) ; aucun son n\u2019est envoy\u00e9.`
               : tableMicroState === "error"
                 ? tableMicroError || "Activation du microphone indisponible."
                 : `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s) d\u00e9tect\u00e9(s). Demande l\u2019autorisation du navigateur ; le microphone sera coup\u00e9 imm\u00e9diatement.`;
@@ -2634,6 +2677,7 @@ const showTableDebug = false;
                 onClick={tableMicroClickHandler}
                 disabled={tableMicroButtonDisabled}
                 aria-busy={tableMicroButtonIsBusy}
+                aria-pressed={tableMicroIsActive}
                 title={tableAudioIsReady ? `${tableMicroTitle} ${tableRelayStatusTitle} ${tableRemoteAudioStatusTitle}` : tableMicroTitle}
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
