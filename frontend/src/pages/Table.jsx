@@ -651,7 +651,18 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
       iceTransportPolicy: "relay",
     });
 
-    connection.addTransceiver("audio", { direction: "recvonly" });
+    const localMicroStream = tableMicroStreamRef.current;
+    const localMicroTrack =
+      localMicroStream?.getAudioTracks?.().find(
+        (track) =>
+          track &&
+          track.kind === "audio" &&
+          track.readyState === "live"
+      ) || null;
+
+    connection.addTransceiver(localMicroTrack || "audio", {
+      direction: localMicroTrack ? "sendrecv" : "recvonly",
+    });
   } catch (error) {
     if (import.meta.env.DEV) console.warn("Relay connection creation error", error);
     return null;
