@@ -857,6 +857,33 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
       await connection.setRemoteDescription(description);
       await flushTableRelayCandidates(peerId, connection);
 
+      const localMicroStream = tableMicroStreamRef.current;
+      const localMicroTrack =
+        localMicroStream?.getAudioTracks?.().find(
+          (track) =>
+            track &&
+            track.kind === "audio" &&
+            track.readyState === "live"
+        ) || null;
+
+      if (localMicroTrack) {
+        const audioTransceiver = connection
+          .getTransceivers()
+          .find(
+            (transceiver) =>
+              transceiver &&
+              transceiver.sender &&
+              transceiver.receiver?.track?.kind === "audio"
+          );
+
+        if (!audioTransceiver) {
+          throw new Error("RELAY_INCOMING_MIC_LINK_NOT_READY");
+        }
+
+        await audioTransceiver.sender.replaceTrack(localMicroTrack);
+        audioTransceiver.direction = "sendrecv";
+      }
+
       const answer = await connection.createAnswer();
       await connection.setLocalDescription(answer);
 
@@ -1632,6 +1659,20 @@ useEffect(() => {
       }
       if (msg.type === "audio_signal" && Number(msg.tableId) === Number(tableId)) {
         const fromAudioPeerId = String(msg.fromAudioPeerId || "").trim();
+
+        if (
+          fromAudioPeerId &&
+          fromAudioPeerId !== tableAudioPeerIdRef.current &&
+          !tableAudioPeerIdsRef.current.has(fromAudioPeerId)
+        ) {
+          tableAudioPeerIdsRef.current.add(fromAudioPeerId);
+
+          setTableAudioPeers((previousPeers) =>
+            previousPeers.includes(fromAudioPeerId)
+              ? previousPeers
+              : [...previousPeers, fromAudioPeerId]
+          );
+        }
 
         if (fromAudioPeerId) {
           queueTableRelaySignal(fromAudioPeerId, msg.signal);
