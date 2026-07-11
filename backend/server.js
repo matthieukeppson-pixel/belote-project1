@@ -2418,7 +2418,7 @@ function applyClassicOrModernBiddingAction(table, hand, actorSeatIndex, action) 
       const completedDeal = completeAuthoritativeDealToEightAfterTake(
         hand,
         actorSeatIndex,
-        false
+        true
       );
 
       return {
