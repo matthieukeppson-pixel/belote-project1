@@ -2688,6 +2688,181 @@ function applyPlayCardToAuthoritativeHand(currentHand, actorSeatIndex, action) {
       : nextSeatIndex(actorSeatIndex),
   };
 }
+function getBotBiddingCardSuit(card) {
+  return card?.suit ?? card?.couleur ?? card?.color ?? null;
+}
+
+function getBotBiddingCardValue(card) {
+  return String(
+    card?.value ?? card?.rank ?? card?.valeur ?? ""
+  ).toUpperCase();
+}
+
+function scoreClassicBotSuit(cards, suit) {
+  const trumpWeights = {
+    J: 10,
+    9: 8,
+    A: 6,
+    10: 5,
+    K: 3,
+    Q: 2,
+    8: 1,
+    7: 0,
+  };
+
+  const trumpCards = cards.filter(
+    (card) => card && getBotBiddingCardSuit(card) === suit
+  );
+
+  const trumpValues = new Set(
+    trumpCards.map((card) => getBotBiddingCardValue(card))
+  );
+
+  let score = trumpCards.reduce(
+    (total, card) =>
+      total + (trumpWeights[getBotBiddingCardValue(card)] || 0),
+    0
+  );
+
+  if (trumpCards.length >= 3) {
+    score += (trumpCards.length - 2) * 3;
+  }
+
+  if (trumpValues.has("J") && trumpValues.has("9")) {
+    score += 4;
+  }
+
+  if (trumpValues.has("K") && trumpValues.has("Q")) {
+    score += 2;
+  }
+
+  for (const card of cards) {
+    if (!card || getBotBiddingCardSuit(card) === suit) continue;
+
+    const value = getBotBiddingCardValue(card);
+
+    if (value === "A") {
+      score += 2.5;
+    } else if (value === "10") {
+      score += 0.75;
+    }
+  }
+
+  return score;
+}
+
+function buildFirstBotBiddingAction(table) {
+  if (!table || table.mode !== "classic") return null;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  if (
+    hand.phase !== "ANNOUNCE_ATOUT_TOUR_1" &&
+    hand.phase !== "ANNOUNCE_ATOUT_TOUR_2"
+  ) {
+    return null;
+  }
+
+  const activeSeatIndex = hand.currentTurnSeatIndex;
+  if (activeSeatIndex == null) return null;
+
+  const activeSeatPseudo = table.seats?.[activeSeatIndex] || null;
+  if (!isBotPseudo(activeSeatPseudo)) return null;
+
+  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
+  const playerHand = Array.isArray(hand.hands?.[playerId])
+    ? hand.hands[playerId].filter(Boolean)
+    : [];
+
+  const turnedCard = hand.atoutPropose || null;
+  const evaluationCards = turnedCard
+    ? [...playerHand, turnedCard]
+    : [...playerHand];
+
+  if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
+    const proposedSuit = getBotBiddingCardSuit(turnedCard);
+    if (!proposedSuit) return { type: "PASS" };
+
+    const strength = scoreClassicBotSuit(
+      evaluationCards,
+      proposedSuit
+    );
+
+    return strength >= 19
+      ? { type: "TAKE_ATOUT", suit: proposedSuit }
+      : { type: "PASS" };
+  }
+
+  const proposedSuit = getBotBiddingCardSuit(turnedCard);
+
+  const candidates = SUITS
+    .filter((suit) => suit !== proposedSuit)
+    .map((suit) => ({
+      suit,
+      strength: scoreClassicBotSuit(evaluationCards, suit),
+    }))
+    .sort(
+      (a, b) =>
+        b.strength - a.strength ||
+        SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit)
+    );
+
+  const bestCandidate = candidates[0] || null;
+
+  return bestCandidate && bestCandidate.strength >= 20
+    ? { type: "TAKE_ATOUT", suit: bestCandidate.suit }
+    : { type: "PASS" };
+}
+
+function playOneBotBiddingActionIfNeeded(table) {
+  const action = buildFirstBotBiddingAction(table);
+  if (!action) return false;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  const actorSeatIndex = hand.currentTurnSeatIndex;
+  if (actorSeatIndex == null) return false;
+
+  const actorPseudo = table.seats?.[actorSeatIndex] || null;
+  if (!isBotPseudo(actorPseudo)) return false;
+
+  const nextHand = applyTableGameActionToHand(
+    table,
+    hand,
+    actorSeatIndex,
+    action
+  );
+
+  if (nextHand === hand) return false;
+
+  table.game = {
+    ...(table.game || createEmptyServerGame()),
+    dealerSeatIndex:
+      typeof nextHand.dealerSeatIndex === "number"
+        ? nextHand.dealerSeatIndex
+        : table.game?.dealerSeatIndex || 0,
+    currentTurnSeatIndex:
+      nextHand.currentTurnSeatIndex != null
+        ? nextHand.currentTurnSeatIndex
+        : null,
+    hand: nextHand,
+    version: (table.game?.version || 0) + 1,
+  };
+
+  broadcastTables();
+
+  if (nextHand.roundId !== hand.roundId) {
+    setTimeout(() => playBotCardsUntilHumanTurn(table), 0);
+  }
+
+  return true;
+}
 function buildFirstBotPlayCardAction(table) {
   const hand = {
     ...createEmptyHandState(),
@@ -2704,11 +2879,30 @@ function buildFirstBotPlayCardAction(table) {
 
   const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
   const playerHand = Array.isArray(hand.hands?.[playerId])
-    ? hand.hands[playerId]
+    ? hand.hands[playerId].filter(Boolean)
     : [];
 
-   const getBotCardSuit = (card) =>
+  if (playerHand.length === 0) return null;
+
+  const getSuit = (card) =>
     card?.suit ?? card?.couleur ?? card?.color ?? null;
+
+  const getValue = (card) =>
+    String(
+      card?.value ?? card?.rank ?? card?.valeur ?? ""
+    ).toUpperCase();
+
+  const buildAction = (card) => {
+    const suit = getSuit(card) || "";
+    const value = getValue(card);
+
+    return {
+      type: "PLAY_CARD",
+      cardKey: String(
+        card?.key || card?.cardKey || `${suit}-${value}`
+      ),
+    };
+  };
 
   const currentTrickCards = Array.isArray(hand.trickCards)
     ? hand.trickCards.filter((entry) => entry && entry.card)
@@ -2716,20 +2910,18 @@ function buildFirstBotPlayCardAction(table) {
 
   const requestedSuit =
     hand.couleurDemandee ||
-    getBotCardSuit(currentTrickCards[0]?.card) ||
+    getSuit(currentTrickCards[0]?.card) ||
     null;
 
   const atout = hand.atout;
 
-  const isBotTrump = (card) => {
+  const isTrump = (card) => {
     if (atout === "TA") return true;
     if (atout === "SA" || !atout) return false;
-    return getBotCardSuit(card) === atout;
+    return getSuit(card) === atout;
   };
-  const getBotCardValue = (card) =>
-    card?.value ?? card?.rank ?? card?.valeur ?? null;
 
-  const botTrumpRank = {
+  const trumpRank = {
     J: 8,
     9: 7,
     A: 6,
@@ -2740,11 +2932,7 @@ function buildFirstBotPlayCardAction(table) {
     7: 1,
   };
 
-  const getBotTrumpRankValue = (card) => {
-    const value = String(getBotCardValue(card) ?? "").toUpperCase();
-    return botTrumpRank[value] || 0;
-  };
-  const botNormalRank = {
+  const normalRank = {
     A: 8,
     10: 7,
     K: 6,
@@ -2755,26 +2943,35 @@ function buildFirstBotPlayCardAction(table) {
     7: 1,
   };
 
-  const getBotRankValue = (card) => {
-    const value = String(getBotCardValue(card) ?? "").toUpperCase();
-    return isBotTrump(card) ? getBotTrumpRankValue(card) : botNormalRank[value] || 0;
+  const getRankValue = (card) => {
+    const value = getValue(card);
+
+    return isTrump(card)
+      ? trumpRank[value] || 0
+      : normalRank[value] || 0;
   };
 
-  const getBotBestTrickEntry = (bestEntry, candidateEntry) => {
+  const compareTrickEntries = (bestEntry, candidateEntry) => {
     if (!bestEntry) return candidateEntry;
 
     const bestCard = bestEntry.card;
     const candidateCard = candidateEntry.card;
 
     if (atout === "TA") {
-      const bestFollowsSuit = getBotCardSuit(bestCard) === requestedSuit;
-      const candidateFollowsSuit = getBotCardSuit(candidateCard) === requestedSuit;
+      const bestFollowsSuit = getSuit(bestCard) === requestedSuit;
+      const candidateFollowsSuit =
+        getSuit(candidateCard) === requestedSuit;
 
-      if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
-      if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+      if (candidateFollowsSuit && !bestFollowsSuit) {
+        return candidateEntry;
+      }
+
+      if (!candidateFollowsSuit && bestFollowsSuit) {
+        return bestEntry;
+      }
 
       if (candidateFollowsSuit && bestFollowsSuit) {
-        return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+        return getRankValue(candidateCard) > getRankValue(bestCard)
           ? candidateEntry
           : bestEntry;
       }
@@ -2782,26 +2979,37 @@ function buildFirstBotPlayCardAction(table) {
       return bestEntry;
     }
 
-    const bestIsTrump = isBotTrump(bestCard);
-    const candidateIsTrump = isBotTrump(candidateCard);
+    const bestIsTrump = isTrump(bestCard);
+    const candidateIsTrump = isTrump(candidateCard);
 
-    if (candidateIsTrump && !bestIsTrump) return candidateEntry;
-    if (!candidateIsTrump && bestIsTrump) return bestEntry;
+    if (candidateIsTrump && !bestIsTrump) {
+      return candidateEntry;
+    }
+
+    if (!candidateIsTrump && bestIsTrump) {
+      return bestEntry;
+    }
 
     if (candidateIsTrump && bestIsTrump) {
-      return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+      return getRankValue(candidateCard) > getRankValue(bestCard)
         ? candidateEntry
         : bestEntry;
     }
 
-    const bestFollowsSuit = getBotCardSuit(bestCard) === requestedSuit;
-    const candidateFollowsSuit = getBotCardSuit(candidateCard) === requestedSuit;
+    const bestFollowsSuit = getSuit(bestCard) === requestedSuit;
+    const candidateFollowsSuit =
+      getSuit(candidateCard) === requestedSuit;
 
-    if (candidateFollowsSuit && !bestFollowsSuit) return candidateEntry;
-    if (!candidateFollowsSuit && bestFollowsSuit) return bestEntry;
+    if (candidateFollowsSuit && !bestFollowsSuit) {
+      return candidateEntry;
+    }
+
+    if (!candidateFollowsSuit && bestFollowsSuit) {
+      return bestEntry;
+    }
 
     if (candidateFollowsSuit && bestFollowsSuit) {
-      return getBotRankValue(candidateCard) > getBotRankValue(bestCard)
+      return getRankValue(candidateCard) > getRankValue(bestCard)
         ? candidateEntry
         : bestEntry;
     }
@@ -2809,87 +3017,238 @@ function buildFirstBotPlayCardAction(table) {
     return bestEntry;
   };
 
-  const currentBestEntry = currentTrickCards.reduce(getBotBestTrickEntry, null);
+  /*
+   * Le moteur autoritaire détermine les cartes légales.
+   * Le bot ne peut donc jamais contourner les règles de fourniture,
+   * de coupe, de surcoupe ou de montée à l'atout.
+   */
+  const legalCards = playerHand.filter((card) => {
+    const simulatedHand = applyPlayCardToAuthoritativeHand(
+      hand,
+      activeSeatIndex,
+      buildAction(card)
+    );
+
+    return simulatedHand !== null;
+  });
+
+  if (legalCards.length === 0) return null;
+
+  const originalIndex = (card) => playerHand.indexOf(card);
+
+  const suitCounts = playerHand.reduce((counts, card) => {
+    const suit = getSuit(card);
+
+    if (suit) {
+      counts[suit] = (counts[suit] || 0) + 1;
+    }
+
+    return counts;
+  }, {});
+
+  const currentBestEntry = currentTrickCards.reduce(
+    compareTrickEntries,
+    null
+  );
+
   const partnerIsWinning =
     currentBestEntry &&
-    seatTeamKey(currentBestEntry.seatIndex) === seatTeamKey(activeSeatIndex);
+    seatTeamKey(currentBestEntry.seatIndex) ===
+      seatTeamKey(activeSeatIndex);
 
-  const taHigherRequestedSuitCard =
-    atout === "TA" && requestedSuit && currentBestEntry
-      ? playerHand
-          .filter(
-            (card) =>
-              card &&
-              getBotCardSuit(card) === requestedSuit &&
-              getBotRankValue(card) > getBotRankValue(currentBestEntry.card)
-          )
-          .sort((a, b) => getBotRankValue(a) - getBotRankValue(b))[0] || null
-      : null;
-  const currentBestTrumpRank =
-    atout && atout !== "SA" && atout !== "TA"
-      ? currentTrickCards
-          .filter((entry) => entry?.card && isBotTrump(entry.card))
-          .reduce(
-            (bestRank, entry) =>
-              Math.max(bestRank, getBotTrumpRankValue(entry.card)),
-            0
-          )
-      : 0;
+  const cardWinsCurrentTrick = (card) => {
+    const entries = [
+      ...currentTrickCards,
+      {
+        seatIndex: activeSeatIndex,
+        card,
+      },
+    ];
 
-  const higherTrumpCard =
-    atout && atout !== "SA" && atout !== "TA"
-      ? playerHand
-          .filter(
-            (candidate) =>
-              candidate &&
-              isBotTrump(candidate) &&
-              getBotTrumpRankValue(candidate) > currentBestTrumpRank
-          )
-          .sort(
-            (a, b) =>
-              getBotTrumpRankValue(a) - getBotTrumpRankValue(b)
-          )[0] || null
-      : null;
+    const winner = entries.reduce(compareTrickEntries, null);
 
-  const requestedSuitCard = requestedSuit
-    ? requestedSuit === atout && higherTrumpCard
-      ? higherTrumpCard
-      : playerHand.find(
-          (candidate) =>
-            candidate && getBotCardSuit(candidate) === requestedSuit
-        )
-    : null;
-  const nonTrumpDiscardCard =
-    requestedSuit && !requestedSuitCard && partnerIsWinning
-      ? playerHand.find((candidate) => candidate && !isBotTrump(candidate))
-      : null;
-  const trumpFallbackCard =
-    requestedSuit && !requestedSuitCard
-      ? higherTrumpCard ||
-        playerHand.find((candidate) => candidate && isBotTrump(candidate))
-      : null;
-
-  const card =
-    taHigherRequestedSuitCard ||
-    requestedSuitCard ||
-    nonTrumpDiscardCard ||
-    trumpFallbackCard ||
-    playerHand.find(Boolean);
-
-  if (!card) return null;
-
-  const suit = card.suit ?? card.couleur ?? card.color ?? "";
-  const value = card.value ?? card.rank ?? card.valeur ?? "";
-  const cardKey = String(card.key || card.cardKey || `${suit}-${value}`);
-
-  if (!cardKey) return null;
-
-  return {
-    type: "PLAY_CARD",
-    cardKey,
+    return winner?.seatIndex === activeSeatIndex;
   };
-}
 
+  const strategicPointValue = (card) =>
+    getServerCardPointValue(card, atout);
+
+  const discardCost = (card) => {
+    const suit = getSuit(card);
+    const value = getValue(card);
+
+    let cost = strategicPointValue(card) * 5;
+
+    if (isTrump(card)) {
+      cost += 18;
+    }
+
+    if (value === "A") {
+      cost += 20;
+    } else if (value === "10") {
+      cost += 14;
+    }
+
+    if (
+      suit &&
+      suitCounts[suit] === 1 &&
+      value !== "A" &&
+      value !== "10"
+    ) {
+      cost -= 3;
+    }
+
+    return cost;
+  };
+
+  const sortLowestCost = (cards) =>
+    [...cards].sort(
+      (a, b) =>
+        discardCost(a) - discardCost(b) ||
+        getRankValue(a) - getRankValue(b) ||
+        SUITS.indexOf(getSuit(a)) - SUITS.indexOf(getSuit(b)) ||
+        originalIndex(a) - originalIndex(b)
+    );
+
+  const sortLowestWinningCard = (cards) =>
+    [...cards].sort(
+      (a, b) =>
+        getRankValue(a) - getRankValue(b) ||
+        discardCost(a) - discardCost(b) ||
+        originalIndex(a) - originalIndex(b)
+    );
+
+  const chooseLeadCard = () => {
+    const activeTeam = seatTeamKey(activeSeatIndex);
+
+    const takerTeam =
+      typeof hand.takerSeatIndex === "number"
+        ? seatTeamKey(hand.takerSeatIndex)
+        : null;
+
+    const teamHasContract = activeTeam === takerTeam;
+
+    const trumpCards =
+      atout && atout !== "SA" && atout !== "TA"
+        ? legalCards.filter((card) => isTrump(card))
+        : [];
+
+    const hasStrongTrump = trumpCards.some(
+      (card) =>
+        getValue(card) === "J" ||
+        getValue(card) === "9"
+    );
+
+    /*
+     * Le preneur ou son partenaire tire les atouts lorsqu'il possède
+     * au moins trois atouts avec le Valet ou le 9.
+     */
+    if (
+      teamHasContract &&
+      trumpCards.length >= 3 &&
+      hasStrongTrump
+    ) {
+      return [...trumpCards].sort(
+        (a, b) =>
+          getRankValue(b) - getRankValue(a) ||
+          originalIndex(a) - originalIndex(b)
+      )[0];
+    }
+
+    /*
+     * Sinon, priorité à un As hors atout.
+     */
+    const nonTrumpAces = legalCards.filter(
+      (card) =>
+        !isTrump(card) &&
+        getValue(card) === "A"
+    );
+
+    if (nonTrumpAces.length > 0) {
+      return [...nonTrumpAces].sort(
+        (a, b) =>
+          (suitCounts[getSuit(b)] || 0) -
+            (suitCounts[getSuit(a)] || 0) ||
+          originalIndex(a) - originalIndex(b)
+      )[0];
+    }
+
+    if (atout === "SA" || atout === "TA") {
+      return [...legalCards].sort(
+        (a, b) =>
+          getRankValue(b) - getRankValue(a) ||
+          originalIndex(a) - originalIndex(b)
+      )[0];
+    }
+
+    /*
+     * Sans As sûr, jouer bas dans une couleur longue protège les honneurs
+     * et peut préparer une coupe future.
+     */
+    return [...legalCards].sort(
+      (a, b) =>
+        (suitCounts[getSuit(b)] || 0) -
+          (suitCounts[getSuit(a)] || 0) ||
+        discardCost(a) - discardCost(b) ||
+        originalIndex(a) - originalIndex(b)
+    )[0];
+  };
+
+  let chosenCard = null;
+
+  if (currentTrickCards.length === 0) {
+    chosenCard = chooseLeadCard();
+  } else {
+    const winningCards = legalCards.filter(cardWinsCurrentTrick);
+
+    const losingCards = legalCards.filter(
+      (card) => !cardWinsCurrentTrick(card)
+    );
+
+    if (partnerIsWinning) {
+      if (
+        currentTrickCards.length === 3 &&
+        losingCards.length > 0
+      ) {
+        /*
+         * Quatrième position derrière le partenaire maître :
+         * charger le pli, mais éviter de gaspiller un atout.
+         */
+        chosenCard = [...losingCards].sort(
+          (a, b) =>
+            (isTrump(a) ? 1 : 0) - (isTrump(b) ? 1 : 0) ||
+            strategicPointValue(b) - strategicPointValue(a) ||
+            originalIndex(a) - originalIndex(b)
+        )[0];
+      } else if (losingCards.length > 0) {
+        /*
+         * Ne pas dépasser volontairement le partenaire avant que le pli
+         * soit terminé.
+         */
+        chosenCard = sortLowestCost(losingCards)[0];
+      } else if (winningCards.length > 0) {
+        chosenCard = sortLowestWinningCard(winningCards)[0];
+      }
+    } else if (winningCards.length > 0) {
+      /*
+       * Gagner contre l'adversaire avec la plus petite carte suffisante.
+       */
+      chosenCard = sortLowestWinningCard(winningCards)[0];
+    } else {
+      /*
+       * Pli impossible à gagner : jeter la carte la moins coûteuse.
+       */
+      chosenCard = sortLowestCost(legalCards)[0];
+    }
+  }
+
+  chosenCard =
+    chosenCard ||
+    sortLowestCost(legalCards)[0] ||
+    null;
+
+  return chosenCard ? buildAction(chosenCard) : null;
+}
 function playOneBotCardIfNeeded(table) {
   const action = buildFirstBotPlayCardAction(table);
   if (!action) return false;
@@ -2950,7 +3309,9 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
 
     if (playedCount >= maxSteps) return;
 
-    const played = playOneBotCardIfNeeded(table);
+    const played =
+      playOneBotBiddingActionIfNeeded(table) ||
+      playOneBotCardIfNeeded(table);
     if (!played) return;
 
     playedCount++;
@@ -2960,7 +3321,9 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
     const nextRoundId = table.game?.hand?.roundId || null;
     if (nextRoundId !== scheduledRoundId) return;
 
-    const nextAction = buildFirstBotPlayCardAction(table);
+    const nextAction =
+      buildFirstBotBiddingAction(table) ||
+      buildFirstBotPlayCardAction(table);
     if (!nextAction) return;
 
     table.botPlayTimer = setTimeout(playNextBotCard, delayMs);
