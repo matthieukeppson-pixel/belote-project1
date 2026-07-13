@@ -2751,8 +2751,109 @@ function scoreClassicBotSuit(cards, suit) {
   return score;
 }
 
+function scoreModernBotNoTrump(cards) {
+  const normalWeights = {
+    A: 9,
+    10: 7,
+    K: 4,
+    Q: 3,
+    J: 2,
+    9: 1,
+    8: 0,
+    7: 0,
+  };
+
+  let score = cards.reduce(
+    (total, card) =>
+      total +
+      (normalWeights[getBotBiddingCardValue(card)] || 0),
+    0
+  );
+
+  for (const suit of SUITS) {
+    const suitedCards = cards.filter(
+      (card) => getBotBiddingCardSuit(card) === suit
+    );
+
+    const values = new Set(
+      suitedCards.map((card) =>
+        getBotBiddingCardValue(card)
+      )
+    );
+
+    if (values.has("A") && values.has("10")) {
+      score += 3;
+    }
+
+    if (
+      values.has("A") &&
+      values.has("10") &&
+      values.has("K")
+    ) {
+      score += 2;
+    }
+
+    if (suitedCards.length >= 4) {
+      score += suitedCards.length - 3;
+    }
+  }
+
+  return score;
+}
+
+function scoreModernBotAllTrump(cards) {
+  const allTrumpWeights = {
+    J: 10,
+    9: 8,
+    A: 6,
+    10: 5,
+    K: 3,
+    Q: 2,
+    8: 1,
+    7: 0,
+  };
+
+  let score = cards.reduce(
+    (total, card) =>
+      total +
+      (allTrumpWeights[getBotBiddingCardValue(card)] || 0),
+    0
+  );
+
+  for (const suit of SUITS) {
+    const values = new Set(
+      cards
+        .filter(
+          (card) =>
+            getBotBiddingCardSuit(card) === suit
+        )
+        .map((card) =>
+          getBotBiddingCardValue(card)
+        )
+    );
+
+    if (values.has("J") && values.has("9")) {
+      score += 4;
+    }
+
+    if (values.has("K") && values.has("Q")) {
+      score += 2;
+    }
+  }
+
+  return score;
+}
+
 function buildFirstBotBiddingAction(table) {
-  if (!table || table.mode !== "classic") return null;
+  if (
+    !table ||
+    (
+      table.mode !== "classic" &&
+      table.mode !== "moderne"
+    )
+  ) {
+    return null;
+  }
 
   const hand = {
     ...createEmptyHandState(),
@@ -2769,51 +2870,155 @@ function buildFirstBotBiddingAction(table) {
   const activeSeatIndex = hand.currentTurnSeatIndex;
   if (activeSeatIndex == null) return null;
 
-  const activeSeatPseudo = table.seats?.[activeSeatIndex] || null;
+  const activeSeatPseudo =
+    table.seats?.[activeSeatIndex] || null;
+
   if (!isBotPseudo(activeSeatPseudo)) return null;
 
-  const playerId = LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
-  const playerHand = Array.isArray(hand.hands?.[playerId])
+  const playerId =
+    LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
+
+  const playerHand = Array.isArray(
+    hand.hands?.[playerId]
+  )
     ? hand.hands[playerId].filter(Boolean)
     : [];
 
   const turnedCard = hand.atoutPropose || null;
+
   const evaluationCards = turnedCard
     ? [...playerHand, turnedCard]
     : [...playerHand];
 
-  if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
-    const proposedSuit = getBotBiddingCardSuit(turnedCard);
-    if (!proposedSuit) return { type: "PASS" };
+  const proposedSuit =
+    getBotBiddingCardSuit(turnedCard);
 
-    const strength = scoreClassicBotSuit(
-      evaluationCards,
-      proposedSuit
-    );
+  /*
+   * Le comportement Classique validé reste inchangé.
+   */
+  if (table.mode === "classic") {
+    if (hand.phase === "ANNOUNCE_ATOUT_TOUR_1") {
+      if (!proposedSuit) {
+        return { type: "PASS" };
+      }
 
-    return strength >= 19
-      ? { type: "TAKE_ATOUT", suit: proposedSuit }
+      const strength = scoreClassicBotSuit(
+        evaluationCards,
+        proposedSuit
+      );
+
+      return strength >= 19
+        ? {
+            type: "TAKE_ATOUT",
+            suit: proposedSuit,
+          }
+        : { type: "PASS" };
+    }
+
+    const candidates = SUITS
+      .filter((suit) => suit !== proposedSuit)
+      .map((suit) => ({
+        suit,
+        strength: scoreClassicBotSuit(
+          evaluationCards,
+          suit
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          b.strength - a.strength ||
+          SUITS.indexOf(a.suit) -
+            SUITS.indexOf(b.suit)
+      );
+
+    const bestCandidate = candidates[0] || null;
+
+    return (
+      bestCandidate &&
+      bestCandidate.strength >= 20
+    )
+      ? {
+          type: "TAKE_ATOUT",
+          suit: bestCandidate.suit,
+        }
       : { type: "PASS" };
   }
 
-  const proposedSuit = getBotBiddingCardSuit(turnedCard);
+  /*
+   * En Moderne, le bot compare couleur, SA et TA.
+   */
+  const colorThreshold =
+    hand.phase === "ANNOUNCE_ATOUT_TOUR_1"
+      ? 19
+      : 20;
 
-  const candidates = SUITS
-    .filter((suit) => suit !== proposedSuit)
-    .map((suit) => ({
-      suit,
-      strength: scoreClassicBotSuit(evaluationCards, suit),
-    }))
-    .sort(
-      (a, b) =>
-        b.strength - a.strength ||
-        SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit)
-    );
+  const allowedColorSuits =
+    hand.phase === "ANNOUNCE_ATOUT_TOUR_1"
+      ? proposedSuit
+        ? [proposedSuit]
+        : []
+      : SUITS.filter(
+          (suit) => suit !== proposedSuit
+        );
 
-  const bestCandidate = candidates[0] || null;
+  const candidates = allowedColorSuits.map(
+    (suit, index) => {
+      const strength = scoreClassicBotSuit(
+        evaluationCards,
+        suit
+      );
 
-  return bestCandidate && bestCandidate.strength >= 20
-    ? { type: "TAKE_ATOUT", suit: bestCandidate.suit }
+      return {
+        suit,
+        strength,
+        threshold: colorThreshold,
+        confidence: strength / colorThreshold,
+        order: index,
+      };
+    }
+  );
+
+  const noTrumpStrength =
+    scoreModernBotNoTrump(evaluationCards);
+
+  candidates.push({
+    suit: "SA",
+    strength: noTrumpStrength,
+    threshold: 27,
+    confidence: noTrumpStrength / 27,
+    order: SUITS.length,
+  });
+
+  const allTrumpStrength =
+    scoreModernBotAllTrump(evaluationCards);
+
+  candidates.push({
+    suit: "TA",
+    strength: allTrumpStrength,
+    threshold: 30,
+    confidence: allTrumpStrength / 30,
+    order: SUITS.length + 1,
+  });
+
+  const bestCandidate =
+    candidates
+      .filter(
+        (candidate) =>
+          candidate.strength >=
+          candidate.threshold
+      )
+      .sort(
+        (a, b) =>
+          b.confidence - a.confidence ||
+          b.strength - a.strength ||
+          a.order - b.order
+      )[0] || null;
+
+  return bestCandidate
+    ? {
+        type: "TAKE_ATOUT",
+        suit: bestCandidate.suit,
+      }
     : { type: "PASS" };
 }
 
@@ -2863,6 +3068,108 @@ function playOneBotBiddingActionIfNeeded(table) {
 
   return true;
 }
+function buildFirstBotModernAnnouncementAction(table) {
+  if (!table || table.mode !== "moderne") {
+    return null;
+  }
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  if (hand.phase !== "ANNONCES_MODERNE") {
+    return null;
+  }
+
+  const activeSeatIndex = hand.currentTurnSeatIndex;
+  if (activeSeatIndex == null) return null;
+
+  const activeSeatPseudo =
+    table.seats?.[activeSeatIndex] || null;
+
+  if (!isBotPseudo(activeSeatPseudo)) return null;
+
+  const playerId =
+    LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
+
+  if (!playerId) return null;
+
+  const detected =
+    hand.modernAnnouncements
+      ?.detectedByPlayer?.[playerId];
+
+  const announcements = Array.isArray(detected)
+    ? detected.filter(Boolean)
+    : [];
+
+  const bestAnnouncement =
+    getBestServerModernAnnouncement(
+      announcements,
+      hand.atout
+    );
+
+  if (!bestAnnouncement) {
+    return {
+      type: "PASS_ANNOUNCEMENT",
+    };
+  }
+
+  return {
+    type: "DECLARE_ANNOUNCEMENT",
+    announcementType: bestAnnouncement.type,
+    highRank: bestAnnouncement.highRank,
+    suit: bestAnnouncement.suit || null,
+  };
+}
+
+function playOneBotModernAnnouncementIfNeeded(table) {
+  const action =
+    buildFirstBotModernAnnouncementAction(table);
+
+  if (!action) return false;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  const actorSeatIndex = hand.currentTurnSeatIndex;
+  if (actorSeatIndex == null) return false;
+
+  const actorPseudo =
+    table.seats?.[actorSeatIndex] || null;
+
+  if (!isBotPseudo(actorPseudo)) return false;
+
+  const nextHand =
+    applyServerModernAnnouncementAction(
+      table,
+      hand,
+      actorSeatIndex,
+      action
+    );
+
+  if (!nextHand) return false;
+
+  table.game = {
+    ...(table.game || createEmptyServerGame()),
+    dealerSeatIndex:
+      typeof nextHand.dealerSeatIndex === "number"
+        ? nextHand.dealerSeatIndex
+        : table.game?.dealerSeatIndex || 0,
+    currentTurnSeatIndex:
+      nextHand.currentTurnSeatIndex != null
+        ? nextHand.currentTurnSeatIndex
+        : null,
+    hand: nextHand,
+    version: (table.game?.version || 0) + 1,
+  };
+
+  broadcastTables();
+  return true;
+}
+
 function buildFirstBotPlayCardAction(table) {
   const hand = {
     ...createEmptyHandState(),
@@ -3311,6 +3618,7 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
 
     const played =
       playOneBotBiddingActionIfNeeded(table) ||
+      playOneBotModernAnnouncementIfNeeded(table) ||
       playOneBotCardIfNeeded(table);
     if (!played) return;
 
@@ -3323,6 +3631,7 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
 
     const nextAction =
       buildFirstBotBiddingAction(table) ||
+      buildFirstBotModernAnnouncementAction(table) ||
       buildFirstBotPlayCardAction(table);
     if (!nextAction) return;
 
@@ -3969,7 +4278,13 @@ if (
   broadcastTables();
 
 
-  if (nextHand.phase === "PLI_EN_COURS") {
+  if (
+    (
+      t.mode === "moderne" &&
+      nextHand.phase === "ANNONCES_MODERNE"
+    ) ||
+    nextHand.phase === "PLI_EN_COURS"
+  ) {
     playBotCardsUntilHumanTurn(t);
   }
 
