@@ -3042,7 +3042,345 @@ function scoreModernBotAllTrump(cards) {
   return score;
 }
 
+const CONTREE_BOT_BID_THRESHOLDS = [
+  { value: 160, minimumStrength: 42 },
+  { value: 150, minimumStrength: 40 },
+  { value: 140, minimumStrength: 38 },
+  { value: 130, minimumStrength: 36 },
+  { value: 120, minimumStrength: 32 },
+  { value: 110, minimumStrength: 28 },
+  { value: 100, minimumStrength: 24 },
+  { value: 90, minimumStrength: 20 },
+  { value: 80, minimumStrength: 15 },
+];
+
+function getContreeBotBidValue(strength) {
+  const threshold = CONTREE_BOT_BID_THRESHOLDS.find(
+    (entry) => strength >= entry.minimumStrength
+  );
+
+  return threshold?.value || null;
+}
+
+function analyzeContreeBotSuit(cards, suit) {
+  const trumpWeights = {
+    J: 10,
+    9: 8,
+    A: 6,
+    10: 5,
+    K: 3,
+    Q: 2,
+    8: 1,
+    7: 0,
+  };
+
+  const trumpCards = cards.filter(
+    (card) => card && getBotBiddingCardSuit(card) === suit
+  );
+
+  const rawTrumpStrength = trumpCards.reduce(
+    (total, card) =>
+      total + (trumpWeights[getBotBiddingCardValue(card)] || 0),
+    0
+  );
+
+  return {
+    suit,
+    strength: scoreClassicBotSuit(cards, suit),
+    trumpCount: trumpCards.length,
+    rawTrumpStrength,
+    eligible:
+      trumpCards.length >= 3 ||
+      (trumpCards.length === 2 && rawTrumpStrength >= 14),
+  };
+}
+
+const CONTREE_BOT_CONTRE_THRESHOLDS = {
+  80: 24,
+  90: 23,
+  100: 22,
+  110: 21,
+  120: 20,
+  130: 19,
+  140: 18,
+  150: 17,
+  160: 16,
+  500: 15,
+};
+
+const CONTREE_BOT_SURCONTRE_BIDDER_THRESHOLDS = {
+  80: 28,
+  90: 29,
+  100: 30,
+  110: 31,
+  120: 32,
+  130: 33,
+  140: 34,
+  150: 35,
+  160: 36,
+  500: 38,
+};
+
+const CONTREE_BOT_SURCONTRE_PARTNER_THRESHOLDS = {
+  80: 26,
+  90: 27,
+  100: 28,
+  110: 29,
+  120: 30,
+  130: 31,
+  140: 32,
+  150: 33,
+  160: 34,
+  500: 36,
+};
+
+function scoreContreeBotDefense(cards, trumpSuit) {
+  const trumpWeights = {
+    J: 8,
+    9: 7,
+    A: 5,
+    10: 4,
+    K: 2,
+    Q: 1,
+    8: 0,
+    7: 0,
+  };
+
+  const sideWeights = {
+    A: 7,
+    10: 3,
+    K: 1.5,
+    Q: 0.5,
+    J: 0,
+    9: 0,
+    8: 0,
+    7: 0,
+  };
+
+  const trumpCards = cards.filter(
+    (card) =>
+      card &&
+      getBotBiddingCardSuit(card) === trumpSuit
+  );
+
+  const trumpValues = new Set(
+    trumpCards.map((card) =>
+      getBotBiddingCardValue(card)
+    )
+  );
+
+  let score = trumpCards.reduce(
+    (total, card) =>
+      total +
+      (
+        trumpWeights[
+          getBotBiddingCardValue(card)
+        ] || 0
+      ),
+    0
+  );
+
+  for (const card of cards) {
+    if (!card) continue;
+
+    const suit = getBotBiddingCardSuit(card);
+    if (suit === trumpSuit) continue;
+
+    score +=
+      sideWeights[
+        getBotBiddingCardValue(card)
+      ] || 0;
+  }
+
+  if (trumpValues.has("J")) score += 2;
+  if (trumpValues.has("9")) score += 1;
+  if (trumpCards.length >= 2) score += 2;
+
+  let sideAceCount = 0;
+
+  for (const suit of SUITS) {
+    if (suit === trumpSuit) continue;
+
+    const values = new Set(
+      cards
+        .filter(
+          (card) =>
+            card &&
+            getBotBiddingCardSuit(card) === suit
+        )
+        .map((card) =>
+          getBotBiddingCardValue(card)
+        )
+    );
+
+    if (values.has("A")) {
+      sideAceCount++;
+    }
+
+    if (
+      values.has("A") &&
+      values.has("10")
+    ) {
+      score += 2;
+    }
+  }
+
+  if (sideAceCount >= 2) {
+    score += 3;
+  }
+
+  return score;
+}
+
+function buildFirstBotContreeBiddingAction(table) {
+  if (!table || table.mode !== "contree") return null;
+
+  const hand = {
+    ...createEmptyHandState(),
+    ...(table.game?.hand || {}),
+  };
+
+  if (hand.phase !== "ENCHERES") return null;
+
+  const activeSeatIndex = hand.currentTurnSeatIndex;
+  if (activeSeatIndex == null) return null;
+
+  const activeSeatPseudo =
+    table.seats?.[activeSeatIndex] || null;
+
+  if (!isBotPseudo(activeSeatPseudo)) return null;
+
+  const playerId =
+    LOGICAL_PLAYER_BY_SEAT_INDEX[activeSeatIndex];
+
+  if (!playerId) return null;
+
+  const playerHand = Array.isArray(hand.hands?.[playerId])
+    ? hand.hands[playerId].filter(Boolean)
+    : [];
+
+  const multiplier = Number(
+    hand.contratMultiplicateur || 1
+  );
+
+  const currentBid = hand.currentBid || null;
+
+  const currentBidValue = Number(
+    currentBid?.value || 0
+  );
+
+  const bestCandidate =
+    SUITS
+      .map((suit) =>
+        analyzeContreeBotSuit(playerHand, suit)
+      )
+      .filter((candidate) => candidate.eligible)
+      .map((candidate) => ({
+        ...candidate,
+        bidValue:
+          getContreeBotBidValue(candidate.strength),
+      }))
+      .filter(
+        (candidate) =>
+          candidate.bidValue != null
+      )
+      .sort(
+        (a, b) =>
+          b.strength - a.strength ||
+          b.trumpCount - a.trumpCount ||
+          b.rawTrumpStrength - a.rawTrumpStrength ||
+          SUITS.indexOf(a.suit) -
+            SUITS.indexOf(b.suit)
+      )[0] || null;
+
+  if (
+    multiplier === 1 &&
+    bestCandidate &&
+    bestCandidate.bidValue > currentBidValue
+  ) {
+    return {
+      type: "BID",
+      value: bestCandidate.bidValue,
+      suit: bestCandidate.suit,
+    };
+  }
+
+  if (
+    !currentBid ||
+    typeof currentBid.seatIndex !== "number" ||
+    !currentBid.suit
+  ) {
+    return { type: "PASS" };
+  }
+
+  const actorTeam =
+    seatTeamKey(activeSeatIndex);
+
+  const takerTeam =
+    seatTeamKey(currentBid.seatIndex);
+
+  const defensiveScore =
+    scoreContreeBotDefense(
+      playerHand,
+      currentBid.suit
+    );
+
+  if (
+    multiplier === 1 &&
+    actorTeam !== takerTeam
+  ) {
+    const threshold =
+      CONTREE_BOT_CONTRE_THRESHOLDS[
+        currentBid.value
+      ];
+
+    if (
+      typeof threshold === "number" &&
+      defensiveScore >= threshold
+    ) {
+      return { type: "CONTRE" };
+    }
+  }
+
+  if (
+    multiplier === 2 &&
+    actorTeam === takerTeam
+  ) {
+    const actorIsBidder =
+      activeSeatIndex === currentBid.seatIndex;
+
+    const surcontreScore =
+      actorIsBidder
+        ? scoreClassicBotSuit(
+            playerHand,
+            currentBid.suit
+          )
+        : defensiveScore;
+
+    const thresholds =
+      actorIsBidder
+        ? CONTREE_BOT_SURCONTRE_BIDDER_THRESHOLDS
+        : CONTREE_BOT_SURCONTRE_PARTNER_THRESHOLDS;
+
+    const threshold =
+      thresholds[currentBid.value];
+
+    if (
+      typeof threshold === "number" &&
+      surcontreScore >= threshold
+    ) {
+      return { type: "SURCONTRE" };
+    }
+  }
+
+  return { type: "PASS" };
+}
+
 function buildFirstBotBiddingAction(table) {
+  if (table?.mode === "contree") {
+    return buildFirstBotContreeBiddingAction(table);
+  }
+
   if (
     !table ||
     (
@@ -3267,7 +3605,13 @@ function playOneBotBiddingActionIfNeeded(table) {
   return true;
 }
 function buildFirstBotModernAnnouncementAction(table) {
-  if (!table || table.mode !== "moderne") {
+  if (
+    !table ||
+    (
+      table.mode !== "moderne" &&
+      table.mode !== "contree"
+    )
+  ) {
     return null;
   }
 
@@ -3799,6 +4143,12 @@ function playOneBotCardIfNeeded(table) {
 
 function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
   if (!table) return 0;
+
+  const stepLimit =
+    table.mode === "contree"
+      ? Math.max(maxSteps, 22)
+      : maxSteps;
+
   if (table.botPlayTimer) return 0;
 
   const scheduledRoundId = table.game?.hand?.roundId || null;
@@ -3812,7 +4162,7 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
     const currentRoundId = table.game?.hand?.roundId || null;
     if (currentRoundId !== scheduledRoundId) return;
 
-    if (playedCount >= maxSteps) return;
+    if (playedCount >= stepLimit) return;
 
     const played =
       playOneBotBiddingActionIfNeeded(table) ||
@@ -3822,7 +4172,7 @@ function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
 
     playedCount++;
 
-    if (playedCount >= maxSteps) return;
+    if (playedCount >= stepLimit) return;
 
     const nextRoundId = table.game?.hand?.roundId || null;
     if (nextRoundId !== scheduledRoundId) return;
@@ -4592,7 +4942,10 @@ if (
 
   if (
     (
-      t.mode === "moderne" &&
+      (
+        t.mode === "moderne" ||
+        t.mode === "contree"
+      ) &&
       nextHand.phase === "ANNONCES_MODERNE"
     ) ||
     nextHand.phase === "PLI_EN_COURS"

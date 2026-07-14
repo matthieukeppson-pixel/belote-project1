@@ -2414,6 +2414,9 @@ const activeSeatInfo =
 const activeIsBot = !!activeSeatInfo?.isBot;
 const turnKey = `${sharedRoundId}:${active}`;
 
+// En Contrée, les annonces des bots sont pilotées par le serveur.
+if (mode === "contree" && activeIsBot) return;
+
   const timer = setTimeout(() => {
     if (modernAnnouncementSentKeyRef.current === turnKey) return;
 
@@ -2485,8 +2488,7 @@ useEffect(() => {
   if (!isPrimaryTableDriver) return;
   if (
     serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
-    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2 &&
-    serverPhaseLabel !== STATES.ENCHERES
+    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2
   ) return;
   if (!isServerTurnBot) return;
 
