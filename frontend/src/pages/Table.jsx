@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
+import { personalizedPseudoClass } from "../utils/pseudoStyle";
+import "../styles/pseudoStyle.css";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
@@ -1859,7 +1861,9 @@ const showTableDebug = false;
                     className="player-avatar"
                   />
 
-                  <div className={`player-pseudo ${displayedSeatRoleClass}`.trim()}>
+                  <div
+                    className={`player-pseudo ${displayedSeatRoleClass} ${personalizedPseudoClass(displayedSeatName, displayedSeat?.role)}`.trim()}
+                  >
                     {displayedSeatName}
                   </div>
 
