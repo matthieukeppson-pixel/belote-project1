@@ -4035,6 +4035,8 @@ function scheduleStartNextHandAfterEnd(table, delayMs = 1000) {
     };
 
     broadcastTables();
+
+    setTimeout(() => playBotCardsUntilHumanTurn(table), 0);
   }, delayMs);
 
   return true;
