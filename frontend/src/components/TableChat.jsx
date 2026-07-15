@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { personalizedPseudoClass } from "../utils/pseudoStyle";
 
 function roleClassFromRole(role) {
   if (role === "admin") return "role-admin";
@@ -123,7 +124,10 @@ const addEmoji = (code) => {
       {msg.text}
     </div>
   ) : (
-    <div key={msg.id} className={`tablechat-line ${msg.from || "other"} ${roleClassFromRole(msg.role)}`}>
+    <div
+      key={msg.id}
+      className={`tablechat-line ${msg.from || "other"} ${roleClassFromRole(msg.role)} ${personalizedPseudoClass(msg.author, msg.role)}`.trim()}
+    >
       <span className="tablechat-author">{msg.author} :</span>{" "}
       {renderCustomMessageContent(msg.text)}
     </div>

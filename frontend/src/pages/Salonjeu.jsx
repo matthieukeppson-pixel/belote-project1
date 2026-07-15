@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { personalizedPseudoClass } from "../utils/pseudoStyle";
+import "../styles/pseudoStyle.css";
 
 function roleClassFromRole(role) {
   if (role === "admin") return "role-admin";
@@ -110,7 +112,12 @@ export default function SalonJeu({ user }) {
       players.find((player) => player.name === name)?.role ||
       "player";
 
-    return roleClassFromRole(role);
+    return [
+      roleClassFromRole(role),
+      personalizedPseudoClass(name, role),
+    ]
+      .filter(Boolean)
+      .join(" ");
   };
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [showProfil, setShowProfil] = useState(false);
@@ -671,7 +678,9 @@ const statusText = isHumanFull
                     cursor: p.name === currentName ? "pointer" : "default",
                   }}
                 />
-                <div className={`player-name ${roleClassFromRole(p.role)}`}>
+                <div
+                  className={`player-name ${roleClassFromRole(p.role)} ${personalizedPseudoClass(p.name, p.role)}`.trim()}
+                >
                   {p.name}
                 </div>
               </div>

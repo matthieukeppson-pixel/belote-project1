@@ -1,0 +1,15 @@
+/*
+ * Signature calligraphique réservée au compte administrateur Véro.
+ * La couleur reste fournie par la classe de rôle role-admin.
+ */
+.player-name.pseudo-vero-signature,
+.table-page .player-pseudo.pseudo-vero-signature,
+.chat-message.pseudo-vero-signature .chat-user,
+.tablechat-line.pseudo-vero-signature .tablechat-author {
+  font-family: "Segoe Script", "Snell Roundhand", "Brush Script MT",
+    "Lucida Handwriting", cursive;
+  font-size: 1.18em;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  line-height: 1.15;
+}
