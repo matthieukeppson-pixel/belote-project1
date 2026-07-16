@@ -8,25 +8,25 @@
 }
 
 .vero-pseudo-image--salon-list {
-  height: 36px;
-  max-width: 84px;
+  height: 34px;
+  max-width: 80px;
 }
 
 .vero-pseudo-image--salon-chat {
-  height: 34px;
-  max-width: 82px;
-  margin: -7px 2px -7px 0;
+  height: 31px;
+  max-width: 76px;
+  margin: -5px 2px -5px 0;
 }
 
 .vero-pseudo-image--table-seat {
-  height: 40px;
-  max-width: 92px;
+  height: 38px;
+  max-width: 88px;
 }
 
 .vero-pseudo-image--table-chat {
-  height: 30px;
-  max-width: 76px;
-  margin: -6px 2px -6px 0;
+  height: 28px;
+  max-width: 72px;
+  margin: -5px 2px -5px 0;
 }
 
 .table-page .player-pseudo.player-pseudo--vero {
