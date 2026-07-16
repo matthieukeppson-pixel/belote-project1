@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import PseudoDisplay from "../components/PseudoDisplay";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
@@ -1820,6 +1821,13 @@ const showTableDebug = false;
   } else if (displayedSeat?.role === "moderator") {
     displayedSeatRoleClass = "role-moderator";
   }
+
+  const isDisplayedSeatVeroAdmin =
+    displayedSeat?.role === "admin" &&
+    String(displayedSeatName ?? "")
+      .trim()
+      .toLocaleLowerCase("fr-FR") === "véro";
+
   const serverDisplayedHand = Array.isArray(serverHand?.hands?.[player])
     ? serverHand.hands[player]
     : null;
@@ -1859,8 +1867,20 @@ const showTableDebug = false;
                     className="player-avatar"
                   />
 
-                  <div className={`player-pseudo ${displayedSeatRoleClass}`.trim()}>
-                    {displayedSeatName}
+                  <div
+                    className={[
+                      "player-pseudo",
+                      displayedSeatRoleClass,
+                      isDisplayedSeatVeroAdmin ? "player-pseudo--vero" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <PseudoDisplay
+                      name={displayedSeatName}
+                      isAdmin={displayedSeat?.role === "admin"}
+                      context="table-seat"
+                    />
                   </div>
 
                  {!isLocalDisplayedPlayer && (

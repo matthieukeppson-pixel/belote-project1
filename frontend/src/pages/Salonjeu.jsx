@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import PseudoDisplay from "../components/PseudoDisplay";
 
 function roleClassFromRole(role) {
   if (role === "admin") return "role-admin";
@@ -562,7 +563,14 @@ const statusText = isHumanFull
           <div className="chat-box" ref={chatBoxRef}>
             {messages.map((m) => (
               <div key={m.id} className={`chat-message ${roleClassForUser(m.user, m.role)}`}>
-                <span className="chat-user">{m.user} :</span>
+                <span className="chat-user">
+                  <PseudoDisplay
+                    name={m.user}
+                    isAdmin={roleClassForUser(m.user, m.role) === "role-admin"}
+                    context="salon-chat"
+                    suffix=" :"
+                  />
+                </span>
                 <span className="chat-text">{renderSalonMessageContent(m.text)}</span>
               </div>
             ))}
@@ -672,7 +680,11 @@ const statusText = isHumanFull
                   }}
                 />
                 <div className={`player-name ${roleClassFromRole(p.role)}`}>
-                  {p.name}
+                  <PseudoDisplay
+                    name={p.name}
+                    isAdmin={p.role === "admin"}
+                    context="salon-list"
+                  />
                 </div>
               </div>
             ))}
