@@ -14,6 +14,7 @@ export default function PseudoDisplay({
   isAdmin = false,
   context,
   suffix = "",
+  textSuffix = suffix,
 }) {
   const safeName = String(name ?? "");
   const useVeroImage = isAdmin && isVeroPseudo(safeName);
@@ -30,7 +31,7 @@ export default function PseudoDisplay({
       ) : (
         safeName
       )}
-      {suffix}
+      {useVeroImage ? suffix : textSuffix}
     </>
   );
 }
