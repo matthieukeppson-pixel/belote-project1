@@ -568,7 +568,7 @@ const statusText = isHumanFull
                     name={m.user}
                     isAdmin={roleClassForUser(m.user, m.role) === "role-admin"}
                     context="salon-chat"
-                    suffix=" :"
+                    suffix=":"
                   />
                 </span>
                 <span className="chat-text">{renderSalonMessageContent(m.text)}</span>
