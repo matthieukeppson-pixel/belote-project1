@@ -661,7 +661,7 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
       ) || null;
 
     connection.addTransceiver(localMicroTrack || "audio", {
-      direction: localMicroTrack ? "sendrecv" : "recvonly",
+      direction: "sendrecv",
     });
   } catch (error) {
     if (import.meta.env.DEV) console.warn("Relay connection creation error", error);
@@ -1081,49 +1081,16 @@ const linkMutedTableMicroToRelayConnections = useCallback(async (stream) => {
       throw new Error("RELAY_MIC_LINK_NOT_READY");
     }
 
-    targets.push({ peerId, connection, negotiationState, audioTransceiver });
+    targets.push({ peerId, connection, audioTransceiver });
   }
 
   try {
-    for (const { peerId, connection, negotiationState, audioTransceiver } of targets) {
-      try {
-        negotiationState.makingOffer = true;
-
-        await audioTransceiver.sender.replaceTrack(localTrack);
-        audioTransceiver.direction = "sendrecv";
-
-        const offer = await connection.createOffer();
-
-        if (
-          tableRelayConnectionsRef.current.get(peerId) !== connection ||
-          connection.signalingState !== "stable"
-        ) {
-          throw new Error("RELAY_MIC_LINK_NOT_READY");
-        }
-
-        await connection.setLocalDescription(offer);
-
-        const localDescription = connection.localDescription;
-
-        if (
-          !localDescription ||
-          localDescription.type !== "offer" ||
-          typeof localDescription.sdp !== "string" ||
-          !sendTableRelaySignal(peerId, {
-            type: "offer",
-            data: {
-              description: {
-                type: localDescription.type,
-                sdp: localDescription.sdp,
-              },
-            },
-          })
-        ) {
-          throw new Error("RELAY_MIC_LINK_NOT_READY");
-        }
-      } finally {
-        negotiationState.makingOffer = false;
+    for (const { peerId, connection, audioTransceiver } of targets) {
+      if (tableRelayConnectionsRef.current.get(peerId) !== connection) {
+        throw new Error("RELAY_MIC_LINK_NOT_READY");
       }
+
+      await audioTransceiver.sender.replaceTrack(localTrack);
     }
   } catch (error) {
     targets.forEach(({ peerId, connection }) => {
@@ -1139,7 +1106,6 @@ const linkMutedTableMicroToRelayConnections = useCallback(async (stream) => {
 }, [
   closeTableRelayConnection,
   ensureTableRelayNegotiationState,
-  sendTableRelaySignal,
 ]);
 
 function toggleTableMicroTransmission() {
