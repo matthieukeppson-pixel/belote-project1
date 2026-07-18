@@ -1295,13 +1295,92 @@ async function prepareTableAudio() {
     return;
   }
 
-  try {
-    ws.send(JSON.stringify({ type: "audio_auth", ticket: audioTicket }));
-    setTableAudioState("authorizing");
-  } catch {
+  const mediaDevices = typeof navigator === "undefined" ? null : navigator.mediaDevices;
+
+  if (!mediaDevices || typeof mediaDevices.getUserMedia !== "function") {
     tableAudioActivationRef.current = false;
     setTableAudioState("error");
-    setTableAudioError("Envoi de l'autorisation audio impossible.");
+    setTableAudioError("Ce navigateur ne peut pas utiliser le microphone.");
+    setTableMicroState("error");
+    setTableMicroError("Ce navigateur ne peut pas utiliser le microphone.");
+    return;
+  }
+
+  let stream = null;
+
+  try {
+    setTableMicroState("requesting");
+    setTableMicroError("");
+
+    stream = await mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+
+    const audioTracks = stream.getAudioTracks();
+
+    if (audioTracks.length === 0) {
+      stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+      throw new Error("NO_AUDIO_TRACK");
+    }
+
+    audioTracks.forEach((track) => {
+      track.enabled = false;
+    });
+
+    if (tableAudioRequestIdRef.current !== requestId) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+
+    tableMicroStreamRef.current = stream;
+    setTableMicroState("muted");
+    setTableMicroError("");
+
+    try {
+      ws.send(JSON.stringify({ type: "audio_auth", ticket: audioTicket }));
+    } catch {
+      throw new Error("AUDIO_AUTH_SEND_FAILED");
+    }
+
+    setTableAudioState("authorizing");
+  } catch (error) {
+    if (tableMicroStreamRef.current === stream) {
+      releaseTableMicro();
+    } else if (stream) {
+      stream.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (cleanupError) {
+          if (import.meta.env.DEV) {
+            console.warn("Micro preparation cleanup error", cleanupError);
+          }
+        }
+      });
+    }
+
+    if (tableAudioRequestIdRef.current !== requestId) return;
+
+    tableAudioActivationRef.current = false;
+    setTableAudioState("error");
+
+    const errorName = String(error?.name || "");
+    const errorMessage = String(error?.message || "");
+
+    let message = "Impossible de préparer le microphone.";
+
+    if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+      message = "Autorisation du microphone refusée par le navigateur.";
+    } else if (errorName === "NotFoundError" || errorMessage === "NO_AUDIO_TRACK") {
+      message = "Aucun microphone disponible sur cet appareil.";
+    } else if (errorMessage === "AUDIO_AUTH_SEND_FAILED") {
+      message = "Envoi de l'autorisation audio impossible.";
+    }
+
+    setTableAudioError(message);
+    setTableMicroState("error");
+    setTableMicroError(message);
   }
 }
 function _chooseSeat(seatIndex) {
@@ -1562,7 +1641,6 @@ useEffect(() => {
 
         closeAllTableRelayConnections();
         tableAudioPeerIdsRef.current = new Set(peers);
-        resetTableMicroUi();
         tableAudioActivationRef.current = false;
         tableAudioPeerIdRef.current = audioPeerId;
         setTableAudioPeers(peers);
