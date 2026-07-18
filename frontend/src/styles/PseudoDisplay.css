@@ -26,7 +26,12 @@
 .vero-pseudo-image--table-chat {
   height: 28px;
   max-width: 72px;
-  margin: -5px 2px -5px 0;
+  margin: -5px 0 -5px -8px;
+}
+
+.vero-pseudo-suffix--table-chat {
+  display: inline-block;
+  margin-left: -6px;
 }
 
 .table-page .player-pseudo.player-pseudo--vero {
