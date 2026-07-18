@@ -31,7 +31,13 @@ export default function PseudoDisplay({
       ) : (
         safeName
       )}
-      {useVeroImage ? suffix : textSuffix}
+      {useVeroImage ? (
+        <span className={`vero-pseudo-suffix vero-pseudo-suffix--${context}`}>
+          {suffix}
+        </span>
+      ) : (
+        textSuffix
+      )}
     </>
   );
 }
