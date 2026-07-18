@@ -130,7 +130,8 @@ const addEmoji = (code) => {
           name={msg.author}
           isAdmin={msg.role === "admin"}
           context="table-chat"
-          suffix=" :"
+          suffix=":"
+          textSuffix=" :"
         />
       </span>{" "}
       {renderCustomMessageContent(msg.text)}
