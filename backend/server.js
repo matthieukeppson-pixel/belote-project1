@@ -4847,6 +4847,7 @@ if (msg.type === "table_game_action") {
     };
 
     broadcastTables();
+    playBotCardsUntilHumanTurn(t);
     return;
   }
 
