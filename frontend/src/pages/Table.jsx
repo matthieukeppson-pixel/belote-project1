@@ -2530,27 +2530,6 @@ useEffect(() => {
   sendTableGameAction,
 ]);
 
-useEffect(() => {
-  if (!isPrimaryTableDriver) return;
-  if (
-    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_1 &&
-    serverPhaseLabel !== STATES.ANNOUNCE_ATOUT_TOUR_2
-  ) return;
-  if (!isServerTurnBot) return;
-
-  const timer = setTimeout(() => {
-    sendTableGameAction({ type: "PASS" });
-  }, 500);
-
-  return () => clearTimeout(timer);
-}, [
-  isPrimaryTableDriver,
-  serverPhaseLabel,
-  serverTurnSeatIndex,
-  isServerTurnBot,
-  sendTableGameAction,
-]);
-
 
   
 
