@@ -4141,7 +4141,7 @@ function playOneBotCardIfNeeded(table) {
   return true;
 }
 
-function playBotCardsUntilHumanTurn(table, maxSteps = 4, delayMs = 600) {
+function playBotCardsUntilHumanTurn(table, maxSteps = 12, delayMs = 600) {
   if (!table) return 0;
 
   const stepLimit =
