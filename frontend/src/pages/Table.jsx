@@ -2842,8 +2842,7 @@ const showTableDebug = false;
               "0 0 14px rgba(255, 211, 88, 0.20), inset 0 0 10px rgba(255, 255, 255, 0.06)",
           }}
         >
-          Contrat actuel : {authoritativeCurrentBid.value} {atoutSymbol(authoritativeCurrentBid.suit)} · x
-          {mult}
+          {authoritativeCurrentBid.value} {atoutSymbol(authoritativeCurrentBid.suit)} ×{mult} — {seatsInfo[currentBidSeatIndex]?.name || tableSeatPseudos[currentBidSeatIndex]}
         </div>
 
         <div
