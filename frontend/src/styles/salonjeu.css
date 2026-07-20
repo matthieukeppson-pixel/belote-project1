@@ -1069,3 +1069,76 @@
   font-weight: 900;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
+
+.salon-staff-actions {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.salon-staff-actions .salon-admin-btn {
+  position: static;
+  top: auto;
+  left: auto;
+}
+
+.salon-close-table-control {
+  position: relative;
+}
+
+.salon-close-table-btn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(150, 210, 255, 0.85);
+  background: linear-gradient(180deg, #2f7cff, #1f58c8);
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.salon-close-table-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.salon-close-table-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.salon-close-table-menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(150, 210, 255, 0.7);
+  background: rgba(8, 35, 85, 0.97);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.salon-close-table-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.salon-close-table-menu button:hover {
+  background: rgba(55, 125, 235, 0.42);
+}

@@ -119,6 +119,7 @@ export default function SalonJeu({ user }) {
   // ✅ Tables viennent du serveur WS (plus de mock)
   // format attendu depuis serveur: { id, mode, seats, count }
   const [tables, setTables] = useState([]);
+  const [isCloseTableMenuOpen, setIsCloseTableMenuOpen] = useState(false);
   const [hasPendingRegistrationRequests, setHasPendingRegistrationRequests] = useState(false);
 
   const wsRef = useRef(null);
@@ -218,6 +219,18 @@ export default function SalonJeu({ user }) {
     sendWS({ type: "create_table", mode: "classic" });
   }
 
+  function closeSalonTable(tableId) {
+    setIsCloseTableMenuOpen(false);
+
+    const confirmed = window.confirm(
+      `Fermer la table ${tableId} ? Elle pourra être recréée plus tard.`
+    );
+
+    if (!confirmed) return;
+
+    sendWS({ type: "close_table", tableId });
+  }
+
   function toggleModeMenu(tableId) {
     if (openMenu === tableId) {
       setOpenMenu(null);
@@ -311,6 +324,10 @@ ws.onmessage = (event) => {
 
     case "tables":
       setTables(Array.isArray(data.tables) ? data.tables : []);
+      return;
+
+    case "close_table_denied":
+      window.alert(data.reason || "La table ne peut pas être fermée.");
       return;
 
     case "animation_state":
@@ -433,24 +450,67 @@ return () => {
   /* ===============================
      RENDER
   ================================ */
+  const closableTables = tables.filter((table) => {
+    const seatsAreEmpty =
+      !Array.isArray(table.seats) ||
+      table.seats.every((seatPseudo) => !seatPseudo);
+    const visitorsAreEmpty =
+      !Array.isArray(table.visitors) ||
+      table.visitors.every((visitorPseudo) => !visitorPseudo);
+
+    return Number(table.id) > 3 && seatsAreEmpty && visitorsAreEmpty;
+  });
+
   return (
     <div className="salon-wrapper">
       {isStaffUser && (
-        <button
-          type="button"
-          className="salon-admin-btn"
-          onClick={() => navigate("/admin")}
-          title={isAdminUser ? "Administration Matt/Véro" : "Modération"}
-        >
-          <span>{isAdminUser ? "Administration" : "Mod\u00e9ration"}</span>
-          {isAdminUser && hasPendingRegistrationRequests && (
-            <span
-              className="salon-admin-pending-dot"
-              aria-label="Demande d'activation en attente"
-              title="Demande d'activation en attente"
-            />
-          )}
-        </button>
+        <div className="salon-staff-actions">
+          <button
+            type="button"
+            className="salon-admin-btn"
+            onClick={() => navigate("/admin")}
+            title={isAdminUser ? "Administration Matt/Véro" : "Modération"}
+          >
+            <span>{isAdminUser ? "Administration" : "Mod\u00e9ration"}</span>
+            {isAdminUser && hasPendingRegistrationRequests && (
+              <span
+                className="salon-admin-pending-dot"
+                aria-label="Demande d'activation en attente"
+                title="Demande d'activation en attente"
+              />
+            )}
+          </button>
+
+          <div className="salon-close-table-control">
+            <button
+              type="button"
+              className="salon-close-table-btn"
+              disabled={closableTables.length === 0}
+              onClick={() => setIsCloseTableMenuOpen((open) => !open)}
+              title={
+                closableTables.length > 0
+                  ? "Fermer une table supplémentaire vide"
+                  : "Aucune table supplémentaire vide"
+              }
+            >
+              Fermer table
+            </button>
+
+            {isCloseTableMenuOpen && closableTables.length > 0 && (
+              <div className="salon-close-table-menu">
+                {closableTables.map((table) => (
+                  <button
+                    key={table.id}
+                    type="button"
+                    onClick={() => closeSalonTable(table.id)}
+                  >
+                    Table {table.id}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       <div className="salon-grid">
         {/* TABLES */}
@@ -549,6 +609,7 @@ const statusText = isHumanFull
                     >
                       Regarder
                     </button>
+
                   </div>
                 </div>
               );
