@@ -906,7 +906,6 @@ const playersMap = new Map();
 
 // tableId(number) -> { id, mode, seats: [pseudo|null, ...] }
 const tablesMap = new Map();
-let nextTableId = 1;
 const BOT_PREFIX = "__bot__";
 
 const animationState = {
@@ -1874,7 +1873,13 @@ function createEmptyServerGame() {
 const MAX_TABLES = 6;
 
 function createTable(mode = "classic") {
-  const id = nextTableId++;
+  const id = Array.from(
+    { length: MAX_TABLES },
+    (_unused, index) => index + 1
+  ).find((candidateId) => !tablesMap.has(candidateId));
+
+  if (id == null) return null;
+
   tablesMap.set(id, {
     id,
     mode,
@@ -1967,7 +1972,7 @@ function seatInfoFromPseudo(pseudo) {
 }
 
 function tablesArray() {
-  return Array.from(tablesMap.values()).map((t) => {
+  return Array.from(tablesMap.values()).sort((a, b) => a.id - b.id).map((t) => {
     const seats = t.seats.map((x) => x || null);
     const seatsInfo = seats.map((pseudo) => seatInfoFromPseudo(pseudo));
     const visitors = Array.isArray(t.visitors) ? t.visitors.filter(Boolean) : [];
@@ -5039,6 +5044,73 @@ if (
       const mode = String(msg.mode || "classic").trim() || "classic";
       const t = createTable(mode);
       system(`ðŸŸ¢ Table ${t.id} crÃ©Ã©e (${mode})`);
+      broadcastTables();
+      return;
+    }
+
+    if (msg.type === "close_table") {
+      const requesterRole = await getUserRoleForPseudo(pseudo);
+
+      if (requesterRole !== "admin" && requesterRole !== "moderator") {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            reason: "Action réservée aux administrateurs et modérateurs.",
+          })
+        );
+        return;
+      }
+
+      const tableId = normalizeTableId(msg.tableId);
+      const t = tableId ? tablesMap.get(tableId) : null;
+
+      if (!t) {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            reason: "Cette table n’existe plus.",
+          })
+        );
+        return;
+      }
+
+      if (tableId <= 3) {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            reason: "Les tables 1, 2 et 3 restent toujours ouvertes.",
+          })
+        );
+        return;
+      }
+
+      const hasOccupiedSeat =
+        Array.isArray(t.seats) && t.seats.some((seatPseudo) => !!seatPseudo);
+      const hasVisitor =
+        Array.isArray(t.visitors) &&
+        t.visitors.some((visitorPseudo) => !!visitorPseudo);
+
+      if (hasOccupiedSeat || hasVisitor) {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            reason: "La table doit être complètement vide avant sa fermeture.",
+          })
+        );
+        return;
+      }
+
+      ["botPlayTimer", "nextHandTimer", "nextTrickTimer"].forEach(
+        (timerName) => {
+          if (t[timerName]) {
+            clearTimeout(t[timerName]);
+            t[timerName] = null;
+          }
+        }
+      );
+
+      tablesMap.delete(tableId);
+      system(`Table ${tableId} fermée par ${pseudo}`);
       broadcastTables();
       return;
     }
