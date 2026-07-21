@@ -2762,16 +2762,6 @@ const showTableDebug = false;
               >
                 <span aria-hidden="true">{"\u{1F399}"}</span>
                 {tableMicroLabel}
-                {tableRelayStatusLabel && (
-                  <span aria-hidden="true" style={{ marginLeft: 4, fontSize: "0.78em", opacity: 0.82 }}>
-                    {tableRelayStatusLabel}
-                  </span>
-                )}
-                {tableRemoteAudioStatusLabel && (
-                  <span aria-hidden="true" style={{ marginLeft: 4, fontSize: "0.78em", opacity: 0.82 }}>
-                    {tableRemoteAudioStatusLabel}
-                  </span>
-                )}
               </button>
             )}
             {beloteToast && (
