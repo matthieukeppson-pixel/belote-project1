@@ -53,6 +53,11 @@ const SALON_EMOJIS = [
   { code: ":chocolat_sourire:", src: "/emojis/chocolat_sourire.png", alt: "chocolat sourire" },
   { code: ":bieres:", src: "/emojis/bieres.png", alt: "bieres" },
   { code: ":sucette_or:", src: "/emojis/sucette_or.png", alt: "sucette or" },
+
+  // Emojis Vero pack 3
+  { code: ":fetard:", src: "/emojis/fetard.png", alt: "fêtard" },
+  { code: ":triste:", src: "/emojis/triste.png", alt: "triste" },
+  { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
