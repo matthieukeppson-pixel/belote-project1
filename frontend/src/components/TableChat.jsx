@@ -34,7 +34,6 @@ const SIMPLE_EMOJIS = [
 
   // Emojis Vero
   { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
-  { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
   { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
   { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
   { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
