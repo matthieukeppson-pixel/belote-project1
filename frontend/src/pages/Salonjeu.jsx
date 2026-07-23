@@ -58,6 +58,16 @@ const SALON_EMOJIS = [
   { code: ":fetard:", src: "/emojis/fetard.png", alt: "fêtard" },
   { code: ":triste:", src: "/emojis/triste.png", alt: "triste" },
   { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
+
+  // Emojis Vero pack 4
+  { code: ":diable:", src: "/emojis/diable.png", alt: "diable" },
+  { code: ":mdr:", src: "/emojis/mdr.png", alt: "mdr" },
+  { code: ":furax:", src: "/emojis/furax.png", alt: "furax" },
+  { code: ":heure:", src: "/emojis/heure.png", alt: "heure" },
+  { code: ":jus_de_fruits:", src: "/emojis/jus_de_fruits.png", alt: "jus de fruits" },
+  { code: ":pleure:", src: "/emojis/pleure.png", alt: "pleure" },
+  { code: ":champagne:", src: "/emojis/champagne.png", alt: "champagne" },
+  { code: ":flute_champagne:", src: "/emojis/flute_champagne.png", alt: "flûte champagne" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
