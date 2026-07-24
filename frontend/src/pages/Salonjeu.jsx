@@ -31,21 +31,18 @@ const SALON_EMOJIS = [
 
   { code: ":rire:", src: "/emojis/rire.png", alt: "rire" },
   { code: ":dodo:", src: "/emojis/dodo.png", alt: "dodo" },
-  { code: ":fleur:", src: "/emojis/fleur.png", alt: "fleur" },
   { code: ":colere:", src: "/emojis/colere.png", alt: "colere" },
   { code: ":glace:", src: "/emojis/glace.png", alt: "glace" },
   { code: ":bisou:", src: "/emojis/bisou.png", alt: "bisou" },
 
   // Emojis Vero
   { code: ":langue_rire:", src: "/emojis/langue_rire.png", alt: "langue rire" },
-  { code: ":bouquet:", src: "/emojis/bouquet.png", alt: "bouquet" },
   { code: ":malade:", src: "/emojis/malade.png", alt: "malade" },
   { code: ":rose_rouge:", src: "/emojis/rose_rouge.png", alt: "rose rouge" },
   { code: ":dj:", src: "/emojis/dj.png", alt: "dj" },
   { code: ":rigolo:", src: "/emojis/rigolo.png", alt: "rigolo" },
   { code: ":cookie:", src: "/emojis/cookie.png", alt: "cookie" },
   { code: ":telephone:", src: "/emojis/telephone.png", alt: "telephone" },
-  { code: ":jus_orange:", src: "/emojis/jus_orange.png", alt: "jus orange" },
   { code: ":bonbon:", src: "/emojis/bonbon.png", alt: "bonbon" },
   { code: ":ange_rire:", src: "/emojis/ange_rire.png", alt: "ange rire" },
 
@@ -56,7 +53,6 @@ const SALON_EMOJIS = [
 
   // Emojis Vero pack 3
   { code: ":fetard:", src: "/emojis/fetard.png", alt: "fêtard" },
-  { code: ":triste:", src: "/emojis/triste.png", alt: "triste" },
   { code: ":anniversaire:", src: "/emojis/anniversaire.png", alt: "anniversaire" },
 
   // Emojis Vero pack 4
