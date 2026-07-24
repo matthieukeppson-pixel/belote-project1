@@ -63,7 +63,6 @@ const SALON_EMOJIS = [
   { code: ":heure:", src: "/emojis/heure.png", alt: "heure" },
   { code: ":jus_de_fruits:", src: "/emojis/jus_de_fruits.png", alt: "jus de fruits" },
   { code: ":pleure:", src: "/emojis/pleure.png", alt: "pleure" },
-  { code: ":champagne:", src: "/emojis/champagne.png", alt: "champagne" },
   { code: ":flute_champagne:", src: "/emojis/flute_champagne.png", alt: "flûte champagne" },
 ];
 
