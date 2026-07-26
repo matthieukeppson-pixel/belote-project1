@@ -184,6 +184,50 @@ export default function Admin() {
     }
   };
 
+  // SUPPRESSION DEFINITIVE COMPTE BANNI V1
+  const deleteBannedUser = async (player) => {
+    const pseudo = String(player?.pseudo || player?.username || "").trim();
+
+    if (!pseudo) {
+      setError("Pseudo joueur introuvable.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Supprimer définitivement le compte « ${pseudo} » ?\n\nLe pseudo et l'adresse e-mail seront libérés. Cette action est irréversible.`
+    );
+
+    if (!confirmed) return;
+
+    const confirmation = window.prompt(
+      `Saisissez exactement le pseudo « ${pseudo} » pour confirmer.`
+    );
+
+    if (confirmation === null) return;
+
+    if (confirmation !== pseudo) {
+      setMessage("");
+      setError("Suppression annulée : le pseudo saisi ne correspond pas.");
+      return;
+    }
+
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/api/admin/users/${player.id}/delete`, {
+        method: "POST",
+        body: JSON.stringify({ confirmation }),
+      });
+
+      setMessageType("danger");
+      setMessage(data.message || "Compte joueur supprimé définitivement.");
+      await loadUsers(currentRole);
+    } catch (err) {
+      setError(err.message || "Suppression définitive impossible.");
+    }
+  };
+
   const promoteModerator = async (userId) => {
     const confirmed = window.confirm("Mettre ce joueur modérateur ?");
     if (!confirmed) return;
@@ -288,9 +332,25 @@ export default function Admin() {
         )}
 
         {section === "banned" && (
-          <button type="button" className="admin-unban-btn" onClick={() => unbanUser(player.id)}>
-            Débannir
-          </button>
+          <>
+            <button
+              type="button"
+              className="admin-unban-btn"
+              onClick={() => unbanUser(player.id)}
+            >
+              Débannir
+            </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                className="admin-reject-btn"
+                onClick={() => deleteBannedUser(player)}
+              >
+                Supprimer définitivement
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

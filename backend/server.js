@@ -752,6 +752,77 @@ app.post("/api/admin/users/:id/unban", async (req, res) => {
   }
 });
 
+// SUPPRESSION DEFINITIVE COMPTE BANNI V1
+app.post("/api/admin/users/:id/delete", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const userId = Number.parseInt(req.params.id, 10);
+    const confirmation = String(req.body?.confirmation || "");
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Identifiant joueur invalide" });
+    }
+
+    const user = await dbGet(
+      `SELECT id, username, role, is_banned
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "Joueur introuvable" });
+    }
+
+    if (String(user.role || "player") === "admin") {
+      return res.status(403).json({ error: "Compte administrateur protégé" });
+    }
+
+    if (Number(user.is_banned) !== 1) {
+      return res.status(409).json({
+        error: "Le compte doit être banni avant sa suppression.",
+      });
+    }
+
+    if (confirmation !== String(user.username || "")) {
+      return res.status(400).json({
+        error: "Confirmation incorrecte : saisissez exactement le pseudo.",
+      });
+    }
+
+    const result = await dbRun(
+      `DELETE FROM users
+       WHERE id = ?
+         AND COALESCE(is_banned, 0) = 1
+         AND COALESCE(role, 'player') <> 'admin'`,
+      [userId]
+    );
+
+    if (result.changes !== 1) {
+      return res.status(409).json({
+        error: "Le compte n'a pas pu être supprimé.",
+      });
+    }
+
+    for (const [token, session] of authSessions.entries()) {
+      if (Number(session?.userId) === userId) {
+        authSessions.delete(token);
+      }
+    }
+
+    return res.json({
+      deletedUserId: userId,
+      message: "Compte joueur supprimé définitivement. Le pseudo et l'adresse e-mail sont libérés.",
+    });
+  } catch (err) {
+    console.error("Erreur /api/admin/users/:id/delete", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 app.post("/api/admin/users/:id/promote-moderator", async (req, res) => {
   try {
     const admin = await requireAdminUser(req, res);
