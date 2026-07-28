@@ -101,11 +101,11 @@ function renderSalonMessageContent(text) {
 
 
 export default function SalonJeu({ user }) {
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
   const currentName =
     user?.pseudo ||
     user?.username ||
-    localStorage.getItem("pseudo") ||
+    sessionStorage.getItem("pseudo") ||
     storedUser.pseudo ||
     storedUser.username ||
     "Joueur";
@@ -148,7 +148,7 @@ export default function SalonJeu({ user }) {
     let cancelled = false;
 
     const loadPendingRegistrationRequests = async () => {
-      const token = localStorage.getItem("token") || "";
+      const token = sessionStorage.getItem("token") || "";
 
       if (!token) {
         if (!cancelled) {

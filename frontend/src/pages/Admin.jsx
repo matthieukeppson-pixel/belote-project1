@@ -5,7 +5,7 @@ import "../styles/Admin.css";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
 
 async function apiRequest(path, options = {}) {
-  const token = localStorage.getItem("token") || "";
+  const token = sessionStorage.getItem("token") || "";
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,

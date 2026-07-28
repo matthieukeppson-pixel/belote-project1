@@ -70,9 +70,9 @@ export default function Accueil({ setPseudo }) {
       const user = data.user;
       const pseudo = user?.username || user?.pseudo || "";
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("pseudo", pseudo);
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("pseudo", pseudo);
 
       if (setPseudo) {
         setPseudo(pseudo, user);

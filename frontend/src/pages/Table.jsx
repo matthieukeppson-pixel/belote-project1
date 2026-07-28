@@ -178,11 +178,11 @@ const tableRole = location.state?.role === "visitor" ? "visitor" : "player";
 const { id } = useParams();
   const tableId = Number(id);
 
-const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
 
 const pseudo =
   location.state?.pseudo ||
-  localStorage.getItem("pseudo") ||
+  sessionStorage.getItem("pseudo") ||
   storedUser.pseudo ||
   storedUser.username ||
   "Joueur";

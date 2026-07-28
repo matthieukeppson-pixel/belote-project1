@@ -33,7 +33,7 @@ async function postJson(path, body) {
 // Sauvegarder le token
 export function saveToken(token) {
   if (!token) return;
-  localStorage.setItem("token", token);
+  sessionStorage.setItem("token", token);
 }
 
 // Sauvegarder l'utilisateur connecté sans casser l'ancien stockage pseudo/avatar
@@ -41,10 +41,10 @@ export function saveUserSession({ token, user }) {
   if (token) saveToken(token);
 
   if (user) {
-    localStorage.setItem("user", JSON.stringify(user));
+    sessionStorage.setItem("user", JSON.stringify(user));
 
     if (user.username || user.pseudo) {
-      localStorage.setItem("pseudo", user.username || user.pseudo);
+      sessionStorage.setItem("pseudo", user.username || user.pseudo);
     }
 
     if (user.avatar_url) {
@@ -72,7 +72,7 @@ export async function login(email, password) {
 }
 
 export async function requestTableAudioCredentials(tableId) {
-  const token = String(localStorage.getItem("token") || "").trim();
+  const token = String(sessionStorage.getItem("token") || "").trim();
 
   if (!token) {
     return { error: "Connexion requise pour activer le microphone." };

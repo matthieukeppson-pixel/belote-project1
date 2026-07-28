@@ -1,97 +1,180 @@
-import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 
 import Accueil from "./pages/Accueil.jsx";
 import SalonJeu from "./pages/Salonjeu.jsx";
 import Table from "./pages/Table.jsx";
 import Admin from "./pages/Admin.jsx";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
+
+function readSessionUser() {
+  const storedUser = sessionStorage.getItem("user");
+
+  if (!storedUser) return null;
+
+  try {
+    return JSON.parse(storedUser);
+  } catch {
+    sessionStorage.removeItem("user");
+    return null;
+  }
+}
+
+function clearAuthenticationSession() {
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  sessionStorage.removeItem("pseudo");
+}
+
+function ProtectedRoute({ authStatus, children }) {
+  const location = useLocation();
+
+  if (authStatus === "checking") {
+    return <div style={{ padding: 30 }}>Vérification de la connexion...</div>;
+  }
+
+  if (authStatus !== "authenticated") {
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{ requestedPath: location.pathname }}
+      />
+    );
+  }
+
+  return children;
+}
+
 export default function App() {
-  // État central utilisateur (pseudo + avatar_url)
-  const [user, setUser] = useState(() => {
-    // Nouveau stockage (prioritaire)
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+  const [user, setUser] = useState(readSessionUser);
+  const [authStatus, setAuthStatus] = useState(() =>
+    sessionStorage.getItem("token") ? "checking" : "unauthenticated"
+  );
+
+  useEffect(() => {
+    // Suppression des anciennes connexions persistantes.
+    // La photo locale reste volontairement conservée.
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("pseudo");
+
+    const token = String(sessionStorage.getItem("token") || "").trim();
+
+    if (!token) {
+      clearAuthenticationSession();
+      setUser(null);
+      setAuthStatus("unauthenticated");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function verifyAuthenticationSession() {
       try {
-        return JSON.parse(storedUser);
+        const response = await fetch(`${API_BASE_URL}/api/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.user) {
+          throw new Error(data.error || "Session invalide");
+        }
+
+        if (cancelled) return;
+
+        const verifiedUser = data.user;
+        const pseudo =
+          verifiedUser.username || verifiedUser.pseudo || "";
+
+        sessionStorage.setItem(
+          "user",
+          JSON.stringify({ ...verifiedUser, pseudo })
+        );
+        sessionStorage.setItem("pseudo", pseudo);
+
+        setUser({ ...verifiedUser, pseudo });
+        setAuthStatus("authenticated");
       } catch {
-        // si JSON corrompu, on retombe sur l'ancien
+        if (cancelled) return;
+
+        clearAuthenticationSession();
+        setUser(null);
+        setAuthStatus("unauthenticated");
       }
     }
 
-    // Compatibilité ancienne (pseudo/ avatar séparés)
-    const pseudo = localStorage.getItem("pseudo") || "";
-    const avatar_url = null; // la source de vérité avatar = backend (on ne met pas d'URL absolue ici)
-    return { pseudo, avatar_url };
-  });
+    verifyAuthenticationSession();
 
-  // Setter central sécurisé
-  const updateUser = (updates) => {
-    setUser((prev) => {
-      const next = { ...prev, ...updates };
-      localStorage.setItem("user", JSON.stringify(next));
-      return next;
-    });
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // ✅ Compatibilité: Accueil veut setPseudo(pseudo)
   const setPseudo = (pseudo, fullUser = null) => {
-    if (fullUser) {
-      updateUser({ ...fullUser, pseudo });
-    } else {
-      updateUser({ pseudo });
-    }
+    const nextUser = fullUser
+      ? { ...fullUser, pseudo }
+      : { ...(user || {}), pseudo };
 
-    // On garde aussi l'ancien storage pour ne rien casser tant que tout n'est pas migré
-    localStorage.setItem("pseudo", pseudo);
+    sessionStorage.setItem("user", JSON.stringify(nextUser));
+    sessionStorage.setItem("pseudo", pseudo);
+
+    setUser(nextUser);
+    setAuthStatus("authenticated");
   };
 
   return (
     <Router>
       <Routes>
-        {/* Accueil inchangé */}
         <Route path="/" element={<Accueil setPseudo={setPseudo} />} />
 
-        {/* Salon moderne */}
-        <Route path="/salon" element={<SalonJeu user={user} />} />
+        <Route
+          path="/salon"
+          element={
+            <ProtectedRoute authStatus={authStatus}>
+              <SalonJeu user={user} />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Administration */}
-        <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute authStatus={authStatus}>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Table statique */}
-        <Route path="/table" element={<Table />} />
+        <Route
+          path="/table"
+          element={
+            <ProtectedRoute authStatus={authStatus}>
+              <Table />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Table dynamique */}
-        <Route path="/table/:id" element={<Table />} />
+        <Route
+          path="/table/:id"
+          element={
+            <ProtectedRoute authStatus={authStatus}>
+              <Table />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
