@@ -377,6 +377,23 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.get("/api/me", async (req, res) => {
+  try {
+    const user = await getAuthUserFromRequest(req);
+
+    if (!user) {
+      return res.status(401).json({ error: "Connexion requise" });
+    }
+
+    return res.json({
+      user: publicUserFromDb(user),
+    });
+  } catch (err) {
+    console.error("Erreur /api/me", err);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 app.post("/api/audio/credentials", async (req, res) => {
   try {
     const user = await getAuthUserFromRequest(req);
