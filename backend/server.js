@@ -4475,7 +4475,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       : currentHand.scores;
 
     const targetScore =
-      table.mode === "contree" ? 1500 : table.mode === "classic" ? 1000 : 500;
+      table.mode === "contree" ? 1500 : table.mode === "classic" ? 1000 : 1500;
     const winnerTeam =
       allHandsEmpty && ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
         ? (nextScores.nous || 0) >= (nextScores.eux || 0)

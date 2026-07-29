@@ -1783,7 +1783,7 @@ useEffect(() => {
   useEffect(() => {
     if (partieRef.current === null) {
       const targetScore =
-        mode === "contree" ? 1500 : mode === "classic" ? 1000 : 500;
+        mode === "contree" ? 1500 : mode === "classic" ? 1000 : 1500;
 
       partieRef.current = new Partie({
        players: [...LOCAL_TABLE_PLAYERS],
@@ -1910,7 +1910,7 @@ const [announcementFading, setAnnouncementFading] = useState(false);
 
     const targetScore =
 
-      mode === "contree" ? 1500 : mode === "classic" ? 1000 : 500;
+      mode === "contree" ? 1500 : mode === "classic" ? 1000 : 1500;
     partieRef.current = new Partie({
       players: game.players,
       targetScore,
