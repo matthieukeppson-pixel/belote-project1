@@ -64,6 +64,7 @@ const SALON_EMOJIS = [
   { code: ":jus_de_fruits:", src: "/emojis/jus_de_fruits.png", alt: "jus de fruits" },
   { code: ":pleure:", src: "/emojis/pleure.png", alt: "pleure" },
   { code: ":flute_champagne:", src: "/emojis/flute_champagne.png", alt: "flûte champagne" },
+  { code: ":bonjour:", src: "/emojis/bonjour.png", alt: "bonjour" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
@@ -89,7 +90,7 @@ function renderSalonMessageContent(text) {
           <img
             src={src}
             alt={clean}
-            className="salon-chat-custom-emoji"
+            className={`salon-chat-custom-emoji${clean === ":bonjour:" ? " salon-chat-custom-emoji--bonjour" : ""}`}
           />
         </span>
       );
@@ -686,7 +687,7 @@ const statusText = isHumanFull
                     alt={emoji.alt}
 
 
-                    className="salon-chat-emoji-btn-img"
+                    className={`salon-chat-emoji-btn-img${emoji.code === ":bonjour:" ? " salon-chat-emoji-btn-img--bonjour" : ""}`}
 
 
                   />
