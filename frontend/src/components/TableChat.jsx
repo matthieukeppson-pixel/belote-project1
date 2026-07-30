@@ -59,6 +59,7 @@ const SIMPLE_EMOJIS = [
   { code: ":jus_de_fruits:", src: "/emojis/jus_de_fruits.png", alt: "jus de fruits" },
   { code: ":pleure:", src: "/emojis/pleure.png", alt: "pleure" },
   { code: ":flute_champagne:", src: "/emojis/flute_champagne.png", alt: "flûte champagne" },
+  { code: ":bonjour:", src: "/emojis/bonjour.png", alt: "bonjour" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
@@ -85,7 +86,7 @@ function renderCustomMessageContent(text) {
           <img
             src={src}
             alt={clean}
-            className="tablechat-custom-emoji"
+            className={`tablechat-custom-emoji${clean === ":bonjour:" ? " tablechat-custom-emoji--bonjour" : ""}`}
           />
         </span>
       );
@@ -162,7 +163,7 @@ const addEmoji = (code) => {
         <img
           src={emoji.src}
           alt={emoji.alt}
-          className="tablechat-emoji-btn-img"
+          className={`tablechat-emoji-btn-img${emoji.code === ":bonjour:" ? " tablechat-emoji-btn-img--bonjour" : ""}`}
         />
       </button>
     ))}

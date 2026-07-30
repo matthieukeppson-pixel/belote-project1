@@ -1142,3 +1142,14 @@
 .salon-close-table-menu button:hover {
   background: rgba(55, 125, 235, 0.42);
 }
+
+/* Taille spéciale de l'emoji Bonjour */
+.salon-chat-custom-emoji--bonjour {
+  width: 68px;
+  height: 52px;
+}
+
+.salon-chat-emoji-btn-img--bonjour {
+  width: 36px;
+  height: 32px;
+}
