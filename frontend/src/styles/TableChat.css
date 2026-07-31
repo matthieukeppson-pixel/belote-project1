@@ -354,3 +354,14 @@
   width: 36px;
   height: 32px;
 }
+
+/* Taille spéciale de l'emoji Au revoir */
+.tablechat-custom-emoji[src$="/emojis/aurevoir.png"] {
+  width: 76px;
+  height: 58px;
+}
+
+.tablechat-emoji-btn-img[src$="/emojis/aurevoir.png"] {
+  width: 40px;
+  height: 35px;
+}
