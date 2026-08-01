@@ -729,6 +729,9 @@ function compareAnnouncements(a, b, atout) {
   const typeDiff = getAnnounceStrength(a) - getAnnounceStrength(b);
   if (typeDiff !== 0) return typeDiff > 0 ? 1 : -1;
 
+  const pointsDiff = (a.points || 0) - (b.points || 0);
+  if (pointsDiff !== 0) return pointsDiff > 0 ? 1 : -1;
+
   const highDiff = (a.highRankValue || 0) - (b.highRankValue || 0);
   if (highDiff !== 0) return highDiff > 0 ? 1 : -1;
 
