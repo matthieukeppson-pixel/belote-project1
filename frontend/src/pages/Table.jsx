@@ -159,9 +159,9 @@ const SEAT_INDEX_TO_LOGICAL_PLAYER = [
 const TABLE_POSITIONS = ["top", "left", "right", "bottom"];
 const UNSEATED_POSITION_TO_SEAT_INDEX = {
   top: 0,
-  left: 1,
-  right: 2,
-  bottom: 3,
+  right: 1,
+  bottom: 2,
+  left: 3,
 };
 
 
