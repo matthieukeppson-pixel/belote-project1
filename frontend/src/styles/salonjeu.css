@@ -1156,12 +1156,12 @@
 
 /* Taille spéciale de l'emoji Au revoir */
 .salon-chat-custom-emoji[src$="/emojis/aurevoir.png"] {
-  width: 76px;
+  width: auto;
   height: 58px;
 }
 
 .salon-chat-emoji-btn-img[src$="/emojis/aurevoir.png"] {
-  width: 40px;
+  width: auto;
   height: 35px;
 }
 
