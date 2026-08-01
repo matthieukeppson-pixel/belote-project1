@@ -1164,3 +1164,14 @@
   width: 40px;
   height: 35px;
 }
+
+/* Taille horizontale de l'emoji Poignée de main */
+.salon-chat-custom-emoji[src$="/emojis/poignee_de_main.png"] {
+  width: auto;
+  height: 32px;
+}
+
+.salon-chat-emoji-btn-img[src$="/emojis/poignee_de_main.png"] {
+  width: auto;
+  height: 24px;
+}

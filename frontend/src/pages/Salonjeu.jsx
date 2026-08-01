@@ -66,6 +66,7 @@ const SALON_EMOJIS = [
   { code: ":bonjour:", src: "/emojis/bonjour.png", alt: "bonjour" },
   { code: ":aurevoir:", src: "/emojis/aurevoir.png", alt: "au revoir" },
   { code: ":boude:", src: "/emojis/boude.png", alt: "boude" },
+  { code: ":poignee_de_main:", src: "/emojis/poignee_de_main.png", alt: "poignée de main" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
