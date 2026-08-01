@@ -346,12 +346,12 @@
 
 /* Taille spéciale de l'emoji Bonjour */
 .tablechat-custom-emoji--bonjour {
-  width: 68px;
+  width: auto;
   height: 52px;
 }
 
 .tablechat-emoji-btn-img--bonjour {
-  width: 36px;
+  width: auto;
   height: 32px;
 }
 
