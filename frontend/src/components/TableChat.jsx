@@ -63,6 +63,7 @@ const SIMPLE_EMOJIS = [
   { code: ":aurevoir:", src: "/emojis/aurevoir.png", alt: "au revoir" },
   { code: ":boude:", src: "/emojis/boude.png", alt: "boude" },
   { code: ":poignee_de_main:", src: "/emojis/poignee_de_main.png", alt: "poignée de main" },
+  { code: ":burger:", src: "/emojis/burger.png", alt: "burger" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
