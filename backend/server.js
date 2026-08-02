@@ -1119,6 +1119,95 @@ function computeTrickPointsByTeam(hand, winnerSeatIndex) {
   return result;
 }
 
+function isClassicLitigeScore(scoreManche) {
+  return (
+    Number(scoreManche?.nous || 0) === 81 &&
+    Number(scoreManche?.eux || 0) === 81
+  );
+}
+
+function computeClassicHandResolution(
+  hand,
+  scoreManche,
+  tricksWon,
+  pendingLitigePoints = 0
+) {
+  const normalizedPendingLitigePoints = Math.max(
+    0,
+    Number(pendingLitigePoints || 0)
+  );
+  const capotScores = computeClassicCapotScores(tricksWon);
+
+  if (!capotScores && isClassicLitigeScore(scoreManche)) {
+    return {
+      scores: { nous: 0, eux: 0 },
+      pendingLitigePoints:
+        normalizedPendingLitigePoints + 162,
+      winningTeam: null,
+      isLitige: true,
+    };
+  }
+
+  const baseScores =
+    capotScores ||
+    computeClassicContractScores(hand, scoreManche);
+
+  const takerTeam =
+    typeof hand?.takerSeatIndex === "number"
+      ? seatTeamKey(hand.takerSeatIndex)
+      : null;
+
+  const defenderTeam =
+    takerTeam === "nous"
+      ? "eux"
+      : takerTeam === "eux"
+        ? "nous"
+        : null;
+
+  let winningTeam = null;
+
+  if (capotScores) {
+    winningTeam =
+      Number(capotScores.nous || 0) >
+      Number(capotScores.eux || 0)
+        ? "nous"
+        : "eux";
+  } else if (takerTeam && defenderTeam) {
+    winningTeam =
+      Number(scoreManche?.[takerTeam] || 0) >= 82
+        ? takerTeam
+        : defenderTeam;
+  }
+
+  if (!winningTeam) {
+    return {
+      scores: baseScores,
+      pendingLitigePoints:
+        normalizedPendingLitigePoints,
+      winningTeam: null,
+      isLitige: false,
+    };
+  }
+
+  return {
+    scores: {
+      nous:
+        Number(baseScores?.nous || 0) +
+        (winningTeam === "nous"
+          ? normalizedPendingLitigePoints
+          : 0),
+      eux:
+        Number(baseScores?.eux || 0) +
+        (winningTeam === "eux"
+          ? normalizedPendingLitigePoints
+          : 0),
+    },
+    pendingLitigePoints: 0,
+    winningTeam,
+    isLitige: false,
+  };
+}
+
 function computeClassicContractScores(hand, scoreManche) {
   const takerTeam =
     typeof hand?.takerSeatIndex === "number" ? seatTeamKey(hand.takerSeatIndex) : null;
@@ -1160,7 +1249,22 @@ function computeClassicCapotScores(tricksWon) {
   return null;
 }
 
-function computeContreeContractScores(hand, scoreManche, tricksWon) {
+function roundContreeScorePoints(points) {
+  const numericPoints = Math.max(0, Number(points || 0));
+  const lowerTen = Math.floor(numericPoints / 10) * 10;
+  const remainder = numericPoints - lowerTen;
+
+  return remainder >= 5 ? lowerTen + 10 : lowerTen;
+}
+
+function computeContreeContractScores(
+  hand,
+  scoreManche,
+  tricksWon,
+  beloteBonusesByTeam = { nous: 0, eux: 0 },
+  announcementWinningTeam = null,
+  announcementPoints = 0
+) {
   const contractValue = Number(hand?.contratValeur || 0);
   const multiplier = Number(hand?.contratMultiplicateur || 1);
   const takerTeam =
@@ -1172,6 +1276,29 @@ function computeContreeContractScores(hand, scoreManche, tricksWon) {
   const takerPoints = Number(scoreManche?.[takerTeam] || 0);
   const defenderPoints = Number(scoreManche?.[defenderTeam] || 0);
   const takerTricks = Number(tricksWon?.[takerTeam] || 0);
+  const defenderTricks = Number(tricksWon?.[defenderTeam] || 0);
+  const takerBelote = Math.max(
+    0,
+    Number(beloteBonusesByTeam?.[takerTeam] || 0)
+  );
+  const defenderBelote = Math.max(
+    0,
+    Number(beloteBonusesByTeam?.[defenderTeam] || 0)
+  );
+  const normalizedAnnouncementPoints = Math.max(
+    0,
+    Number(announcementPoints || 0)
+  );
+  const takerAnnouncement =
+    announcementWinningTeam === takerTeam
+      ? normalizedAnnouncementPoints
+      : 0;
+  const defenderAnnouncement =
+    announcementWinningTeam === defenderTeam
+      ? normalizedAnnouncementPoints
+      : 0;
+  const allAnnouncementPoints =
+    takerAnnouncement + defenderAnnouncement;
 
   if (contractValue === 500) {
     const capotSucceeded = takerTricks === 8;
@@ -1179,27 +1306,88 @@ function computeContreeContractScores(hand, scoreManche, tricksWon) {
 
     return capotSucceeded
       ? {
-          [takerTeam]: capotScore,
+          [takerTeam]:
+            capotScore + takerBelote + allAnnouncementPoints,
           [defenderTeam]: 0,
         }
       : {
           [takerTeam]: 0,
-          [defenderTeam]: capotScore,
+          [defenderTeam]:
+            capotScore +
+            takerBelote +
+            defenderBelote +
+            allAnnouncementPoints,
         };
   }
 
-  const takerSucceeded = takerPoints >= contractValue;
-  const contractBonus = contractValue * multiplier;
+  const takerSucceeded =
+    takerPoints + takerBelote + takerAnnouncement >= contractValue;
 
-  return takerSucceeded
-    ? {
-        [takerTeam]: takerPoints + contractBonus,
-        [defenderTeam]: defenderPoints,
-      }
-    : {
-        [takerTeam]: 0,
-        [defenderTeam]: 162 + contractBonus,
-      };
+  if (multiplier > 1) {
+    const multipliedScore = (160 + contractValue) * multiplier;
+
+    return takerSucceeded
+      ? {
+          [takerTeam]:
+            multipliedScore + takerBelote + takerAnnouncement,
+          [defenderTeam]:
+            defenderBelote + defenderAnnouncement,
+        }
+      : {
+          [takerTeam]: 0,
+          [defenderTeam]:
+            multipliedScore +
+            takerBelote +
+            defenderBelote +
+            allAnnouncementPoints,
+        };
+  }
+
+  if (takerTricks === 8) {
+    return {
+      [takerTeam]:
+        250 +
+        contractValue +
+        takerBelote +
+        allAnnouncementPoints,
+      [defenderTeam]: 0,
+    };
+  }
+
+  if (defenderTricks === 8) {
+    return {
+      [takerTeam]: 0,
+      [defenderTeam]:
+        250 +
+        contractValue +
+        takerBelote +
+        defenderBelote +
+        allAnnouncementPoints,
+    };
+  }
+
+  if (takerSucceeded) {
+    return {
+      [takerTeam]:
+        roundContreeScorePoints(
+          takerPoints + takerBelote + takerAnnouncement
+        ) + contractValue,
+      [defenderTeam]:
+        roundContreeScorePoints(
+          defenderPoints + defenderBelote + defenderAnnouncement
+        ),
+    };
+  }
+
+  return {
+    [takerTeam]: 0,
+    [defenderTeam]:
+      160 +
+      contractValue +
+      takerBelote +
+      defenderBelote +
+      allAnnouncementPoints,
+  };
 }
 
 function buildServerBeloteRebeloteEntry(playerId, suit) {
@@ -4320,6 +4508,10 @@ function scheduleStartNextHandAfterEnd(table, delayMs = 1000) {
 
     const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
     nextHand.scores = currentHand.scores || { nous: 0, eux: 0 };
+    nextHand.classicLitigePoints = Math.max(
+      0,
+      Number(currentHand.classicLitigePoints || 0)
+    );
     table.game = {
       ...(table.game || createEmptyServerGame()),
       dealerSeatIndex: nextHand.dealerSeatIndex,
@@ -4388,17 +4580,22 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         trickPointsByTeam.eux +
         (winnerTeamKey === "eux" ? dixDeDerBonus : 0),
     };
-    const classicCapotScores =
+    const classicHandResolution =
       allHandsEmpty && table.mode === "classic"
-        ? computeClassicCapotScores(nextTricksWon)
+        ? computeClassicHandResolution(
+            currentHand,
+            nextScoreManche,
+            nextTricksWon,
+            currentHand.classicLitigePoints
+          )
         : null;
 
-    const nextContractScores =
-      allHandsEmpty && table.mode === "classic"
-        ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
-        : allHandsEmpty && table.mode === "contree"
-          ? computeContreeContractScores(currentHand, nextScoreManche, nextTricksWon)
-          : nextScoreManche;
+    const nextClassicLitigePoints =
+      classicHandResolution?.pendingLitigePoints ??
+      Math.max(
+        0,
+        Number(currentHand.classicLitigePoints || 0)
+      );
 
     const beloteBonusesByTeam = {
       nous: 0,
@@ -4433,14 +4630,6 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       }
     }
 
-    const nextScoreWithBelote =
-      beloteBonusesByTeam.nous > 0 || beloteBonusesByTeam.eux > 0
-        ? {
-            nous: nextContractScores.nous + beloteBonusesByTeam.nous,
-            eux: nextContractScores.eux + beloteBonusesByTeam.eux,
-          }
-        : nextContractScores;
-
     const modernAnnouncementWinningTeam =
       allHandsEmpty && (table.mode === "moderne" || table.mode === "contree")
         ? currentHand.modernAnnouncements?.winningTeam || null
@@ -4456,17 +4645,43 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           )
         : 0;
 
+    const nextContractScores =
+      allHandsEmpty && table.mode === "classic"
+        ? classicHandResolution?.scores || nextScoreManche
+        : allHandsEmpty && table.mode === "contree"
+          ? computeContreeContractScores(
+                currentHand,
+                nextScoreManche,
+                nextTricksWon,
+                beloteBonusesByTeam,
+                modernAnnouncementWinningTeam,
+                modernAnnouncementPoints
+              )
+          : nextScoreManche;
+
+    const nextScoreWithBelote =
+      table.mode === "contree"
+        ? nextContractScores
+        : beloteBonusesByTeam.nous > 0 || beloteBonusesByTeam.eux > 0
+          ? {
+              nous: nextContractScores.nous + beloteBonusesByTeam.nous,
+              eux: nextContractScores.eux + beloteBonusesByTeam.eux,
+            }
+          : nextContractScores;
+
     const nextScoreWithModernAnnouncements =
-      modernAnnouncementPoints > 0
-        ? {
-            nous:
-              nextScoreWithBelote.nous +
-              (modernAnnouncementWinningTeam === "nous" ? modernAnnouncementPoints : 0),
-            eux:
-              nextScoreWithBelote.eux +
-              (modernAnnouncementWinningTeam === "eux" ? modernAnnouncementPoints : 0),
-          }
-        : nextScoreWithBelote;
+      table.mode === "contree"
+        ? nextScoreWithBelote
+        : modernAnnouncementPoints > 0
+          ? {
+              nous:
+                nextScoreWithBelote.nous +
+                (modernAnnouncementWinningTeam === "nous" ? modernAnnouncementPoints : 0),
+              eux:
+                nextScoreWithBelote.eux +
+                (modernAnnouncementWinningTeam === "eux" ? modernAnnouncementPoints : 0),
+            }
+          : nextScoreWithBelote;
 
     const nextScores = allHandsEmpty
       ? {
@@ -4480,7 +4695,12 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     const targetScore =
       table.mode === "contree" ? 1500 : table.mode === "classic" ? 1000 : 1500;
     const winnerTeam =
-      allHandsEmpty && ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
+      allHandsEmpty &&
+      !(
+        table.mode === "classic" &&
+        nextClassicLitigePoints > 0
+      ) &&
+      ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
         ? (nextScores.nous || 0) >= (nextScores.eux || 0)
           ? "nous"
           : "eux"
@@ -4494,6 +4714,13 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           ? "FIN_DE_MANCHE"
           : "PLI_EN_COURS",
       scoreManche: allHandsEmpty ? nextScoreWithModernAnnouncements : nextScoreManche,
+      classicLitigePoints:
+        allHandsEmpty && table.mode === "classic"
+          ? nextClassicLitigePoints
+          : Math.max(
+              0,
+              Number(currentHand.classicLitigePoints || 0)
+            ),
       tricksWon: nextTricksWon,
       scores: nextScores,
       partieTerminee,
