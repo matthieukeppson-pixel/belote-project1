@@ -4252,40 +4252,22 @@ function buildFirstBotPlayCardAction(table) {
     );
 
   const chooseLeadCard = () => {
-    const activeTeam = seatTeamKey(activeSeatIndex);
-
-    const takerTeam =
-      typeof hand.takerSeatIndex === "number"
-        ? seatTeamKey(hand.takerSeatIndex)
-        : null;
-
-    const teamHasContract = activeTeam === takerTeam;
-
     const trumpCards =
       atout && atout !== "SA" && atout !== "TA"
         ? legalCards.filter((card) => isTrump(card))
         : [];
 
-    const hasStrongTrump = trumpCards.some(
-      (card) =>
-        getValue(card) === "J" ||
-        getValue(card) === "9"
+    const trumpJack = trumpCards.find(
+      (card) => getValue(card) === "J"
     );
 
     /*
-     * Le preneur ou son partenaire tire les atouts lorsqu'il possède
-     * au moins trois atouts avec le Valet ou le 9.
+     * À l'entame, tout bot qui possède le Valet d'atout
+     * le joue en premier, quel que soit son camp
+     * ou son nombre d'atouts.
      */
-    if (
-      teamHasContract &&
-      trumpCards.length >= 3 &&
-      hasStrongTrump
-    ) {
-      return [...trumpCards].sort(
-        (a, b) =>
-          getRankValue(b) - getRankValue(a) ||
-          originalIndex(a) - originalIndex(b)
-      )[0];
+    if (trumpJack) {
+      return trumpJack;
     }
 
     /*
