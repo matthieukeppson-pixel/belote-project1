@@ -2600,8 +2600,8 @@ const activeSeatInfo =
 const activeIsBot = !!activeSeatInfo?.isBot;
 const turnKey = `${sharedRoundId}:${active}`;
 
-// En Contrée, les annonces des bots sont pilotées par le serveur.
-if (mode === "contree" && activeIsBot) return;
+// En Moderne et Contrée, les annonces des bots sont pilotées par le serveur.
+if (activeIsBot) return;
 
   const timer = setTimeout(() => {
     if (modernAnnouncementSentKeyRef.current === turnKey) return;

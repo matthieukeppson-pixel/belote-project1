@@ -5285,25 +5285,12 @@ if (
   if (actorSeatIndex === -1) return;
 
   const activeSeatIndex = currentHand.currentTurnSeatIndex;
-  const activeSeatPseudo =
-    activeSeatIndex != null ? t.seats[activeSeatIndex] : null;
-
-  let effectiveSeatIndex = actorSeatIndex;
-
-  if (actorSeatIndex !== activeSeatIndex) {
-    const actorIsHuman = !isBotPseudo(pseudo);
-    const activeIsBot = isBotPseudo(activeSeatPseudo);
-    const canProxyBotAnnouncement = actorIsHuman && activeIsBot;
-
-    if (!canProxyBotAnnouncement) return;
-
-    effectiveSeatIndex = activeSeatIndex;
-  }
+  if (actorSeatIndex !== activeSeatIndex) return;
 
   const nextHand = applyServerModernAnnouncementAction(
     t,
     currentHand,
-    effectiveSeatIndex,
+    actorSeatIndex,
     action
   );
 
