@@ -3,6 +3,7 @@ import PseudoDisplay from "../components/PseudoDisplay";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import TableChat from "../components/TableChat";
+import SalonHostPanel from "../components/SalonHostPanel";
 import "../styles/Table.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
@@ -208,6 +209,15 @@ const modeLabel =
   mode === "moderne" ? "Moderne" :
   "Classique";
 const [tableChatMessages, setTableChatMessages] = useState([]);
+const [salonPanelAllowed, setSalonPanelAllowed] = useState(false);
+const [salonPlayers, setSalonPlayers] = useState([]);
+const [salonMessages, setSalonMessages] = useState([]);
+const [salonPanelOpen, setSalonPanelOpen] = useState(false);
+const [salonUnreadCount, setSalonUnreadCount] = useState(0);
+const [salonArrivalNotice, setSalonArrivalNotice] = useState("");
+const salonPanelAllowedRef = useRef(false);
+const salonPanelOpenRef = useRef(false);
+const salonArrivalTimerRef = useRef(null);
 const [tableAudioState, setTableAudioState] = useState("off");
 const [tableAudioError, setTableAudioError] = useState("");
 const [tableAudioPeers, setTableAudioPeers] = useState([]);
@@ -247,6 +257,27 @@ function sendTableMessage(text) {
     })
   );
 }
+function sendSalonMessage(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return;
+
+  const ws = wsTableRef.current;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  ws.send(JSON.stringify({ type: "message", text: clean }));
+}
+
+function toggleSalonPanel() {
+  setSalonPanelOpen((previous) => {
+    const next = !previous;
+    salonPanelOpenRef.current = next;
+
+    if (next) setSalonUnreadCount(0);
+
+    return next;
+  });
+}
+
 const stopTableMicroStream = useCallback(() => {
   const stream = tableMicroStreamRef.current;
   tableMicroStreamRef.current = null;
@@ -1556,6 +1587,11 @@ function canChoosePosition(position) {
 useEffect(() => {
   if (!tableId) return;
 
+  salonPanelAllowedRef.current = false;
+  setSalonPanelAllowed(false);
+  salonPanelOpenRef.current = false;
+  setSalonPanelOpen(false);
+
   setTableChatMessages([]);
   resetTableRelayState();
   resetTableMicroUi();
@@ -1567,6 +1603,7 @@ useEffect(() => {
   setTableAudioPeers([]);
 
   let isCancelled = false;
+  let tableJoinSent = false;
 
   const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:4000";
     const ws = new WebSocket(wsUrl);
@@ -1582,11 +1619,12 @@ useEffect(() => {
   return;
 }
 
-    ws.send(JSON.stringify({ type: "join_salon", pseudo, avatar }));
     ws.send(
       JSON.stringify({
-        type: tableRole === "visitor" ? "watch_table" : "join_table",
-        tableId,
+        type: "join_salon",
+        pseudo,
+        avatar,
+        token: sessionStorage.getItem("token") || "",
       })
     );
   };
@@ -1594,6 +1632,105 @@ useEffect(() => {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
+
+      if (msg.type === "salon_host_access") {
+        if (!tableJoinSent && ws.readyState === WebSocket.OPEN) {
+          tableJoinSent = true;
+          ws.send(
+            JSON.stringify({
+              type: tableRole === "visitor" ? "watch_table" : "join_table",
+              tableId,
+            })
+          );
+        }
+
+        return;
+      }
+
+      if (
+        msg.type === "joined_table" &&
+        Number(msg.tableId) === Number(tableId)
+      ) {
+        salonPanelAllowedRef.current = true;
+        setSalonPanelAllowed(true);
+
+        return;
+      }
+
+      if (
+        msg.type === "watching_table" &&
+        Number(msg.tableId) === Number(tableId)
+      ) {
+        salonPanelAllowedRef.current = false;
+        setSalonPanelAllowed(false);
+        salonPanelOpenRef.current = false;
+        setSalonPanelOpen(false);
+
+        return;
+      }
+
+      if (msg.type === "players" && Array.isArray(msg.players)) {
+        setSalonPlayers(
+          msg.players.filter((player) => player?.name)
+        );
+        return;
+      }
+
+      if (msg.type === "salon_guest_arrived") {
+        if (!salonPanelAllowedRef.current) return;
+
+        const guest = String(msg.pseudo || "").trim();
+        if (!guest || guest === pseudo) return;
+
+        setSalonArrivalNotice(
+          `${guest} vient d’entrer dans le salon`
+        );
+
+        if (!salonPanelOpenRef.current) {
+          setSalonUnreadCount((count) => count + 1);
+        }
+
+        if (salonArrivalTimerRef.current) {
+          clearTimeout(salonArrivalTimerRef.current);
+        }
+
+        salonArrivalTimerRef.current = setTimeout(() => {
+          setSalonArrivalNotice("");
+          salonArrivalTimerRef.current = null;
+        }, 6000);
+
+        return;
+      }
+
+      if (msg.type === "message") {
+        if (!salonPanelAllowedRef.current) return;
+        if (msg.user === "Système") return;
+
+        const author = String(msg.user || "").trim();
+        const messageText = String(msg.text || "").trim();
+
+        if (!author || !messageText) return;
+
+        setSalonMessages((messages) =>
+          [
+            ...messages,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              user: author,
+              text: messageText,
+            },
+          ].slice(-100)
+        );
+
+        if (
+          !salonPanelOpenRef.current &&
+          author !== pseudo
+        ) {
+          setSalonUnreadCount((count) => count + 1);
+        }
+
+        return;
+      }
 
       if (msg.type === "tables" && Array.isArray(msg.tables)) {
         const found = msg.tables.find((t) => Number(t.id) === tableId) || null;
@@ -3409,6 +3546,18 @@ const showTableDebug = false;
               )}
           </div>
         </div>
+
+        <SalonHostPanel
+          allowed={salonPanelAllowed}
+          open={salonPanelOpen}
+          players={salonPlayers}
+          messages={salonMessages}
+          unreadCount={salonUnreadCount}
+          arrivalNotice={salonArrivalNotice}
+          currentUserName={pseudo}
+          onToggle={toggleSalonPanel}
+          onSendMessage={sendSalonMessage}
+        />
 
         <div className="table-chat-zone">
 <TableChat
