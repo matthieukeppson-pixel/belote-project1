@@ -308,6 +308,7 @@ export default function SalonJeu({ user }) {
           type: "join_salon",
           pseudo: currentName,
           avatar: localStorage.getItem("profile_photo_local") || "/avatar_blue.png",
+          token: sessionStorage.getItem("token") || "",
         })
       );
 

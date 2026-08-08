@@ -1,0 +1,247 @@
+.salon-host {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 3200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.salon-host__toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(17, 35, 50, 0.95);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.salon-host__toggle span,
+.salon-host__toggle strong {
+  min-width: 23px;
+  height: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.salon-host__toggle span {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.salon-host__toggle strong {
+  background: #efb93f;
+  color: #172330;
+}
+
+.salon-host__arrival {
+  max-width: 330px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(17, 35, 50, 0.96);
+  color: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.salon-host__panel {
+  width: min(340px, calc(100vw - 24px));
+  max-height: 65vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(12, 28, 42, 0.97);
+  color: white;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.42);
+}
+
+.salon-host__panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.salon-host__panel header button {
+  border: 0;
+  background: transparent;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.salon-host__messages {
+  overflow-y: auto;
+  padding: 11px;
+}
+
+.salon-host__messages > p {
+  opacity: 0.65;
+  text-align: center;
+}
+
+.salon-host__message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin-bottom: 9px;
+}
+
+.salon-host__message.is-mine {
+  align-items: flex-end;
+}
+
+.salon-host__message b {
+  color: #efc76c;
+  font-size: 12px;
+}
+
+.salon-host__message span {
+  max-width: 90%;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.11);
+  overflow-wrap: anywhere;
+}
+
+.salon-host__message.is-mine span {
+  background: rgba(64, 132, 184, 0.45);
+}
+
+.salon-host__panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  padding: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.salon-host__panel input {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.salon-host__panel form button {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: #efb93f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.salon-host__panel form button:disabled {
+  opacity: 0.45;
+}
+
+@media (max-width: 700px) {
+  .salon-host {
+    top: 7px;
+    right: 7px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .salon-host {
+    top: 305px;
+    right: auto;
+    left: 20px;
+    align-items: flex-start;
+  }
+
+  .salon-host__panel,
+  .salon-host__arrival {
+    width: 205px;
+    max-width: 205px;
+  }
+
+  .salon-host__panel {
+    height: min(460px, calc(100vh - 385px));
+    max-height: calc(100vh - 385px);
+  }
+}
+
+/* Harmonisation bordeaux avec la table */
+.salon-host__toggle,
+.salon-host__arrival,
+.salon-host__panel {
+  border-color: rgba(220, 180, 120, 0.48);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(112, 12, 20, 0.97),
+      rgba(65, 5, 12, 0.97)
+    );
+  color: #f5e7d0;
+}
+
+.salon-host__panel {
+  border: 1px solid rgba(220, 180, 120, 0.48);
+}
+
+.salon-host__message span {
+  background: rgba(255, 235, 215, 0.11);
+}
+
+.salon-host__message.is-mine span {
+  background: rgba(153, 38, 48, 0.78);
+}
+
+.salon-host__panel input {
+  border-color: rgba(220, 180, 120, 0.38);
+  background: rgba(55, 3, 9, 0.55);
+  color: #fff4e7;
+}
+
+.salon-host__panel input::placeholder {
+  color: rgba(245, 231, 208, 0.62);
+}
+
+/* Défilement réel de l’historique du salon */
+.salon-host__messages {
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+}
+
+/* Barre de défilement bordeaux */
+.salon-host__messages {
+  scrollbar-width: thin;
+  scrollbar-color: #7b0f1b rgba(255, 235, 215, 0.10);
+}
+
+.salon-host__messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.salon-host__messages::-webkit-scrollbar-track {
+  background: rgba(255, 235, 215, 0.08);
+  border-radius: 999px;
+}
+
+.salon-host__messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7b0f1b, #4e0811);
+  border: 1px solid rgba(220, 180, 120, 0.30);
+  border-radius: 999px;
+}
+
+.salon-host__messages::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #8f1421, #5a0a13);
+}

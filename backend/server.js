@@ -171,8 +171,8 @@ function createAuthSession(user) {
   return token;
 }
 
-async function getAuthUserFromRequest(req) {
-  const token = getAuthTokenFromRequest(req);
+async function getAuthUserFromToken(rawToken) {
+  const token = String(rawToken || "").trim();
   if (!token) return null;
 
   const session = authSessions.get(token);
@@ -195,11 +195,18 @@ async function getAuthUserFromRequest(req) {
 
   if (Number(user.is_banned) === 1) return null;
 
-  if (String(user.role || "player") !== "admin" && Number(user.is_approved) !== 1) {
+  if (
+    String(user.role || "player") !== "admin" &&
+    Number(user.is_approved) !== 1
+  ) {
     return null;
   }
 
   return user;
+}
+
+async function getAuthUserFromRequest(req) {
+  return getAuthUserFromToken(getAuthTokenFromRequest(req));
 }
 
 async function requireAdminUser(req, res) {
@@ -2289,6 +2296,26 @@ function broadcast(obj) {
   const payload = JSON.stringify(obj);
   wss.clients.forEach((client) => {
     if (client.readyState === 1) client.send(payload);
+  });
+}
+
+
+function sendToSeatedHumanPlayersAtTable(obj, excludedPseudo = "") {
+  const payload = JSON.stringify(obj);
+  const excluded = String(excludedPseudo || "").trim();
+
+  wss.clients.forEach((client) => {
+    if (client.readyState !== 1) return;
+
+    const clientPseudo = String(client.pseudo || "").trim();
+    if (!clientPseudo || isBotPseudo(clientPseudo)) return;
+    if (excluded && clientPseudo === excluded) return;
+
+    const tableId = normalizeTableId(client.tableId);
+    if (!tableId) return;
+    if (!isPlayerInTable(tableId, clientPseudo)) return;
+
+    client.send(payload);
   });
 }
 
@@ -4877,6 +4904,8 @@ wss.on("connection", (ws) => {
   ws.tableId = null;
   ws.tableRole = null;
   ws.audioIdentity = null;
+  ws.authUserId = null;
+  ws.isSalonHost = false;
 
   // Ã©tat initial
   ws.send(JSON.stringify({ type: "players", players: playersArray() }));
@@ -4896,19 +4925,67 @@ wss.on("connection", (ws) => {
     // ===============================
     if (msg.type === "join_salon") {
       clearAudioIdentity(ws);
-      const pseudo = String(msg.pseudo || "Joueur").trim() || "Joueur";
+
+      const requestedPseudo =
+        String(msg.pseudo || "Joueur").trim() || "Joueur";
+
+      const authUser = await getAuthUserFromToken(msg.token);
+
+      const pseudo =
+        String(authUser?.username || requestedPseudo).trim() || "Joueur";
+
       ws.pseudo = pseudo;
+      ws.authUserId = authUser?.id ? Number(authUser.id) : null;
+      ws.isSalonHost = Boolean(
+        authUser && isAnimationHost(authUser.username)
+      );
+
+      const requestedAvatar =
+        String(msg.avatar || "").trim();
+
+      const storedAvatar =
+        String(authUser?.avatar_url || "").trim();
 
       const avatar =
-        String(msg.avatar || "/avatar_blue.png").trim() || "/avatar_blue.png";
-      const role = await getUserRoleForPseudo(pseudo);
+        requestedAvatar &&
+        requestedAvatar !== "/avatar_blue.png"
+          ? requestedAvatar
+          : storedAvatar || requestedAvatar || "/avatar_blue.png";
+
+      const role = authUser
+        ? normalizePublicRole(authUser.role)
+        : await getUserRoleForPseudo(pseudo);
+
+      ws.send(
+        JSON.stringify({
+          type: "salon_host_access",
+          allowed: ws.isSalonHost,
+        })
+      );
+
       const existing = playersMap.get(pseudo);
+
       if (!existing) {
-        playersMap.set(pseudo, { name: pseudo, avatar, role, count: 1 });
-        system(`â­ Bienvenue ${pseudo} â­`);
+        playersMap.set(
+          pseudo,
+          { name: pseudo, avatar, role, count: 1 }
+        );
+
+        system(`⭐ Bienvenue ${pseudo} ⭐`);
+
+        if (!isBotPseudo(pseudo)) {
+          sendToSeatedHumanPlayersAtTable(
+            {
+              type: "salon_guest_arrived",
+              pseudo,
+              avatar,
+              role,
+            },
+            pseudo
+          );
+        }
       } else {
         existing.count += 1;
-        // âœ… on ne touche PAS existing.avatar ici
       }
 
       broadcastPlayers();
