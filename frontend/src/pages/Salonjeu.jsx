@@ -69,6 +69,9 @@ const SALON_EMOJIS = [
   { code: ":boude:", src: "/emojis/boude.png", alt: "boude" },
   { code: ":poignee_de_main:", src: "/emojis/poignee_de_main.png", alt: "poignée de main" },
   { code: ":burger:", src: "/emojis/burger.png", alt: "burger" },
+
+  // Emoji animé
+  { code: ":danseur:", src: "/emojis/danseur-belote-et-amis.gif", alt: "danseur" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(

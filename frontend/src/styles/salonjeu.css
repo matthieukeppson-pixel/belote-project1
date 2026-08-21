@@ -1175,3 +1175,14 @@
   width: auto;
   height: 24px;
 }
+
+/* Taille spéciale de l'emoji danseur animé */
+.salon-chat-custom-emoji[src$="/emojis/danseur-belote-et-amis.gif"] {
+  width: auto;
+  height: 60px;
+}
+
+.salon-chat-emoji-btn-img[src$="/emojis/danseur-belote-et-amis.gif"] {
+  width: auto;
+  height: 32px;
+}
