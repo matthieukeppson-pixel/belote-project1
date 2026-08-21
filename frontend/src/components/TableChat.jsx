@@ -68,6 +68,7 @@ const SIMPLE_EMOJIS = [
   // Emoji animé
   { code: ":danseur:", src: "/emojis/danseur-belote-et-amis.gif", alt: "danseur" },
   { code: ":couple_rock:", src: "/emojis/couple-rock-belote-et-amis.gif", alt: "couple rock" },
+  { code: ":danseuse:", src: "/emojis/danseuse-belote-et-amis.gif", alt: "danseuse" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
