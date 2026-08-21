@@ -72,6 +72,7 @@ const SALON_EMOJIS = [
 
   // Emoji animé
   { code: ":danseur:", src: "/emojis/danseur-belote-et-amis.gif", alt: "danseur" },
+  { code: ":couple_rock:", src: "/emojis/couple-rock-belote-et-amis.gif", alt: "couple rock" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
