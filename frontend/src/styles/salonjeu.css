@@ -1186,3 +1186,14 @@
   width: auto;
   height: 32px;
 }
+
+/* Taille spéciale de l'emoji couple rock animé */
+.salon-chat-custom-emoji[src$="/emojis/couple-rock-belote-et-amis.gif"] {
+  width: auto;
+  height: 60px;
+}
+
+.salon-chat-emoji-btn-img[src$="/emojis/couple-rock-belote-et-amis.gif"] {
+  width: auto;
+  height: 32px;
+}
