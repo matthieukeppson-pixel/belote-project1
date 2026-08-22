@@ -70,6 +70,7 @@ const SIMPLE_EMOJIS = [
   { code: ":couple_rock:", src: "/emojis/couple-rock-belote-et-amis.gif", alt: "couple rock" },
   { code: ":danseuse:", src: "/emojis/danseuse-belote-et-amis.gif", alt: "danseuse" },
   { code: ":couple_slow:", src: "/emojis/couple-slow-belote-et-amis.gif", alt: "couple slow" },
+  { code: ":chenille:", src: "/emojis/chenille-belote-et-amis.gif", alt: "chenille" },
 ];
 
 const CUSTOM_CHAT_EMOJIS = Object.fromEntries(
