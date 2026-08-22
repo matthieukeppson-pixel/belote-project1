@@ -420,3 +420,14 @@
   width: auto;
   height: 38px;
 }
+
+/* Taille spéciale de l'emoji chenille animée */
+.tablechat-custom-emoji[src$="/emojis/chenille-belote-et-amis.gif"] {
+  width: auto;
+  height: 120px;
+}
+
+.tablechat-emoji-btn-img[src$="/emojis/chenille-belote-et-amis.gif"] {
+  width: auto;
+  height: 56px;
+}
