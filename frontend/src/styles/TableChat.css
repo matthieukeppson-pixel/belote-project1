@@ -409,3 +409,14 @@
   width: auto;
   height: 36px;
 }
+
+/* Taille spéciale de l'emoji couple slow animé */
+.tablechat-custom-emoji[src$="/emojis/couple-slow-belote-et-amis.gif"] {
+  width: auto;
+  height: 72px;
+}
+
+.tablechat-emoji-btn-img[src$="/emojis/couple-slow-belote-et-amis.gif"] {
+  width: auto;
+  height: 38px;
+}
