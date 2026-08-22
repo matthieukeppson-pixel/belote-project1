@@ -74,6 +74,7 @@ const SALON_EMOJIS = [
   { code: ":danseur:", src: "/emojis/danseur-belote-et-amis.gif", alt: "danseur" },
   { code: ":couple_rock:", src: "/emojis/couple-rock-belote-et-amis.gif", alt: "couple rock" },
   { code: ":danseuse:", src: "/emojis/danseuse-belote-et-amis.gif", alt: "danseuse" },
+  { code: ":couple_slow:", src: "/emojis/couple-slow-belote-et-amis.gif", alt: "couple slow" },
 ];
 
 const SALON_CHAT_EMOJIS = Object.fromEntries(
