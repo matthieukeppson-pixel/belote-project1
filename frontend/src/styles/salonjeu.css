@@ -1223,12 +1223,12 @@
 /* Taille spéciale de l'emoji chenille animée */
 .salon-chat-custom-emoji[src$="/emojis/chenille-belote-et-amis.gif"] {
   width: auto;
-  height: 120px;
+  height: 76px;
 }
 
 .salon-chat-emoji-btn-img[src$="/emojis/chenille-belote-et-amis.gif"] {
   width: auto;
-  height: 56px;
+  height: 34px;
 }
 
 /* Taille spéciale de l'emoji peeker animé */
