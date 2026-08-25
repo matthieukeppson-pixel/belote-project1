@@ -431,3 +431,14 @@
   width: auto;
   height: 56px;
 }
+
+/* Taille spéciale de l'emoji peeker animé */
+.tablechat-custom-emoji[src$="/emojis/peeker-belote-et-amis.gif"] {
+  width: auto;
+  height: 90px;
+}
+
+.tablechat-emoji-btn-img[src$="/emojis/peeker-belote-et-amis.gif"] {
+  width: auto;
+  height: 44px;
+}
