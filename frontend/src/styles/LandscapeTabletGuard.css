@@ -1,0 +1,104 @@
+.tablet-landscape-guard {
+  display: none;
+}
+
+/*
+ * Tablettes en orientation portrait uniquement.
+ * Le contenu SALON / TABLE reste monte derriere :
+ * aucune reconnexion et aucun rechargement au changement d'orientation.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: portrait)
+  and (min-width: 600px)
+  and (max-width: 1100px)
+  and (min-height: 800px) {
+
+  .tablet-landscape-guard {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    padding: 32px;
+
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(12, 55, 125, 0.98),
+        rgba(1, 13, 43, 0.99)
+      );
+
+    color: #ffffff;
+    text-align: center;
+
+    touch-action: none;
+  }
+
+  .tablet-landscape-guard__card {
+    width: min(100%, 520px);
+    padding: 36px 30px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(120, 190, 255, 0.55);
+    border-radius: 24px;
+
+    background: rgba(0, 24, 75, 0.78);
+
+    box-shadow:
+      0 0 28px rgba(0, 150, 255, 0.35),
+      inset 0 0 18px rgba(0, 120, 255, 0.16);
+  }
+
+  .tablet-landscape-guard__device {
+    position: relative;
+
+    width: 132px;
+    height: 84px;
+
+    margin: 0 auto 32px;
+
+    border: 7px solid #ffffff;
+    border-radius: 16px;
+
+    box-sizing: border-box;
+
+    box-shadow: 0 0 20px rgba(110, 190, 255, 0.65);
+  }
+
+  .tablet-landscape-guard__device::after {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    right: 6px;
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+    background: #ffffff;
+
+    transform: translateY(-50%);
+  }
+
+  .tablet-landscape-guard__title {
+    margin-bottom: 14px;
+
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .tablet-landscape-guard__text {
+    font-size: clamp(1.05rem, 3vw, 1.35rem);
+    line-height: 1.45;
+    color: #dceeff;
+  }
+}

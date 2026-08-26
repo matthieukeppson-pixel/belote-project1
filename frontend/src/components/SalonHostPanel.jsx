@@ -11,6 +11,7 @@ export default function SalonHostPanel({
   currentUserName,
   onToggle,
   onSendMessage,
+  tabletAudioControl = null,
 }) {
   const [draft, setDraft] = useState("");
   const messagesRef = useRef(null);
@@ -44,16 +45,24 @@ export default function SalonHostPanel({
         </div>
       )}
 
-      <button
-        type="button"
-        className="salon-host__toggle"
-        onClick={onToggle}
-      >
-        Salon <span>{players.length}</span>
-        {unreadCount > 0 && (
-          <strong>{unreadCount > 99 ? "99+" : unreadCount}</strong>
+      <div className="salon-host__topline">
+        {tabletAudioControl && (
+          <div className="salon-host__tablet-audio">
+            {tabletAudioControl}
+          </div>
         )}
-      </button>
+
+        <button
+          type="button"
+          className="salon-host__toggle"
+          onClick={onToggle}
+        >
+          Salon <span>{players.length}</span>
+          {unreadCount > 0 && (
+            <strong>{unreadCount > 99 ? "99+" : unreadCount}</strong>
+          )}
+        </button>
+      </div>
 
       {open && (
         <section className="salon-host__panel">
