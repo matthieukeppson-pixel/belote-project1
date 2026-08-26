@@ -10,6 +10,7 @@ import {
 import Accueil from "./pages/Accueil.jsx";
 import SalonJeu from "./pages/Salonjeu.jsx";
 import Table from "./pages/Table.jsx";
+import LandscapeTabletGuard from "./components/LandscapeTabletGuard.jsx";
 import Admin from "./pages/Admin.jsx";
 
 const API_BASE_URL =
@@ -143,7 +144,9 @@ export default function App() {
           path="/salon"
           element={
             <ProtectedRoute authStatus={authStatus}>
-              <SalonJeu user={user} />
+              <LandscapeTabletGuard>
+                <SalonJeu user={user} />
+              </LandscapeTabletGuard>
             </ProtectedRoute>
           }
         />
@@ -161,7 +164,9 @@ export default function App() {
           path="/table"
           element={
             <ProtectedRoute authStatus={authStatus}>
-              <Table />
+              <LandscapeTabletGuard>
+                <Table />
+              </LandscapeTabletGuard>
             </ProtectedRoute>
           }
         />
@@ -170,7 +175,9 @@ export default function App() {
           path="/table/:id"
           element={
             <ProtectedRoute authStatus={authStatus}>
-              <Table />
+              <LandscapeTabletGuard>
+                <Table />
+              </LandscapeTabletGuard>
             </ProtectedRoute>
           }
         />

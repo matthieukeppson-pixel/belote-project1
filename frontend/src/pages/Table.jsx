@@ -3557,6 +3557,26 @@ const showTableDebug = false;
           currentUserName={pseudo}
           onToggle={toggleSalonPanel}
           onSendMessage={sendSalonMessage}
+          tabletAudioControl={
+            canUseTableMicro ? (
+              <button
+                type="button"
+                className={`salon-host__tablet-audio-btn${tableAudioIsReady ? " active" : ""}`}
+                onClick={tableMicroClickHandler}
+                disabled={tableMicroButtonDisabled}
+                aria-busy={tableMicroButtonIsBusy}
+                aria-pressed={tableMicroIsActive}
+                title={
+                  tableAudioIsReady
+                    ? `${tableMicroTitle} ${tableRelayStatusTitle} ${tableRemoteAudioStatusTitle}`
+                    : tableMicroTitle
+                }
+              >
+                <span aria-hidden="true">{"\u{1F399}"}</span>
+                {tableMicroLabel}
+              </button>
+            ) : null
+          }
         />
 
         <div className="table-chat-zone">
