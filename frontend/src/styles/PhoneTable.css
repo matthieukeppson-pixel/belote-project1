@@ -1,0 +1,668 @@
+/* ==========================================================
+   TABLE DE JEU — SMARTPHONE UNIQUEMENT
+
+   Principe :
+   - smartphone portrait : rotation obligatoire
+   - smartphone paysage : table + tchat
+   - tablette et ordinateur : aucune règle applicable
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PORTRAIT : PAYSAGE OBLIGATOIRE
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: portrait)
+  and (max-width: 599px) {
+
+  .table-page::before {
+    content:
+      "↻\A\A"
+      "Tournez votre téléphone\A\A"
+      "Pour jouer, utilisez votre smartphone en mode paysage.";
+
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    padding: 28px;
+
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(90, 12, 22, 1),
+        rgba(24, 3, 8, 1)
+      );
+
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: clamp(1.25rem, 6vw, 2rem);
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: center;
+    white-space: pre-line;
+
+    pointer-events: auto;
+    touch-action: none;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PAYSAGE
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+
+    overflow: hidden;
+  }
+
+  .table-layout {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+
+    gap: clamp(5px, 1vw, 10px);
+
+    padding: 30px 5px 4px;
+
+    box-sizing: border-box;
+  }
+
+  .table-zone {
+    position: relative;
+
+    flex: 0 0 360px;
+    width: 360px;
+    height: 360px;
+
+    overflow: visible;
+  }
+
+  .table-board {
+    position: absolute;
+    top: 21px;
+    left: 21px;
+
+    transform: scale(0.44);
+    transform-origin: top left;
+  }
+
+  /*
+   * Le responsive historique masque le tchat sous 900px.
+   * Le smartphone paysage le réactive explicitement.
+   */
+  .table-chat-zone {
+    display: block;
+
+    flex: 1 1 250px;
+
+    width: auto;
+    min-width: 215px;
+    max-width: 360px;
+    height: 360px;
+
+    margin-left: 0;
+    padding: 9px;
+
+    border-radius: 13px;
+
+    box-sizing: border-box;
+  }
+
+  .tablechat-title {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+
+    font-size: 11px;
+  }
+
+  .tablechat-line {
+    margin-bottom: 5px;
+
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .tablechat-inputzone {
+    gap: 5px;
+  }
+
+  .tablechat-input {
+    min-width: 0;
+
+    padding: 8px 7px;
+
+    font-size: 13px;
+  }
+
+  .tablechat-emoji-toggle {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+
+    font-size: 19px;
+  }
+
+  .tablechat-button {
+    padding: 8px;
+
+    font-size: 12px;
+  }
+
+  .tablechat-emojis {
+    max-height: min(40vh, 116px);
+
+    overflow-y: auto;
+
+    gap: 5px;
+    padding: 6px 0 7px;
+  }
+
+  .tablechat-emoji-btn {
+    width: 31px;
+    height: 31px;
+  }
+
+  .table-back-btn {
+    top: 3px;
+    left: 3px;
+
+    max-width: 116px;
+
+    padding: 5px 7px;
+
+    font-size: 11px;
+    line-height: 1.05;
+
+    white-space: normal;
+  }
+
+  .table-page .card,
+  .table-page button {
+    touch-action: manipulation;
+  }
+
+  .table-page .card:hover .card-img {
+    transform: none;
+  }
+
+  .table-page .card:active .card-img {
+    transform: translateY(-8px);
+  }
+}
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PAYSAGE COMPACT
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 390px) {
+
+  .table-layout {
+    gap: 6px;
+    padding-top: 27px;
+  }
+
+  .table-zone {
+    flex-basis: 310px;
+
+    width: 310px;
+    height: 310px;
+  }
+
+  .table-board {
+    top: 20px;
+    left: 20px;
+
+    transform: scale(0.375);
+  }
+
+  .table-chat-zone {
+    min-width: 210px;
+    max-width: 330px;
+    height: 310px;
+
+    padding: 7px;
+  }
+
+  .tablechat-line {
+    font-size: 12px;
+  }
+
+  .tablechat-button {
+    padding-left: 6px;
+    padding-right: 6px;
+
+    font-size: 11px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PAYSAGE TRES COURT
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-layout {
+    gap: 4px;
+    padding-top: 25px;
+  }
+
+  .table-zone {
+    flex-basis: 280px;
+
+    width: 280px;
+    height: 280px;
+  }
+
+  .table-board {
+    top: 18px;
+    left: 18px;
+
+    transform: scale(0.34);
+  }
+
+  .table-chat-zone {
+    min-width: 195px;
+    height: 280px;
+
+    padding: 6px;
+  }
+
+  .tablechat-title {
+    margin-bottom: 3px;
+  }
+
+  .tablechat-inputzone {
+    gap: 3px;
+  }
+
+  .tablechat-input {
+    padding-left: 5px;
+    padding-right: 5px;
+
+    font-size: 12px;
+  }
+
+  .tablechat-emoji-toggle {
+    width: 32px;
+    min-width: 32px;
+    height: 34px;
+  }
+
+  .tablechat-button {
+    padding-left: 5px;
+    padding-right: 5px;
+
+    font-size: 10px;
+  }
+}
+
+
+/* ==========================================================
+   PHONE TABLE - BARRE COMMANDES
+
+   Smartphone paysage uniquement :
+   - le bouton bots quitte visuellement le plateau ;
+   - le bouton audio original du plateau est masque ;
+   - le controle audio existant dans SalonHostPanel est affiche
+     a cote de Salon.
+   ========================================================== */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Le layout réserve déjà environ 30 px en haut.
+   * Les commandes occupent cette barre au lieu du plateau.
+   */
+  .table-page .start-with-bots-btn {
+    position: fixed;
+    top: 3px;
+    left: 50%;
+    right: auto;
+
+    z-index: 3400;
+
+    transform: translateX(-50%);
+
+    min-height: 27px;
+    max-width: 132px;
+
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    font-size: 10px;
+    line-height: 1.05;
+
+    white-space: nowrap;
+  }
+
+  /*
+   * Bouton audio historique ordinateur :
+   * il ne doit plus sortir du plateau vers le tchat.
+   */
+  .table-page .table-board .table-micro-btn {
+    display: none;
+  }
+
+  /*
+   * Réutilisation du contrôle déjà prévu dans SalonHostPanel.
+   * Même logique audio, seulement une autre position visuelle.
+   */
+  .table-page .salon-host {
+    top: 3px;
+    right: 3px;
+
+    gap: 4px;
+  }
+
+  .table-page .salon-host__topline {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 4px;
+  }
+
+  .table-page .salon-host__tablet-audio {
+    display: block;
+  }
+
+  .table-page .salon-host__tablet-audio-btn {
+    min-height: 27px;
+
+    padding: 4px 7px;
+
+    border-radius: 999px;
+
+    font-size: 9.5px;
+    line-height: 1;
+
+    white-space: nowrap;
+  }
+
+  .table-page .salon-host__toggle {
+    min-height: 27px;
+
+    padding: 4px 7px;
+
+    gap: 4px;
+
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .table-page .salon-host__toggle span,
+  .table-page .salon-host__toggle strong {
+    min-width: 18px;
+    height: 18px;
+
+    font-size: 9px;
+  }
+}
+
+
+/* Smartphone paysage particulièrement étroit / bas. */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .start-with-bots-btn {
+    min-height: 24px;
+    max-width: 118px;
+
+    padding: 3px 6px;
+
+    font-size: 9px;
+  }
+
+  .table-page .salon-host__tablet-audio-btn {
+    min-height: 24px;
+
+    padding: 3px 5px;
+
+    font-size: 8.5px;
+  }
+
+  .table-page .salon-host__toggle {
+    min-height: 24px;
+
+    padding: 3px 5px;
+
+    font-size: 9px;
+  }
+
+  .table-page .salon-host__toggle span,
+  .table-page .salon-host__toggle strong {
+    min-width: 16px;
+    height: 16px;
+
+    font-size: 8px;
+  }
+}
+
+
+/* ==========================================================
+   PHONE TABLE - SCORE ET MODE EN HAUT
+
+   Smartphone paysage uniquement.
+   Le mode quitte le bord gauche du plateau.
+   Le score remonte au-dessus du tapis.
+   ========================================================== */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * MODE : placé dans la barre supérieure, entre Retour
+   * et la commande Bots.
+   */
+  .table-page .table-mode-pill {
+    position: fixed;
+
+    top: 3px;
+    left: 118px;
+
+    z-index: 3390;
+
+    min-height: 27px;
+    max-width: 105px;
+
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+
+    padding: 4px 6px;
+
+    border-radius: 999px;
+
+    font-size: 9px;
+    line-height: 1;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /*
+   * Les anciens media queries plaçaient le score à +22px
+   * dans le plateau. On repasse volontairement en négatif :
+   * il se retrouve juste au-dessus du tapis.
+   */
+  .table-page .score-overlay.score-pill {
+    top: -48px;
+    left: 50%;
+
+    transform: translateX(-50%) scale(1.85);
+    transform-origin: top center;
+  }
+}
+
+
+/* Finition pour les smartphones paysage très bas. */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-mode-pill {
+    min-height: 24px;
+    max-width: 100px;
+
+    padding: 3px 5px;
+
+    font-size: 8.5px;
+  }
+
+  .table-page .score-overlay.score-pill {
+    top: -46px;
+
+    transform: translateX(-50%) scale(1.95);
+  }
+}
+
+
+/* ==========================================================
+   PHONE TABLE - AJUSTEMENT GAUCHE ET SCORE
+
+   Smartphone paysage uniquement :
+   - Mode sous Retour au salon ;
+   - Dernier pli davantage a gauche ;
+   - Score encore remonte.
+   ========================================================== */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /* Mode juste sous Retour au salon. */
+  .table-page .table-mode-pill {
+    position: fixed;
+
+    top: 34px;
+    left: 3px;
+
+    min-height: 25px;
+    max-width: 105px;
+
+    padding: 4px 6px;
+
+    font-size: 9px;
+    line-height: 1;
+
+    z-index: 3390;
+  }
+
+  /* Dernier pli : on le dégage du bord gauche du tapis. */
+  .table-page .last-trick-btn {
+    position: fixed;
+
+    left: 3px;
+
+    max-width: 98px;
+
+    padding: 5px 8px;
+
+    font-size: 10px;
+    line-height: 1;
+
+    white-space: nowrap;
+
+    z-index: 3390;
+  }
+
+  /* Si le mini-pli est ouvert, il suit le même bord gauche. */
+  .table-page .last-trick-mini-table {
+    left: 3px;
+  }
+
+  /* Remontée supplémentaire du score. */
+  .table-page .score-overlay.score-pill {
+    top: -100px;
+
+    left: 50%;
+
+    transform: translateX(-50%) scale(1.85);
+    transform-origin: top center;
+  }
+}
+
+
+/* Smartphone paysage très bas. */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-mode-pill {
+    top: 30px;
+
+    min-height: 22px;
+    max-width: 96px;
+
+    padding: 3px 5px;
+
+    font-size: 8px;
+  }
+
+  .table-page .last-trick-btn {
+    left: 3px;
+
+    max-width: 92px;
+
+    padding: 4px 6px;
+
+    font-size: 9px;
+  }
+
+  .table-page .last-trick-mini-table {
+    left: 3px;
+  }
+
+  .table-page .score-overlay.score-pill {
+    top: -96px;
+
+    transform: translateX(-50%) scale(1.95);
+  }
+}
