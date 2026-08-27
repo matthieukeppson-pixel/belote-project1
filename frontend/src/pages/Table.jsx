@@ -5,6 +5,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import TableChat from "../components/TableChat";
 import SalonHostPanel from "../components/SalonHostPanel";
 import "../styles/Table.css";
+import "../styles/PhoneTable.css";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 import Partie from "../game/Partie";

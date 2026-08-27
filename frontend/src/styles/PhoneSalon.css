@@ -1,0 +1,597 @@
+/* ==========================================================
+   SALON — SMARTPHONE UNIQUEMENT
+
+   Principe :
+   - smartphone portrait : rotation obligatoire
+   - smartphone paysage : interface compacte et adaptative
+   - tablette et ordinateur : aucune règle applicable
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PORTRAIT : PAYSAGE OBLIGATOIRE
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: portrait)
+  and (max-width: 599px) {
+
+  .salon-grid::before {
+    content:
+      "↻\A\A"
+      "Tournez votre téléphone\A\A"
+      "Pour continuer, utilisez votre smartphone en mode paysage.";
+
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    padding: 28px;
+
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(12, 55, 125, 0.99),
+        rgba(1, 13, 43, 1)
+      );
+
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: clamp(1.25rem, 6vw, 2rem);
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: center;
+    white-space: pre-line;
+
+    pointer-events: auto;
+    touch-action: none;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PAYSAGE
+   La hauteur courte identifie le téléphone et exclut les
+   tablettes paysage validées.
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .salon-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+
+    margin: 0;
+    padding: 4px;
+
+    box-sizing: border-box;
+
+    display: grid;
+    grid-template-columns:
+      minmax(150px, 30%)
+      minmax(230px, 1fr)
+      minmax(110px, 22%);
+
+    gap: clamp(4px, 0.8vw, 8px);
+    align-items: stretch;
+  }
+
+  .salon-grid .panel {
+    min-width: 0;
+    min-height: 0;
+
+    padding: clamp(5px, 1.3vh, 9px);
+
+    border-radius: 11px;
+    box-sizing: border-box;
+  }
+
+  .salon-grid .panel-side,
+  .salon-grid .panel-center {
+    width: auto;
+    height: 100%;
+    min-height: 0;
+
+    margin-top: 0;
+  }
+
+  .salon-grid .panel-title {
+    flex: 0 0 auto;
+
+    margin: 0 0 5px;
+    padding: 0;
+
+    font-size: clamp(0.82rem, 4vh, 1.15rem);
+    line-height: 1.05;
+  }
+
+
+  /* TABLES ------------------------------------------------ */
+
+  .salon-grid .btn-create-table,
+  .salon-grid .tables-ready-info {
+    flex: 0 0 auto;
+
+    margin: 0 0 5px;
+    padding: 6px 7px;
+
+    border-radius: 8px;
+
+    font-size: clamp(0.68rem, 2.8vh, 0.82rem);
+    line-height: 1.1;
+  }
+
+  .salon-grid .tables-list {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    gap: 5px;
+    padding-right: 2px;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .salon-grid .table-card {
+    min-height: 0;
+
+    margin: 0 0 5px;
+    padding: 7px;
+
+    border-radius: 9px;
+  }
+
+  .salon-grid .table-title {
+    font-size: clamp(0.82rem, 3.3vh, 1rem);
+    line-height: 1.05;
+  }
+
+  .salon-grid .table-info,
+  .salon-grid .table-seated-player {
+    font-size: clamp(0.65rem, 2.5vh, 0.78rem);
+    line-height: 1.15;
+  }
+
+  .salon-grid .table-card-actions {
+    gap: 4px;
+    margin-top: 5px;
+  }
+
+  .salon-grid .table-card button,
+  .salon-grid .table-card select {
+    min-height: 28px;
+
+    padding: 4px 5px;
+
+    border-radius: 7px;
+
+    font-size: clamp(0.65rem, 2.5vh, 0.78rem);
+    line-height: 1.05;
+
+    touch-action: manipulation;
+  }
+
+
+  /* TCHAT ------------------------------------------------- */
+
+  .salon-grid .panel-center {
+    overflow: hidden;
+  }
+
+  .salon-grid .chat-box {
+    flex: 1 1 auto;
+
+    min-width: 0;
+    min-height: 0;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .salon-grid .chat-message {
+    margin-bottom: 4px;
+
+    font-size: clamp(0.68rem, 2.7vh, 0.84rem);
+    line-height: 1.25;
+  }
+
+  .salon-grid .chat-input-zone {
+    flex: 0 0 auto;
+
+    width: 100%;
+    height: 34px;
+
+    gap: 5px;
+    margin: 4px 0 0;
+  }
+
+  .salon-grid .chat-input {
+    min-width: 0;
+    height: 34px;
+
+    padding: 0 8px;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+  }
+
+  .salon-grid .chat-send {
+    height: 34px;
+
+    padding: 0 8px;
+
+    border-radius: 7px;
+
+    font-size: 12px;
+  }
+
+  .salon-grid .chat-emoji-toggle {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+
+    border-radius: 7px;
+
+    font-size: 18px;
+  }
+
+  .salon-grid .salon-chat-emojis {
+    left: 7px;
+    right: 7px;
+    bottom: 43px;
+
+    max-height: min(42vh, 130px);
+
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .salon-grid .salon-chat-emoji-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .salon-grid .salon-chat-emoji-btn-img {
+    max-width: 24px;
+    max-height: 24px;
+  }
+
+
+  /* JOUEURS ---------------------------------------------- */
+
+  .salon-grid .players-list {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    gap: 4px;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .salon-grid .player-card {
+    gap: 5px;
+
+    margin-bottom: 4px;
+    padding: 4px 5px;
+
+    border-radius: 9px;
+  }
+
+  .salon-grid .player-avatar {
+    width: clamp(24px, 7vh, 32px);
+    height: clamp(24px, 7vh, 32px);
+  }
+
+  .salon-grid .player-name {
+    min-width: 0;
+
+    font-size: clamp(0.65rem, 2.6vh, 0.78rem);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+
+  /* ADMINISTRATION --------------------------------------- */
+
+  .salon-staff-actions {
+    position: fixed;
+    top: 2px;
+    left: 2px;
+    z-index: 30;
+
+    gap: 3px;
+
+    transform: scale(0.62);
+    transform-origin: top left;
+  }
+}
+
+
+
+/* ==========================================================
+   PHONE SALON - CORRECTION COLONNE TABLES
+
+   Les cartes ne doivent jamais être écrasées verticalement.
+   C'est la liste des tables qui défile.
+   ========================================================== */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Un peu plus de place pour les informations et commandes
+   * des tables, sans supprimer Tchat ni Joueurs.
+   */
+  .salon-grid {
+    grid-template-columns:
+      minmax(0, 1.45fr)
+      minmax(0, 1.85fr)
+      minmax(0, 0.75fr);
+  }
+
+  .salon-grid > .panel:first-child {
+    overflow: hidden;
+  }
+
+  .salon-grid .tables-list {
+    gap: 6px;
+  }
+
+  /*
+   * Point essentiel :
+   * une carte ne se comprime plus pour faire entrer toutes
+   * les tables simultanément. La liste possède déjà son scroll.
+   */
+  .salon-grid .table-card {
+    flex: 0 0 auto;
+
+    min-height: 124px;
+
+    margin-bottom: 0;
+    padding: 6px 7px;
+
+    overflow: hidden;
+  }
+
+  .salon-grid .table-title {
+    margin: 0 0 1px;
+  }
+
+  .salon-grid .table-info {
+    margin: 0;
+  }
+
+  .salon-grid .table-seated-players {
+    min-height: 0;
+
+    margin-top: 3px;
+    margin-bottom: 4px;
+
+    gap: 2px 6px;
+  }
+
+  .salon-grid .table-seated-player {
+    padding-left: 0;
+  }
+
+  /*
+   * Le mode ordinateur utilise margin-top:auto.
+   * Sur téléphone cela provoquait l'écrasement de la carte.
+   */
+  .salon-grid .table-info.mode {
+    min-height: 28px;
+
+    margin-top: 0;
+
+    gap: 4px;
+  }
+
+  .salon-grid .table-mode-label {
+    flex: 0 0 auto;
+  }
+
+  .salon-grid .table-mode-dropdown {
+    min-width: 0;
+    max-width: 68%;
+  }
+
+  .salon-grid .table-mode-trigger {
+    max-width: 100%;
+    height: 28px;
+
+    padding: 0 6px;
+
+    gap: 4px;
+
+    border-radius: 7px;
+
+    font-size: clamp(0.63rem, 2.4vh, 0.76rem);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .salon-grid .table-card-actions {
+    margin-top: 4px;
+
+    gap: 4px;
+  }
+
+  .salon-grid .table-card-actions .btn-join,
+  .salon-grid .table-card-actions .btn-watch {
+    min-height: 28px;
+    height: 28px;
+
+    margin-top: 0;
+    padding: 0 4px;
+
+    font-size: clamp(0.60rem, 2.3vh, 0.72rem);
+    line-height: 1;
+
+    white-space: nowrap;
+  }
+
+  /*
+   * Administration / Fermer table :
+   * une seule petite ligne en haut sur le compte administrateur.
+   */
+  .salon-staff-actions {
+    top: 2px;
+    left: 3px;
+
+    flex-direction: row;
+    align-items: flex-start;
+
+    gap: 3px;
+
+    transform: scale(0.52);
+    transform-origin: top left;
+  }
+
+  /*
+   * L'espace supplémentaire n'existe que lorsque les commandes
+   * d'administration sont réellement présentes.
+   */
+  body:has(.salon-staff-actions)
+    .salon-grid > .panel:first-child {
+    padding-top: 30px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   SMARTPHONE PAYSAGE TRES COURT
+   Adaptation supplémentaire pour les petites hauteurs.
+   Aucun modèle de téléphone n'est ciblé.
+   ---------------------------------------------------------- */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .salon-grid {
+    padding: 3px;
+
+    grid-template-columns:
+      minmax(145px, 30%)
+      minmax(215px, 1fr)
+      minmax(100px, 21%);
+
+    gap: 3px;
+  }
+
+  .salon-grid .panel {
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  .salon-grid .panel-title {
+    margin-bottom: 3px;
+    font-size: 0.78rem;
+  }
+
+  .salon-grid .table-card {
+    padding: 5px;
+  }
+
+  .salon-grid .chat-input-zone {
+    height: 31px;
+    gap: 3px;
+  }
+
+  .salon-grid .chat-input,
+  .salon-grid .chat-send,
+  .salon-grid .chat-emoji-toggle {
+    height: 31px;
+  }
+
+  .salon-grid .chat-emoji-toggle {
+    width: 31px;
+    min-width: 31px;
+  }
+}
+
+
+/* ==========================================================
+   TELEPHONE PAYSAGE TRES COURT - FINITION CARTES
+   ========================================================== */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .salon-grid {
+    grid-template-columns:
+      minmax(0, 1.50fr)
+      minmax(0, 1.80fr)
+      minmax(0, 0.70fr);
+  }
+
+  .salon-grid .table-card {
+    min-height: 112px;
+
+    padding: 4px 5px;
+  }
+
+  .salon-grid .table-seated-players {
+    margin-top: 1px;
+    margin-bottom: 2px;
+  }
+
+  .salon-grid .table-info.mode {
+    min-height: 25px;
+  }
+
+  .salon-grid .table-mode-trigger {
+    height: 25px;
+  }
+
+  .salon-grid .table-card-actions {
+    margin-top: 2px;
+  }
+
+  .salon-grid .table-card-actions .btn-join,
+  .salon-grid .table-card-actions .btn-watch {
+    min-height: 25px;
+    height: 25px;
+  }
+
+  .salon-staff-actions {
+    transform: scale(0.45);
+  }
+
+  body:has(.salon-staff-actions)
+    .salon-grid > .panel:first-child {
+    padding-top: 24px;
+  }
+}
