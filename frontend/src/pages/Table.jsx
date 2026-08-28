@@ -6,6 +6,8 @@ import TableChat from "../components/TableChat";
 import SalonHostPanel from "../components/SalonHostPanel";
 import "../styles/Table.css";
 import "../styles/PhoneTable.css";
+import "../styles/TabletLandscapeTable.css";
+import "../utils/TabletLandscapeTableRuntime.js";
 
 import { createInitialGameState, dispatch, STATES } from "../game/beloteEngine";
 import Partie from "../game/Partie";
