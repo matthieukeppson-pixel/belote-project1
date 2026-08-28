@@ -541,7 +541,7 @@ return () => {
         <div className="panel panel-side">
           <h2 className="panel-title">Tables</h2>
 
-          {tables.length < 6 ? (
+          {tables.length < 12 ? (
             <button
               type="button"
               className="btn-create-table"

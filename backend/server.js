@@ -1968,7 +1968,7 @@ function createEmptyServerGame() {
   };
 }
 
-const MAX_TABLES = 6;
+const MAX_TABLES = 12;
 
 function createTable(mode = "classic") {
   const id = Array.from(
