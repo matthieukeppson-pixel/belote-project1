@@ -902,22 +902,23 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
             track.readyState === "live"
         ) || null;
 
+      const audioTransceiver = connection
+        .getTransceivers()
+        .find(
+          (transceiver) =>
+            transceiver &&
+            transceiver.sender &&
+            transceiver.receiver?.track?.kind === "audio"
+        );
+
+      if (!audioTransceiver) {
+        throw new Error("RELAY_INCOMING_MIC_LINK_NOT_READY");
+      }
+
+      audioTransceiver.direction = "sendrecv";
+
       if (localMicroTrack) {
-        const audioTransceiver = connection
-          .getTransceivers()
-          .find(
-            (transceiver) =>
-              transceiver &&
-              transceiver.sender &&
-              transceiver.receiver?.track?.kind === "audio"
-          );
-
-        if (!audioTransceiver) {
-          throw new Error("RELAY_INCOMING_MIC_LINK_NOT_READY");
-        }
-
         await audioTransceiver.sender.replaceTrack(localMicroTrack);
-        audioTransceiver.direction = "sendrecv";
       }
 
       const answer = await connection.createAnswer();
