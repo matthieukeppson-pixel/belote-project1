@@ -25,7 +25,7 @@ export default function SalonHostPanel({
     container.scrollTop = container.scrollHeight;
   }, [messages.length, open]);
 
-  if (!allowed) return null;
+  if (!allowed && !tabletAudioControl) return null;
 
   const send = (event) => {
     event.preventDefault();
@@ -39,7 +39,7 @@ export default function SalonHostPanel({
 
   return (
     <aside className="salon-host">
-      {arrivalNotice && (
+      {allowed && arrivalNotice && (
         <div className="salon-host__arrival" role="status">
           {arrivalNotice}
         </div>
@@ -52,19 +52,21 @@ export default function SalonHostPanel({
           </div>
         )}
 
-        <button
-          type="button"
-          className="salon-host__toggle"
-          onClick={onToggle}
-        >
-          Salon <span>{players.length}</span>
-          {unreadCount > 0 && (
-            <strong>{unreadCount > 99 ? "99+" : unreadCount}</strong>
-          )}
-        </button>
+        {allowed && (
+          <button
+            type="button"
+            className="salon-host__toggle"
+            onClick={onToggle}
+          >
+            Salon <span>{players.length}</span>
+            {unreadCount > 0 && (
+              <strong>{unreadCount > 99 ? "99+" : unreadCount}</strong>
+            )}
+          </button>
+        )}
       </div>
 
-      {open && (
+      {allowed && open && (
         <section className="salon-host__panel">
           <header>
             <span>Le salon · {players.length} présent(s)</span>
