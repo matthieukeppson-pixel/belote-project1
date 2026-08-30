@@ -130,3 +130,79 @@ export function publicTournamentTableMeta(
     seatAssignments: [...assignments],
   };
 }
+
+export const TOURNAMENT_DB_ENV =
+  "BELOTE_TOURNAMENT_DB_PATH";
+
+function tournamentDatabasePath(
+  env,
+  explicitDbPath
+) {
+  return String(
+    explicitDbPath ??
+      env?.[TOURNAMENT_DB_ENV] ??
+      ""
+  ).trim();
+}
+
+export async function initializeTournamentRuntime({
+  env = process.env,
+  dbPath = null,
+} = {}) {
+  const enabled =
+    tournamentFeatureEnabled(env);
+
+  if (!enabled) {
+    return {
+      enabled: false,
+      dbPath: null,
+      store: null,
+      orchestrator: null,
+      async close() {},
+    };
+  }
+
+  const resolvedDbPath =
+    tournamentDatabasePath(
+      env,
+      dbPath
+    );
+
+  if (!resolvedDbPath) {
+    throw new Error(
+      `${TOURNAMENT_DB_ENV} est obligatoire lorsque les mini-tournois sont actives`
+    );
+  }
+
+  // Imports dynamiques volontaires :
+  // aucun stockage tournoi n'est charge ni ouvert
+  // lorsque le feature flag est desactive.
+  const [
+    { openTournamentStore },
+    { createTournamentOrchestrator },
+  ] = await Promise.all([
+    import("./tournamentStore.js"),
+    import("./tournamentOrchestrator.js"),
+  ]);
+
+  const store =
+    await openTournamentStore({
+      dbPath: resolvedDbPath,
+    });
+
+  const orchestrator =
+    createTournamentOrchestrator({
+      store,
+    });
+
+  return {
+    enabled: true,
+    dbPath: store.dbPath,
+    store,
+    orchestrator,
+
+    async close() {
+      await store.close();
+    },
+  };
+}
