@@ -1,4 +1,8 @@
-import { tournamentFeatureEnabled } from "./tournamentRuntime.js";
+import {
+  publicTournamentTableMeta,
+  tournamentFeatureEnabled,
+  tournamentTableAccess,
+} from "./tournamentRuntime.js";
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -2266,6 +2270,10 @@ function tablesArray() {
     const visitors = Array.isArray(t.visitors) ? t.visitors.filter(Boolean) : [];
     const visitorsInfo = visitors.map((pseudo) => seatInfoFromPseudo(pseudo));
     const count = seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
+      const tournamentMeta = publicTournamentTableMeta(
+        t,
+        TOURNAMENTS_ENABLED
+      );
 
     return {
       id: t.id,
@@ -2275,6 +2283,9 @@ function tablesArray() {
       visitors,
       visitorsInfo,
       count,
+        ...(tournamentMeta
+          ? { tournament: tournamentMeta }
+          : {}),
 game: {
   status: t.game?.status || "WAITING_FOR_PLAYERS",
   players: t.game?.players || [],
@@ -5576,6 +5587,26 @@ if (msg.type === "join_table") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
+    const tournamentAccess = tournamentTableAccess(
+      t,
+      pseudo,
+      TOURNAMENTS_ENABLED
+    );
+
+    if (
+      tournamentAccess.managed &&
+      !tournamentAccess.allowed
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "join_table_denied",
+          tableId: t.id,
+          reason: tournamentAccess.reason,
+        })
+      );
+      return;
+    }
+
   const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
   if (leftVisitorTableId) {
     clearAudioIdentity(ws);
@@ -5604,7 +5635,30 @@ if (msg.type === "join_table") {
   // place libre OU place occupÃ©e par un bot remplaÃ§able
   const freeIdx = t.seats.findIndex((s) => !s);
   const botIdx = t.seats.findIndex((s) => isBotPseudo(s));
-  const targetIdx = freeIdx !== -1 ? freeIdx : botIdx;
+    const targetIdx = tournamentAccess.managed
+      ? tournamentAccess.seatIndex
+      : freeIdx !== -1
+        ? freeIdx
+        : botIdx;
+
+    if (tournamentAccess.managed) {
+      const assignedSeat = t.seats[targetIdx];
+
+      if (
+        assignedSeat &&
+        !isBotPseudo(assignedSeat) &&
+        assignedSeat !== pseudo
+      ) {
+        ws.send(
+          JSON.stringify({
+            type: "join_table_denied",
+            tableId: t.id,
+            reason: "TOURNAMENT_SEAT_UNAVAILABLE",
+          })
+        );
+        return;
+      }
+    }
 
   // vraiment pleine = 4 humains
   if (targetIdx === -1) {
@@ -5691,6 +5745,41 @@ if (msg.type === "choose_seat") {
     );
     return;
   }
+
+    const tournamentAccess = tournamentTableAccess(
+      t,
+      pseudo,
+      TOURNAMENTS_ENABLED
+    );
+
+    if (
+      tournamentAccess.managed &&
+      !tournamentAccess.allowed
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "choose_seat_denied",
+          tableId: t.id,
+          reason: tournamentAccess.reason,
+        })
+      );
+      return;
+    }
+
+    if (
+      tournamentAccess.managed &&
+      seatIndex !== tournamentAccess.seatIndex
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "choose_seat_denied",
+          tableId: t.id,
+          reason: "TOURNAMENT_SEAT_LOCKED",
+          assignedSeatIndex: tournamentAccess.seatIndex,
+        })
+      );
+      return;
+    }
 
   // sÃ©curitÃ© forte :
   // le joueur doit dÃ©jÃ  Ãªtre rÃ©ellement assis dans CETTE table
