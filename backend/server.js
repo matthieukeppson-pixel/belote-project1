@@ -1,6 +1,6 @@
 import {
+  initializeTournamentRuntime,
   publicTournamentTableMeta,
-  tournamentFeatureEnabled,
   tournamentTableAccess,
 } from "./tournamentRuntime.js";
 import express from "express";
@@ -989,6 +989,17 @@ app.get("/api/admin/me", async (req, res) => {
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
+const tournamentRuntime =
+  await initializeTournamentRuntime({
+    env: process.env,
+  });
+
+console.log(
+  tournamentRuntime.enabled
+    ? `[TOURNAMENT] runtime actif : ${tournamentRuntime.dbPath}`
+    : "[TOURNAMENT] runtime desactive"
+);
+
 app.listen(HTTP_PORT, () => {
   console.log(`âœ… Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
 });
@@ -1005,7 +1016,7 @@ console.log(`âœ… WebSocket actif sur ws://localhost:${WS_PORT}`);
 const playersMap = new Map();
 
 // tableId(number) -> { id, mode, seats: [pseudo|null, ...] }
-const TOURNAMENTS_ENABLED = tournamentFeatureEnabled(process.env);
+const TOURNAMENTS_ENABLED = tournamentRuntime.enabled;
 const tablesMap = new Map();
 const BOT_PREFIX = "__bot__";
 
