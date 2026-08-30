@@ -1,3 +1,4 @@
+import { tournamentFeatureEnabled } from "./tournamentRuntime.js";
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -1000,6 +1001,7 @@ console.log(`âœ… WebSocket actif sur ws://localhost:${WS_PORT}`);
 const playersMap = new Map();
 
 // tableId(number) -> { id, mode, seats: [pseudo|null, ...] }
+const TOURNAMENTS_ENABLED = tournamentFeatureEnabled(process.env);
 const tablesMap = new Map();
 const BOT_PREFIX = "__bot__";
 
