@@ -62,9 +62,11 @@ function sameStoredResult(match, result) {
 
 export function createTournamentOrchestrator({ store }) {
   requireStoreMethod(store, "createTournament");
+  requireStoreMethod(store, "getTournament");
   requireStoreMethod(store, "addTeam");
   requireStoreMethod(store, "getTeam");
   requireStoreMethod(store, "createMatch");
+  requireStoreMethod(store, "assignMatchTable");
   requireStoreMethod(store, "recordMatchResult");
   requireStoreMethod(store, "listTournamentMatches");
 
@@ -222,6 +224,43 @@ export function createTournamentOrchestrator({ store }) {
       return {
         match: storedMatch,
         tableMeta: buildTournamentTableMeta(match),
+      };
+    },
+
+    async assignMatchTable({
+      tournamentId,
+      matchId,
+      tableId,
+    }) {
+      const tournament =
+        await store.getTournament(tournamentId);
+
+      if (!tournament) {
+        throw new Error("Tournoi introuvable");
+      }
+
+      const assignment =
+        await store.assignMatchTable({
+          tournamentId,
+          matchId,
+          tableId,
+        });
+
+      const { domainMatch } =
+        await loadMatchContext({
+          tournamentId,
+          matchId,
+        });
+
+      return {
+        assignment,
+        tournament: {
+          id: tournament.id,
+          mode: tournament.mode,
+        },
+        tableMeta: buildTournamentTableMeta(
+          domainMatch
+        ),
       };
     },
 
