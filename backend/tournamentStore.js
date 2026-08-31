@@ -213,6 +213,11 @@ export async function openTournamentStore({
 
       CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round
         ON tournament_matches(tournament_id, round_number);
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_tournament_matches_active_table
+        ON tournament_matches(table_id)
+        WHERE table_id IS NOT NULL
+          AND status IN ('ready', 'playing');
     `
   );
 
@@ -254,6 +259,18 @@ export async function openTournamentStore({
         db,
         "SELECT * FROM tournaments WHERE id = ?",
         [id]
+      );
+    },
+
+    async getTournament(tournamentId) {
+      return get(
+        db,
+        `
+          SELECT *
+          FROM tournaments
+          WHERE id = ?
+        `,
+        [requireText(tournamentId, "tournament.id")]
       );
     },
 
@@ -408,6 +425,124 @@ export async function openTournamentStore({
         db,
         "SELECT * FROM tournament_matches WHERE id = ?",
         [id]
+      );
+    },
+
+    async assignMatchTable({
+      tournamentId,
+      matchId,
+      tableId,
+    }) {
+      const normalizedTournamentId = requireText(
+        tournamentId,
+        "match.tournamentId"
+      );
+      const normalizedMatchId = requireText(
+        matchId,
+        "match.id"
+      );
+      const normalizedTableId = Number(tableId);
+
+      if (
+        !Number.isInteger(normalizedTableId) ||
+        normalizedTableId <= 0
+      ) {
+        throw new Error(
+          "match.tableId doit etre un entier positif"
+        );
+      }
+
+      let write;
+
+      try {
+        write = await run(
+          db,
+          `
+            UPDATE tournament_matches
+            SET
+              table_id = ?,
+              status = 'ready'
+            WHERE id = ?
+              AND tournament_id = ?
+              AND table_id IS NULL
+              AND status = 'pending'
+          `,
+          [
+            normalizedTableId,
+            normalizedMatchId,
+            normalizedTournamentId,
+          ]
+        );
+      } catch (err) {
+        if (
+          String(err?.message || "").includes(
+            "UNIQUE constraint failed: tournament_matches.table_id"
+          )
+        ) {
+          throw new Error(
+            "Cette table est deja affectee a un autre match actif"
+          );
+        }
+
+        throw err;
+      }
+
+      if (write.changes === 1) {
+        return {
+          assigned: true,
+          reason: "ASSIGNED",
+          match: await get(
+            db,
+            "SELECT * FROM tournament_matches WHERE id = ?",
+            [normalizedMatchId]
+          ),
+        };
+      }
+
+      if (write.changes !== 0) {
+        throw new Error(
+          "Nombre inattendu de lignes modifiees pour l'affectation de table"
+        );
+      }
+
+      const currentMatch = await get(
+        db,
+        "SELECT * FROM tournament_matches WHERE id = ?",
+        [normalizedMatchId]
+      );
+
+      if (!currentMatch) {
+        throw new Error("Match de tournoi introuvable");
+      }
+
+      if (
+        String(currentMatch.tournament_id) !==
+        normalizedTournamentId
+      ) {
+        throw new Error(
+          "Le match n'appartient pas au tournoi demande"
+        );
+      }
+
+      if (
+        Number(currentMatch.table_id) === normalizedTableId &&
+        currentMatch.status === "ready"
+      ) {
+        return {
+          assigned: false,
+          reason: "ALREADY_ASSIGNED",
+          match: currentMatch,
+        };
+      }
+
+      if (currentMatch.table_id != null) {
+        throw new Error(
+          `Le match est deja affecte a la table ${currentMatch.table_id}`
+        );
+      }
+
+      throw new Error(
+        `Le match ne peut pas recevoir de table depuis le statut ${currentMatch.status}`
       );
     },
 
