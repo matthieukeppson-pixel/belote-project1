@@ -223,7 +223,12 @@ export function resultFromAuthoritativeHand(match, authoritativeHand) {
   const scoreNous = Number(scores.nous);
   const scoreEux = Number(scores.eux);
 
-  if (!Number.isFinite(scoreNous) || !Number.isFinite(scoreEux)) {
+  if (
+    !Number.isSafeInteger(scoreNous) ||
+    scoreNous < 0 ||
+    !Number.isSafeInteger(scoreEux) ||
+    scoreEux < 0
+  ) {
     throw new Error("Scores finaux invalides");
   }
 

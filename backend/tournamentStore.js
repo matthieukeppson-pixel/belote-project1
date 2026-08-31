@@ -167,12 +167,33 @@ export async function openTournamentStore({
               'forfeit'
             )
           ),
-        winner_team_id TEXT,
-        score_nous INTEGER,
-        score_eux INTEGER,
+        winner_team_id TEXT
+          CHECK (
+            winner_team_id IS NULL OR
+            winner_team_id = team_a_id OR
+            winner_team_id = team_b_id
+          ),
+        score_nous INTEGER
+          CHECK (
+            score_nous IS NULL OR
+            (typeof(score_nous) = 'integer' AND score_nous >= 0)
+          ),
+        score_eux INTEGER
+          CHECK (
+            score_eux IS NULL OR
+            (typeof(score_eux) = 'integer' AND score_eux >= 0)
+          ),
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         finished_at TEXT,
         CHECK (team_a_id <> team_b_id),
+        CHECK (
+          status <> 'finished' OR (
+            winner_team_id IS NOT NULL AND
+            score_nous IS NOT NULL AND
+            score_eux IS NOT NULL AND
+            finished_at IS NOT NULL
+          )
+        ),
         FOREIGN KEY (tournament_id)
           REFERENCES tournaments(id)
           ON DELETE CASCADE,
@@ -423,13 +444,15 @@ export async function openTournamentStore({
       const normalizedScoreEux = Number(scoreEux);
 
       if (
-        !Number.isFinite(normalizedScoreNous) ||
-        !Number.isFinite(normalizedScoreEux)
+        !Number.isSafeInteger(normalizedScoreNous) ||
+        normalizedScoreNous < 0 ||
+        !Number.isSafeInteger(normalizedScoreEux) ||
+        normalizedScoreEux < 0
       ) {
         throw new Error("Scores finaux invalides");
       }
 
-      await run(
+      const write = await run(
         db,
         `
           UPDATE tournament_matches
@@ -440,6 +463,7 @@ export async function openTournamentStore({
             score_eux = ?,
             finished_at = CURRENT_TIMESTAMP
           WHERE id = ?
+            AND status IN ('pending', 'ready', 'playing')
         `,
         [
           winnerTeamId,
@@ -449,10 +473,57 @@ export async function openTournamentStore({
         ]
       );
 
-      return get(
+      if (write.changes === 1) {
+        const finishedMatch = await get(
+          db,
+          "SELECT * FROM tournament_matches WHERE id = ?",
+          [matchId]
+        );
+
+        return {
+          recorded: true,
+          reason: "RECORDED",
+          match: finishedMatch,
+        };
+      }
+
+      if (write.changes !== 0) {
+        throw new Error(
+          "Nombre inattendu de lignes modifiees pour le resultat tournoi"
+        );
+      }
+
+      const currentMatch = await get(
         db,
         "SELECT * FROM tournament_matches WHERE id = ?",
         [matchId]
+      );
+
+      if (!currentMatch) {
+        throw new Error("Match de tournoi introuvable apres ecriture");
+      }
+
+      if (currentMatch.status === "finished") {
+        const sameResult =
+          currentMatch.winner_team_id === winnerTeamId &&
+          Number(currentMatch.score_nous) === normalizedScoreNous &&
+          Number(currentMatch.score_eux) === normalizedScoreEux;
+
+        if (sameResult) {
+          return {
+            recorded: false,
+            reason: "ALREADY_RECORDED",
+            match: currentMatch,
+          };
+        }
+
+        throw new Error(
+          "Un resultat different est deja enregistre pour ce match"
+        );
+      }
+
+      throw new Error(
+        `Le match ne peut pas etre finalise depuis le statut ${currentMatch.status}`
       );
     },
 

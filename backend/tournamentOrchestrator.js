@@ -278,7 +278,7 @@ export function createTournamentOrchestrator({ store }) {
         );
       }
 
-      const finishedMatch =
+      const writeResult =
         await store.recordMatchResult({
           matchId,
           winnerTeamId: result.winnerTeamId,
@@ -286,10 +286,24 @@ export function createTournamentOrchestrator({ store }) {
           scoreEux: result.scoreEux,
         });
 
+      if (writeResult.reason === "ALREADY_RECORDED") {
+        return {
+          recorded: false,
+          reason: "ALREADY_RECORDED",
+          match: writeResult.match,
+        };
+      }
+
+      if (writeResult.reason !== "RECORDED") {
+        throw new Error(
+          `Etat d'ecriture resultat tournoi inattendu: ${writeResult.reason}`
+        );
+      }
+
       return {
         recorded: true,
         reason: "RECORDED",
-        match: finishedMatch,
+        match: writeResult.match,
         result,
       };
     },
