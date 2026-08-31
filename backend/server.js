@@ -2216,6 +2216,33 @@ function createEmptyServerGame() {
 
 const MAX_TABLES = 12;
 
+const reservedTableIds = new Set();
+
+function normalizedTableCreationId(tableId) {
+  const id = Number(tableId);
+
+  if (
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    id > MAX_TABLES
+  ) {
+    return null;
+  }
+
+  return id;
+}
+
+function tableIdAvailable(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  return Boolean(
+    id != null &&
+    !tablesMap.has(id) &&
+    !reservedTableIds.has(id)
+  );
+}
+
 function findAvailableTableId() {
   return (
     Array.from(
@@ -2223,23 +2250,62 @@ function findAvailableTableId() {
       (_unused, index) => index + 1
     ).find(
       (candidateId) =>
-        !tablesMap.has(candidateId)
+        tableIdAvailable(candidateId)
     ) ?? null
   );
 }
 
-function createTableAtId(
-  tableId,
-  mode = "classic"
-) {
-  const id = Number(tableId);
+function reserveTableId(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
 
   if (
-    !Number.isInteger(id) ||
-    id <= 0 ||
-    id > MAX_TABLES ||
+    id == null ||
+    !tableIdAvailable(id)
+  ) {
+    return false;
+  }
+
+  reservedTableIds.add(id);
+
+  return true;
+}
+
+function releaseTableIdReservation(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  if (id == null) {
+    return false;
+  }
+
+  return reservedTableIds.delete(id);
+}
+
+function createTableAtId(
+  tableId,
+  mode = "classic",
+  {
+    consumeReservation = false,
+  } = {}
+) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  if (
+    id == null ||
     tablesMap.has(id)
   ) {
+    return null;
+  }
+
+  if (consumeReservation) {
+    if (!reservedTableIds.has(id)) {
+      return null;
+    }
+
+    reservedTableIds.delete(id);
+  } else if (reservedTableIds.has(id)) {
     return null;
   }
 
