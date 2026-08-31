@@ -131,6 +131,35 @@ export function publicTournamentTableMeta(
   };
 }
 
+export async function persistTournamentResultIfManaged({
+  runtime,
+  table,
+  authoritativeHand,
+} = {}) {
+  if (!runtime?.enabled || !table?.tournament) {
+    return null;
+  }
+
+  const tableMeta = publicTournamentTableMeta(table, true);
+
+  if (!tableMeta) {
+    throw new Error("Metadonnees de table tournoi invalides");
+  }
+
+  if (
+    !runtime.orchestrator ||
+    typeof runtime.orchestrator.recordAuthoritativeResult !== "function"
+  ) {
+    throw new Error("Orchestrateur tournoi indisponible");
+  }
+
+  return runtime.orchestrator.recordAuthoritativeResult({
+    tournamentId: tableMeta.tournamentId,
+    matchId: tableMeta.matchId,
+    authoritativeHand,
+  });
+}
+
 export const TOURNAMENT_DB_ENV =
   "BELOTE_TOURNAMENT_DB_PATH";
 

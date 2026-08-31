@@ -1,5 +1,6 @@
 import {
   initializeTournamentRuntime,
+  persistTournamentResultIfManaged,
   publicTournamentTableMeta,
   tournamentTableAccess,
 } from "./tournamentRuntime.js";
@@ -4571,7 +4572,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
   if (hand.phase !== "PLI_TERMINE") return false;
   if (table.nextTrickTimer) return false;
 
-  table.nextTrickTimer = setTimeout(() => {
+  table.nextTrickTimer = setTimeout(async () => {
     table.nextTrickTimer = null;
 
     const currentHand = {
@@ -4769,6 +4770,33 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       couleurDemandee: null,
       winnerIndex: null,
     };
+
+    if (partieTerminee && TOURNAMENTS_ENABLED && table.tournament) {
+      try {
+        const persistence =
+          await persistTournamentResultIfManaged({
+            runtime: tournamentRuntime,
+            table,
+            authoritativeHand: nextHand,
+          });
+
+        if (
+          persistence &&
+          persistence.reason !== "RECORDED" &&
+          persistence.reason !== "ALREADY_RECORDED"
+        ) {
+          throw new Error(
+            `Etat de persistance tournoi inattendu: ${persistence.reason}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[TOURNAMENT] resultat non persiste table ${table.id}`,
+          error
+        );
+        return;
+      }
+    }
 
     table.game = {
       ...(table.game || createEmptyServerGame()),
@@ -5235,6 +5263,21 @@ if (msg.type === "table_game_action") {
   }
 
   if (action.type === "RESET_ROUND") {
+    if (
+      TOURNAMENTS_ENABLED &&
+      t.tournament &&
+      t.game?.hand?.phase === "FIN_DE_PARTIE"
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "table_game_action_denied",
+          tableId: t.id,
+          reason: "TOURNAMENT_MATCH_FINISHED",
+        })
+      );
+      return;
+    }
+
     const nextHand = buildFreshAuthoritativeHand(
       t,
       typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
