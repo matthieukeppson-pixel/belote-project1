@@ -5740,7 +5740,10 @@ if (
     }
 
     if (msg.type === "create_table") {
-      if (tablesMap.size >= MAX_TABLES) {
+      const mode = String(msg.mode || "classic").trim() || "classic";
+      const t = createTable(mode);
+
+      if (!t) {
         ws.send(
           JSON.stringify({
             type: "create_table_denied",
@@ -5751,8 +5754,6 @@ if (
         return;
       }
 
-      const mode = String(msg.mode || "classic").trim() || "classic";
-      const t = createTable(mode);
       system(`ðŸŸ¢ Table ${t.id} crÃ©Ã©e (${mode})`);
       broadcastTables();
       return;
