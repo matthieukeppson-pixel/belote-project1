@@ -4873,6 +4873,10 @@ function refreshServerGameForTable(table) {
 
   syncBotsForTable(table);
 
+  if (tournamentTablePaused(table)) {
+    return;
+  }
+
   const seated = getSeatedPlayersInOrder(table);
   const count = seated.length;
 
@@ -4941,8 +4945,124 @@ function refreshServerGameForTable(table) {
     hand: sharedHand,
   };
 }
+function isManagedTournamentTable(table) {
+  return Boolean(
+    TOURNAMENTS_ENABLED &&
+    table?.tournament
+  );
+}
+
+function getTournamentPausedPlayers(table) {
+  if (!isManagedTournamentTable(table)) {
+    return [];
+  }
+
+  const paused =
+    table.tournament?.pausedPlayers;
+
+  if (!Array.isArray(paused)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      paused
+        .map((pseudo) =>
+          String(pseudo ?? "").trim()
+        )
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function tournamentTablePaused(table) {
+  return getTournamentPausedPlayers(table).length > 0;
+}
+
+function pauseTournamentPlayerAtTable(
+  table,
+  pseudo
+) {
+  if (!isManagedTournamentTable(table)) {
+    return false;
+  }
+
+  const normalizedPseudo =
+    String(pseudo ?? "").trim();
+
+  if (
+    !normalizedPseudo ||
+    !Array.isArray(table.seats) ||
+    !table.seats.includes(normalizedPseudo)
+  ) {
+    return false;
+  }
+
+  const paused =
+    getTournamentPausedPlayers(table);
+
+  if (!paused.includes(normalizedPseudo)) {
+    table.tournament = {
+      ...table.tournament,
+      pausedPlayers: [
+        ...paused,
+        normalizedPseudo,
+      ],
+    };
+  }
+
+  [
+    "botPlayTimer",
+    "nextHandTimer",
+    "nextTrickTimer",
+  ].forEach((timerName) => {
+    if (table[timerName]) {
+      clearTimeout(table[timerName]);
+      table[timerName] = null;
+    }
+  });
+
+  return true;
+}
+
+function resumeTournamentPlayerAtTable(
+  table,
+  pseudo
+) {
+  if (!isManagedTournamentTable(table)) {
+    return false;
+  }
+
+  const normalizedPseudo =
+    String(pseudo ?? "").trim();
+
+  const paused =
+    getTournamentPausedPlayers(table);
+
+  if (
+    !normalizedPseudo ||
+    !paused.includes(normalizedPseudo)
+  ) {
+    return false;
+  }
+
+  table.tournament = {
+    ...table.tournament,
+    pausedPlayers: paused.filter(
+      (pausedPseudo) =>
+        pausedPseudo !== normalizedPseudo
+    ),
+  };
+
+  return true;
+}
+
 function resumeTableAfterSeatChange(table) {
   if (!table?.game?.hand) return;
+
+  if (tournamentTablePaused(table)) {
+    return;
+  }
 
   playBotCardsUntilHumanTurn(table);
   scheduleAdvanceCompletedTrick(table);
@@ -4987,6 +5107,16 @@ function removeVisitorFromAnyTable(pseudo) {
 function removePlayerFromAnyTable(pseudo) {
   const found = findPlayerTable(pseudo);
   if (!found) return null;
+
+  if (
+    pauseTournamentPlayerAtTable(
+      found.table,
+      pseudo
+    )
+  ) {
+    return found.table.id;
+  }
+
   found.table.seats[found.seatIndex] = null;
   return found.table.id;
 }
@@ -5291,6 +5421,18 @@ if (msg.type === "table_game_action") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
+  if (tournamentTablePaused(t)) {
+    ws.send(
+      JSON.stringify({
+        type: "table_game_action_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_MATCH_PAUSED",
+      })
+    );
+    return;
+  }
+
   if (!isPlayerInTable(t.id, pseudo)) return;
 
   const roundId = String(msg.roundId || "");
@@ -5546,6 +5688,18 @@ if (
         return;
       }
 
+      if (isManagedTournamentTable(t)) {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            tableId: t.id,
+            reason:
+              "TOURNAMENT_CLOSE_REQUIRES_HOST",
+          })
+        );
+        return;
+      }
+
       if (tableId <= 3) {
         ws.send(
           JSON.stringify({
@@ -5592,6 +5746,18 @@ if (
       const mode = String(msg.mode || "").trim();
       const t = tableId ? tablesMap.get(tableId) : null;
       if (!t) return;
+
+      if (isManagedTournamentTable(t)) {
+        ws.send(
+          JSON.stringify({
+            type: "set_table_mode_denied",
+            tableId: t.id,
+            reason:
+              "TOURNAMENT_MODE_LOCKED",
+          })
+        );
+        return;
+      }
 
       if (!["classic", "contree", "moderne"].includes(mode)) return;
 
@@ -5651,6 +5817,26 @@ if (msg.type === "watch_table") {
   const tableId = normalizeTableId(msg.tableId);
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
+
+  const tournamentSeat =
+    findPlayerTable(pseudo);
+
+  if (
+    tournamentSeat &&
+    isManagedTournamentTable(
+      tournamentSeat.table
+    )
+  ) {
+    ws.send(
+      JSON.stringify({
+        type: "watch_table_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_SEAT_RESERVED",
+      })
+    );
+    return;
+  }
 
   if (Number(ws.tableId) !== Number(t.id)) {
     clearAudioIdentity(ws);
@@ -5722,10 +5908,42 @@ if (msg.type === "join_table") {
   const wasAlreadyInTargetTable =
     prev && Number(prev.table.id) === Number(t.id);
 
+  if (
+    prev &&
+    !wasAlreadyInTargetTable &&
+    isManagedTournamentTable(prev.table)
+  ) {
+    ws.send(
+      JSON.stringify({
+        type: "join_table_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_SEAT_RESERVED",
+      })
+    );
+    return;
+  }
+
   // dÃ©jÃ  assis dans cette table : on rattache juste le socket
   if (wasAlreadyInTargetTable) {
   ws.tableId = t.id;
+  ws.tableRole = "player";
+
+  const resumedTournamentSeat =
+    resumeTournamentPlayerAtTable(
+      t,
+      pseudo
+    );
+
   refreshServerGameForTable(t);
+
+  if (
+    resumedTournamentSeat &&
+    !tournamentTablePaused(t)
+  ) {
+    resumeTableAfterSeatChange(t);
+  }
+
   broadcastTables();
 
   ws.send(
@@ -5794,6 +6012,7 @@ if (msg.type === "join_table") {
   // rattachement + installation dans la table
   clearAudioIdentity(ws);
   ws.tableId = t.id;
+  ws.tableRole = "player";
   t.seats[targetIdx] = pseudo;
   refreshServerGameForTable(t);
   broadcastTables();
@@ -5977,6 +6196,61 @@ if (msg.type === "choose_seat") {
       // si tableId absent -> quitte n'importe quelle table
       const tableId = msg.tableId != null ? normalizeTableId(msg.tableId) : null;
 
+      const tournamentSeat =
+        tableId
+          ? (() => {
+              const candidate =
+                tablesMap.get(tableId);
+
+              if (
+                !candidate ||
+                !candidate.seats.includes(pseudo)
+              ) {
+                return null;
+              }
+
+              return {
+                table: candidate,
+              };
+            })()
+          : findPlayerTable(pseudo);
+
+      if (
+        tournamentSeat &&
+        pauseTournamentPlayerAtTable(
+          tournamentSeat.table,
+          pseudo
+        )
+      ) {
+        clearAudioIdentityForTable(
+          ws,
+          tournamentSeat.table.id
+        );
+
+        if (
+          Number(ws.tableId) ===
+          Number(tournamentSeat.table.id)
+        ) {
+          ws.tableId = null;
+          ws.tableRole = null;
+        }
+
+        broadcastTables();
+
+        broadcastToTable(
+          tournamentSeat.table.id,
+          {
+            type: "table_system",
+            tableId:
+              tournamentSeat.table.id,
+            text:
+              `${pseudo} est temporairement absent - partie tournoi en pause`,
+          }
+        );
+
+        return;
+      }
+
       if (tableId) {
         const t = tablesMap.get(tableId);
         if (!t) return;
@@ -6052,6 +6326,58 @@ if (leftTable) {
 
     p.count -= 1;
 
+    const disconnectedTournamentSeat =
+      findPlayerTable(pseudo);
+
+    const disconnectedTournamentTable =
+      disconnectedTournamentSeat?.table ||
+      null;
+
+    const closedTournamentTableSocket =
+      disconnectedTournamentTable &&
+      isManagedTournamentTable(
+        disconnectedTournamentTable
+      ) &&
+      ws.tableRole !== "visitor" &&
+      Number(ws.tableId) ===
+        Number(disconnectedTournamentTable.id);
+
+    const hasOtherOpenTournamentTableSocket =
+      closedTournamentTableSocket &&
+      Array.from(wss.clients).some(
+        (client) =>
+          client !== ws &&
+          client.readyState === 1 &&
+          client.pseudo === pseudo &&
+          client.tableRole !== "visitor" &&
+          Number(client.tableId) ===
+            Number(
+              disconnectedTournamentTable.id
+            )
+      );
+
+    if (
+      closedTournamentTableSocket &&
+      !hasOtherOpenTournamentTableSocket &&
+      pauseTournamentPlayerAtTable(
+        disconnectedTournamentTable,
+        pseudo
+      )
+    ) {
+      broadcastTables();
+
+      broadcastToTable(
+        disconnectedTournamentTable.id,
+        {
+          type: "table_system",
+          tableId:
+            disconnectedTournamentTable.id,
+          text:
+            `${pseudo} est deconnecte - partie tournoi en pause`,
+        }
+      );
+    }
+
     // Laisse le temps au meme pseudo de se reconnecter pendant une navigation
     // salon -> table, pour ne pas sortir le joueur de la table trop tot.
     if (p.count <= 0) {
@@ -6075,7 +6401,13 @@ if (leftTable) {
         broadcastPlayers();
         broadcastTables();
 
-        if (leftTableId) {
+        if (
+          leftTableId &&
+          !(
+            leftTable &&
+            tournamentTablePaused(leftTable)
+          )
+        ) {
           broadcastToTable(leftTableId, {
             type: "table_system",
             tableId: leftTableId,
