@@ -2216,23 +2216,53 @@ function createEmptyServerGame() {
 
 const MAX_TABLES = 12;
 
-function createTable(mode = "classic") {
-  const id = Array.from(
-    { length: MAX_TABLES },
-    (_unused, index) => index + 1
-  ).find((candidateId) => !tablesMap.has(candidateId));
+function findAvailableTableId() {
+  return (
+    Array.from(
+      { length: MAX_TABLES },
+      (_unused, index) => index + 1
+    ).find(
+      (candidateId) =>
+        !tablesMap.has(candidateId)
+    ) ?? null
+  );
+}
 
-  if (id == null) return null;
+function createTableAtId(
+  tableId,
+  mode = "classic"
+) {
+  const id = Number(tableId);
 
-  tablesMap.set(id, {
+  if (
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    id > MAX_TABLES ||
+    tablesMap.has(id)
+  ) {
+    return null;
+  }
+
+  const table = {
     id,
     mode,
     seats: [null, null, null, null],
     visitors: [],
     botsEnabled: false,
     game: createEmptyServerGame(),
-  });
-  return tablesMap.get(id);
+  };
+
+  tablesMap.set(id, table);
+
+  return table;
+}
+
+function createTable(mode = "classic") {
+  const id = findAvailableTableId();
+
+  if (id == null) return null;
+
+  return createTableAtId(id, mode);
 }
 
 function ensureDefaultTables() {
