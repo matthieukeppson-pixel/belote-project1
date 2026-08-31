@@ -2059,6 +2059,14 @@ function getHumanSeatCount(table) {
 function syncBotsForTable(table) {
   if (!table) return;
 
+  if (TOURNAMENTS_ENABLED && table.tournament) {
+    table.botsEnabled = false;
+    table.seats = table.seats.map((pseudo) =>
+      isBotPseudo(pseudo) ? null : pseudo
+    );
+    return;
+  }
+
   const humanCount = getHumanSeatCount(table);
 
   // aucun humain => table vide, pas de bots, reset du mode bots
@@ -5571,6 +5579,18 @@ if (msg.type === "start_with_bots") {
   const tableId = normalizeTableId(msg.tableId);
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
+
+  if (TOURNAMENTS_ENABLED && t.tournament) {
+    syncBotsForTable(t);
+    ws.send(
+      JSON.stringify({
+        type: "start_with_bots_denied",
+        tableId: t.id,
+        reason: "TOURNAMENT_BOTS_FORBIDDEN",
+      })
+    );
+    return;
+  }
 
   if (!isPlayerInTable(t.id, pseudo)) {
     return;
