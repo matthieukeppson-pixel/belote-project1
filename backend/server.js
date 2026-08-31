@@ -215,6 +215,38 @@ async function getAuthUserFromRequest(req) {
   return getAuthUserFromToken(getAuthTokenFromRequest(req));
 }
 
+async function getAdminUserForSocket(ws) {
+  const userId = Number(ws?.authUserId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return null;
+  }
+
+  const user = await dbGet(
+    `
+      SELECT id, username, role, is_banned
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (!user || Number(user.is_banned) === 1) {
+    return null;
+  }
+
+  if (String(user.role || "player") !== "admin") {
+    return null;
+  }
+
+  if (!isAnimationHost(user.username)) {
+    return null;
+  }
+
+  return user;
+}
+
 async function requireAdminUser(req, res) {
   const user = await getAuthUserFromRequest(req);
 
