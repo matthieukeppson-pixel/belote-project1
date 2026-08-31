@@ -196,6 +196,13 @@ export function buildTournamentTableMeta(match) {
     tournamentId: match.tournamentId,
     matchId: match.id,
     roundNumber: match.roundNumber,
+    tableId:
+      match.tableId == null
+        ? null
+        : requirePositiveInteger(
+            match.tableId,
+            "match.tableId"
+          ),
     allowedPlayers: [...match.seatAssignments],
     seatAssignments: [...match.seatAssignments],
   };
