@@ -666,3 +666,2966 @@
     transform: translateX(-50%) scale(1.95);
   }
 }
+
+
+/* ==========================================================
+   MOBILE GAME-FIRST V1
+   Smartphone tactile < 768 px
+   - jeu prioritaire
+   - tchat masque par defaut
+   - tchat en tiroir overlay
+   ========================================================== */
+
+.mobile-chat-toggle,
+.mobile-chat-close {
+  display: none;
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .table-page .table-layout {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    padding: 30px 0 0;
+    margin: 0;
+
+    box-sizing: border-box;
+  }
+
+  .table-page .table-zone {
+    position: relative;
+
+    width: 100%;
+    height: calc(100dvh - 30px);
+
+    min-width: 0;
+    min-height: 0;
+
+    flex: none;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    overflow: hidden;
+  }
+
+  /*
+   * Plateau interne 720x720.
+   * Le jeu utilise maintenant toute la zone disponible.
+   */
+  .table-page .table-board {
+    position: relative;
+
+    top: auto;
+    left: auto;
+
+    width: 720px;
+    height: 720px;
+
+    flex: 0 0 720px;
+
+    transform: scale(0.50);
+    transform-origin: center center;
+  }
+
+  /*
+   * Le tchat ne reserve plus aucune largeur.
+   */
+  .table-page .table-chat-zone {
+    display: none;
+
+    position: fixed;
+
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: auto;
+
+    z-index: 5000;
+
+    width: min(88vw, 360px);
+    min-width: 0;
+    max-width: none;
+
+    height: 100vh;
+    height: 100dvh;
+
+    margin: 0;
+    padding: 52px 12px 12px;
+
+    box-sizing: border-box;
+
+    border-radius: 18px 0 0 18px;
+
+    background: rgba(38, 5, 12, 0.97);
+
+    box-shadow:
+      -12px 0 30px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(220, 180, 120, 0.30);
+  }
+
+  .table-page .table-chat-zone.mobile-open {
+    display: block;
+  }
+
+  .table-page .mobile-chat-toggle {
+    position: fixed;
+
+    right: 8px;
+    bottom: 8px;
+
+    z-index: 4900;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 52px;
+    height: 52px;
+
+    padding: 0;
+
+    border: 1px solid rgba(255, 220, 150, 0.75);
+    border-radius: 50%;
+
+    background: rgba(92, 18, 28, 0.96);
+    color: #fff;
+
+    font-size: 25px;
+
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.42);
+
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .table-page .mobile-chat-close {
+    position: absolute;
+
+    top: 7px;
+    right: 7px;
+
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    height: 40px;
+
+    padding: 0;
+
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 50%;
+
+    background: rgba(0, 0, 0, 0.30);
+    color: #fff;
+
+    font-size: 27px;
+    line-height: 1;
+
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-board {
+    transform: scale(0.44);
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_TAPIS_FULL_WIDTH_V2
+   Le tapis visuel occupe toute la largeur du smartphone.
+   Les elements de jeu restent independants pour permettre
+   leur agrandissement/repositionnement aux etapes suivantes.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * La zone de jeu devient elle-meme le tapis :
+   * largeur 100 %, aucune colonne reservee au tchat.
+   */
+  .table-page .table-zone {
+    width: 100vw;
+    max-width: 100vw;
+
+    background-image: url("/table_vero.png");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 100% 100%;
+  }
+
+  /*
+   * L'ancien tapis 720x720 est masque visuellement.
+   * On conserve le board pour les cartes, joueurs et logique.
+   */
+  .table-page .table-board .table-image {
+    visibility: hidden;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_RESPONSIVE_SEATS_V3
+   Les quatre joueurs suivent les vrais bords du tapis mobile.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Le board 720x720 est affiche a scale(0.50).
+   * Ces positions compensent cette echelle afin que les sieges
+   * suivent les bords reels du viewport, et non ceux du vieux carre.
+   */
+
+  .table-page .player-seat.top {
+    top: calc(410px - 100dvh);
+    left: 50%;
+
+    right: auto;
+    bottom: auto;
+
+    transform: translateX(-50%);
+  }
+
+  .table-page .player-seat.bottom {
+    bottom: calc(410px - 100dvh);
+    left: 50%;
+
+    right: auto;
+    top: auto;
+
+    transform: translateX(-50%);
+  }
+
+  .table-page .player-seat.left {
+    left: calc(384px - 100vw);
+    top: 50%;
+
+    right: auto;
+    bottom: auto;
+
+    transform: translateY(-50%);
+  }
+
+  .table-page .player-seat.right {
+    right: calc(384px - 100vw);
+    top: 50%;
+
+    left: auto;
+    bottom: auto;
+
+    transform: translateY(-50%);
+  }
+
+  /*
+   * Les noms restent diriges vers l'interieur du tapis.
+   * Ainsi aucun pseudo ne sort de l'ecran.
+   */
+
+  .table-page .player-seat.top .player-pseudo {
+    top: 60px;
+    bottom: auto;
+  }
+
+  .table-page .player-seat.bottom .player-pseudo {
+    top: -28px;
+    bottom: auto;
+  }
+
+  .table-page .player-seat.left .player-pseudo {
+    left: 60px;
+    right: auto;
+  }
+
+  .table-page .player-seat.right .player-pseudo {
+    right: 60px;
+    left: auto;
+  }
+}
+
+/*
+ * Adaptation lorsque la regle existante utilise scale(0.44).
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .player-seat.top {
+    top: calc(417px - 113.64dvh);
+  }
+
+  .table-page .player-seat.bottom {
+    bottom: calc(417px - 113.64dvh);
+  }
+
+  .table-page .player-seat.left {
+    left: calc(387px - 113.64vw);
+  }
+
+  .table-page .player-seat.right {
+    right: calc(387px - 113.64vw);
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CARDS_ACTIONS_V4
+   Cartes plus lisibles + commandes tactiles plus grandes.
+   Le board mobile etant scale(0.50), les dimensions internes
+   sont volontairement doublees pour obtenir une vraie taille
+   confortable a l'ecran.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * MAIN DU JOUEUR LOCAL
+   * Ancien : 90 x 130 internes = environ 45 x 65 visibles.
+   * Nouveau : 128 x 185 = environ 64 x 92 visibles.
+   */
+  .table-page .player-bottom {
+    bottom: 96px;
+  }
+
+  .table-page .player-bottom .card {
+    width: 128px;
+    height: 185px;
+
+    flex: 0 0 128px;
+
+    border-radius: 11px;
+  }
+
+  /*
+   * Les cartes peuvent legerement se recouvrir lorsque la main
+   * comporte beaucoup de cartes, sans les rendre minuscules.
+   */
+  .table-page .player-bottom .card + .card {
+    margin-left: -10px;
+  }
+
+  /*
+   * COMMANDES D'ATOUT / ENCHERES
+   * 96 px internes x scale(0.50) = 48 px visibles minimum.
+   */
+  .table-page .atout-actions {
+    gap: 12px;
+
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .table-page .atout-btn {
+    min-width: 132px;
+    min-height: 96px;
+
+    padding: 18px 26px !important;
+
+    border-radius: 20px;
+
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.1;
+
+    touch-action: manipulation;
+  }
+
+  /*
+   * Boutons ronds Coeur / Carreau / Pique / Trefle.
+   */
+  .table-page .atout-suit-btn {
+    width: 96px;
+    height: 96px;
+
+    min-width: 96px;
+    min-height: 96px;
+
+    padding: 0 !important;
+  }
+
+  .table-page .atout-suit-symbol {
+    width: 54px;
+    height: 54px;
+
+    font-size: 48px;
+  }
+
+  /*
+   * Contrer / Surcontrer utilisent aussi la classe contree-btn.
+   * Leur ancienne hauteur de 34px ne doit plus les reduire.
+   */
+  .table-page .atout-btn.contree-btn {
+    height: auto;
+    min-height: 96px;
+  }
+}
+
+/*
+ * Lorsque le plateau passe a scale(0.44),
+ * 110 x 0.44 = 48.4 px visibles.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .atout-btn {
+    min-height: 110px;
+  }
+
+  .table-page .atout-suit-btn {
+    width: 110px;
+    height: 110px;
+
+    min-width: 110px;
+    min-height: 110px;
+  }
+
+  .table-page .atout-btn.contree-btn {
+    min-height: 110px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_ACTION_ZONE_V5
+   Les decisions restent dans la partie haute du plateau
+   et ne recouvrent plus la main du joueur local.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Tous les panneaux de decision utilisent la meme zone haute.
+   * !important neutralise les anciens top/bottom ainsi que
+   * les positions inline JSX utilisees sur certains panneaux.
+   */
+  .table-page .atout-panel,
+  .table-page .modern-announcement-panel,
+  .table-page .atout-panel--glass,
+  .table-page .atout-panel--tour2-wide {
+    top: 22px !important;
+    bottom: auto !important;
+
+    left: 50% !important;
+    right: auto !important;
+
+    transform: translateX(-50%) !important;
+
+    max-height: 390px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    box-sizing: border-box;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+   * Panneau Contrée autonome éventuel.
+   */
+  .table-page .contree-panel {
+    top: 22px !important;
+    bottom: auto !important;
+
+    left: 50% !important;
+    right: auto !important;
+
+    transform: translateX(-50%) !important;
+
+    max-height: 390px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    box-sizing: border-box;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+   * L'enchère Contrée peut contenir beaucoup de commandes.
+   * On lui donne presque toute la largeur interne du board,
+   * mais jamais la zone reservee a la main.
+   */
+  .table-page[data-mode="contree"] .atout-panel {
+    width: min(640px, calc(100% - 32px)) !important;
+    max-width: 640px !important;
+  }
+
+  /*
+   * Les panneaux Classic / Moderne restent compacts.
+   */
+  .table-page[data-mode="classic"] .atout-panel,
+  .table-page[data-mode="moderne"] .atout-panel {
+    max-width: 650px;
+  }
+
+  /*
+   * Barre de defilement discrete si une enchere Contrée
+   * depasse la hauteur disponible.
+   */
+  .table-page .atout-panel::-webkit-scrollbar,
+  .table-page .contree-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .table-page .atout-panel::-webkit-scrollbar-thumb,
+  .table-page .contree-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+  }
+}
+
+/*
+ * Sur les ecrans de moindre hauteur, la zone de decisions
+ * est encore un peu plus courte pour proteger la main.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .atout-panel,
+  .table-page .modern-announcement-panel,
+  .table-page .atout-panel--glass,
+  .table-page .atout-panel--tour2-wide,
+  .table-page .contree-panel {
+    top: 16px !important;
+    max-height: 365px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_PLI_DECISIONS_V6
+   - grand pli central
+   - aucune carte jouee sur la main
+   - panneaux de decision au-dessus de la main
+   - tour d'enchere Contrée toujours visible
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * CARTES JOUEES
+   *
+   * 126 x 183 internes donnent environ 63 x 92 px visibles
+   * avec le scale mobile 0.50.
+   */
+  .table-page .pli-card {
+    width: 126px;
+    height: 183px;
+
+    border-radius: 16px;
+
+    box-shadow:
+      0 0 0 3px rgba(220, 180, 120, 0.90),
+      0 12px 24px rgba(0, 0, 0, 0.68);
+  }
+
+  /*
+   * Vrai pli central en croix.
+   * La carte du joueur local s'arrete avant la grande main.
+   */
+
+  .table-page .pli-joueur1 {
+    top: auto;
+    right: auto;
+
+    bottom: 300px;
+    left: 50%;
+
+    transform: translateX(-50%);
+  }
+
+  .table-page .pli-joueur2 {
+    top: 118px;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+
+    transform: translateX(-50%);
+  }
+
+  .table-page .pli-joueur3 {
+    top: 50%;
+    right: 188px;
+    bottom: auto;
+    left: auto;
+
+    transform: translateY(-50%);
+  }
+
+  .table-page .pli-joueur4 {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 188px;
+
+    transform: translateY(-50%);
+  }
+
+  /*
+   * ZONE DE DECISION.
+   *
+   * Le panneau finit nettement avant le debut de la main.
+   * Une Contrée longue defile dans le panneau au lieu
+   * de descendre sur les cartes.
+   */
+  .table-page .atout-panel,
+  .table-page .modern-announcement-panel,
+  .table-page .atout-panel--glass,
+  .table-page .atout-panel--tour2-wide,
+  .table-page .contree-panel {
+    top: 80px !important;
+    bottom: auto !important;
+
+    left: 50% !important;
+    right: auto !important;
+
+    transform: translateX(-50%) !important;
+
+    max-height: 300px !important;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    box-sizing: border-box;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+   * Contrée : largeur confortable tout en restant
+   * dans la partie centrale du plateau.
+   */
+  .table-page[data-mode="contree"] .atout-panel {
+    width: 680px !important;
+    max-width: 680px !important;
+  }
+
+  /*
+   * Les boutons de valeurs gardent une grande cible tactile,
+   * mais deviennent assez compacts pour limiter les lignes.
+   */
+  .table-page[data-mode="contree"] .atout-panel .atout-btn:not(.atout-suit-btn) {
+    min-width: 104px;
+  }
+
+  /*
+   * JOUEUR QUI DOIT ENCHERIR.
+   * Cette indication reste visible pendant le scroll.
+   */
+  .table-page .contree-turn-indicator {
+    position: sticky;
+    top: 0;
+
+    z-index: 6;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    width: fit-content;
+    min-width: 300px;
+
+    margin: 0 auto 12px;
+    padding: 10px 18px;
+
+    box-sizing: border-box;
+
+    border: 2px solid rgba(255, 226, 126, 0.75);
+    border-radius: 14px;
+
+    background: rgba(65, 6, 21, 0.96);
+    color: #fff;
+
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  .table-page .contree-turn-indicator strong {
+    color: #ffe58b;
+    font-weight: 900;
+  }
+
+  /*
+   * Le dernier contrat + son enchérisseur reste lui aussi
+   * visible juste sous l'indication du tour.
+   */
+  .table-page .contree-current-contract {
+    position: sticky;
+    top: 58px;
+
+    z-index: 5;
+  }
+}
+
+/*
+ * Adaptation lorsque le board passe a scale(0.44).
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .pli-card {
+    width: 126px;
+    height: 183px;
+  }
+
+  .table-page .pli-joueur1 {
+    bottom: 300px;
+  }
+
+  .table-page .pli-joueur2 {
+    top: 118px;
+  }
+
+  .table-page .pli-joueur3 {
+    right: 188px;
+  }
+
+  .table-page .pli-joueur4 {
+    left: 188px;
+  }
+
+  .table-page .atout-panel,
+  .table-page .modern-announcement-panel,
+  .table-page .atout-panel--glass,
+  .table-page .atout-panel--tour2-wide,
+  .table-page .contree-panel {
+    top: 72px !important;
+    max-height: 300px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_VISUAL_TUNING_V7
+   Ajustement visuel apres validation sur captures :
+   - pli compact en croix
+   - aucune carte jouee sur la main
+   - Contrée plus haute et plus exploitable
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * PLI CENTRAL
+   *
+   * On conserve exactement la taille V6 des cartes jouees.
+   * Seul leur placement change.
+   *
+   * Les marges remplacent translate() afin que l'animation
+   * d'apparition des cartes ne modifie pas leur position.
+   */
+
+  /* Joueur local : carte basse du pli */
+  .table-page .pli-joueur1 {
+    top: 250px;
+    bottom: auto;
+
+    left: 50%;
+    right: auto;
+
+    margin-left: -63px;
+
+    transform: none;
+  }
+
+  /* Joueur du haut */
+  .table-page .pli-joueur2 {
+    top: 105px;
+    bottom: auto;
+
+    left: 50%;
+    right: auto;
+
+    margin-left: -63px;
+
+    transform: none;
+  }
+
+  /* Joueur de droite */
+  .table-page .pli-joueur3 {
+    top: 178px;
+    bottom: auto;
+
+    left: calc(50% + 62px);
+    right: auto;
+
+    margin-left: 0;
+
+    transform: none;
+  }
+
+  /* Joueur de gauche */
+  .table-page .pli-joueur4 {
+    top: 178px;
+    bottom: auto;
+
+    left: calc(50% - 188px);
+    right: auto;
+
+    margin-left: 0;
+
+    transform: none;
+  }
+
+  /*
+   * CONTREE
+   *
+   * Le précédent max-height 300px ne donnait que 150px visibles
+   * avec scale(0.50), ce qui expliquait la grosse zone scrollée.
+   *
+   * 430px internes donnent environ 215px visibles.
+   * Le panneau reste donc au-dessus de la main.
+   */
+  .table-page[data-mode="contree"] .atout-panel {
+    top: 18px !important;
+
+    width: 700px !important;
+    max-width: 700px !important;
+
+    max-height: 430px !important;
+  }
+
+  /*
+   * On gagne quelques pixels verticaux sans réduire
+   * les grandes cibles tactiles.
+   */
+  .table-page[data-mode="contree"] .atout-title {
+    margin-bottom: 6px !important;
+  }
+
+  .table-page[data-mode="contree"] .contree-turn-indicator {
+    margin-bottom: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .table-page[data-mode="contree"] .contree-current-contract {
+    margin-bottom: 8px !important;
+  }
+}
+
+/*
+ * Adaptation pour les smartphones dont la hauteur paysage
+ * déclenche le scale(0.44).
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .pli-joueur1 {
+    top: 250px;
+  }
+
+  .table-page .pli-joueur2 {
+    top: 105px;
+  }
+
+  .table-page .pli-joueur3,
+  .table-page .pli-joueur4 {
+    top: 178px;
+  }
+
+  .table-page[data-mode="contree"] .atout-panel {
+    top: 12px !important;
+    max-height: 390px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_ATOUT_CONTREE_V8
+   Validation visuelle smartphone :
+   - carte atout visible en Classic / Moderne
+   - Contrée compacte sans cacher les couleurs
+   - grandes cibles tactiles conservees
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * CLASSIC / MODERNE
+   *
+   * La carte retournee etait exactement derriere le panneau.
+   * Elle est maintenant affichee a gauche de la decision.
+   */
+  .table-page[data-mode="classic"] .atout-card,
+  .table-page[data-mode="moderne"] .atout-card {
+    position: absolute !important;
+
+    top: 150px !important;
+    bottom: auto !important;
+
+    left: calc(50% - 320px) !important;
+    right: auto !important;
+
+    width: 130px;
+    height: 188px;
+
+    transform: none !important;
+
+    z-index: 25;
+  }
+
+  /*
+   * CONTREE
+   *
+   * Organisation en quatre zones :
+   *
+   * titre
+   * [ tour / derniere enchere ] [ contrer / surcontrer ]
+   * [ 80 ... 500 sur 2 lignes ]
+   * [ coeur / carreau / pique / trefle / passer ]
+   *
+   * Tout tient avant la grande main.
+   */
+  .table-page .contree-bidding-panel {
+    top: 12px !important;
+    bottom: auto !important;
+
+    width: 700px !important;
+    max-width: 700px !important;
+
+    max-height: 470px !important;
+
+    padding: 10px 14px 12px !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr);
+
+    grid-template-areas:
+      "title title"
+      "turn counter"
+      "values values"
+      "suits suits";
+
+    column-gap: 12px;
+    row-gap: 8px;
+
+    align-items: start;
+
+    overflow: hidden !important;
+  }
+
+  .table-page .contree-bidding-panel > .atout-title {
+    grid-area: title;
+
+    margin: 0 !important;
+
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  /*
+   * Tour actuel + derniere enchere.
+   */
+  .table-page .contree-bidding-panel .contree-turn-indicator {
+    grid-area: turn;
+
+    position: static;
+
+    width: 100%;
+    min-width: 0;
+
+    margin: 0;
+    padding: 8px 10px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+
+    font-size: 25px;
+    line-height: 1.05;
+  }
+
+  .table-page .contree-turn-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    white-space: nowrap;
+  }
+
+  .table-page .contree-bid-summary {
+    width: 100%;
+
+    overflow: hidden;
+
+    color: #fff7d1;
+
+    font-size: 20px;
+    font-weight: 800;
+
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * L'ancien encart "contrat courant" est redondant sur mobile :
+   * son contenu est maintenant dans l'indicateur ci-dessus.
+   */
+  .table-page .contree-bidding-panel .contree-current-contract {
+    display: none !important;
+  }
+
+  /*
+   * Contrer / Surcontrer à droite de l'indication du tour.
+   */
+  .table-page .contree-counter-actions {
+    grid-area: counter;
+
+    width: 100%;
+
+    margin: 0 !important;
+
+    display: flex !important;
+    flex-wrap: nowrap !important;
+
+    gap: 8px !important;
+  }
+
+  .table-page .contree-counter-actions .atout-btn {
+    flex: 1 1 0;
+
+    width: auto;
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 12px 8px !important;
+  }
+
+  /*
+   * 10 valeurs = exactement 2 lignes de 5.
+   */
+  .table-page .contree-bid-values {
+    grid-area: values;
+
+    width: 100%;
+
+    margin: 0 !important;
+
+    display: grid !important;
+
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    gap: 8px !important;
+  }
+
+  .table-page .contree-bid-values .atout-btn {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 10px 5px !important;
+  }
+
+  /*
+   * Les quatre couleurs + Passer restent TOUJOURS visibles
+   * sur une seule ligne.
+   */
+  .table-page .contree-suit-actions {
+    grid-area: suits;
+
+    width: 100%;
+
+    margin: 0 !important;
+
+    display: grid !important;
+
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    align-items: center;
+
+    gap: 8px !important;
+  }
+
+  .table-page .contree-suit-actions .atout-suit-btn {
+    justify-self: center;
+
+    width: 96px;
+    height: 96px;
+
+    min-width: 96px !important;
+    min-height: 96px;
+  }
+
+  .table-page .contree-suit-actions .atout-btn.pass {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 10px 5px !important;
+  }
+}
+
+/*
+ * Smartphones avec moins de hauteur :
+ * même organisation, légèrement remontée.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page[data-mode="classic"] .atout-card,
+  .table-page[data-mode="moderne"] .atout-card {
+    top: 140px !important;
+  }
+
+  .table-page .contree-bidding-panel {
+    top: 8px !important;
+    max-height: 470px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CONTREE_MODERNE_V9
+   Validation visuelle :
+   - CLASSIQUE volontairement non touche
+   - Contrée compacte sans reduire les cibles tactiles
+   - Moderne sans scrollbar inutile
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * CONTREE
+   *
+   * On conserve les boutons a 96 px internes
+   * (= environ 48 px visibles avec scale 0.50).
+   *
+   * On gagne de la hauteur uniquement sur :
+   * - les marges
+   * - les espacements
+   * - le padding du panneau
+   */
+  .table-page .contree-bidding-panel {
+    max-height: 440px !important;
+
+    padding: 6px 10px 8px !important;
+
+    column-gap: 8px !important;
+    row-gap: 4px !important;
+  }
+
+  .table-page .contree-bidding-panel > .atout-title {
+    margin: 0 !important;
+
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .table-page .contree-bidding-panel .contree-turn-indicator {
+    margin: 0 !important;
+    padding: 6px 8px !important;
+
+    gap: 2px;
+  }
+
+  .table-page .contree-bid-summary {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .table-page .contree-counter-actions {
+    gap: 6px !important;
+  }
+
+  .table-page .contree-counter-actions .atout-btn {
+    min-height: 96px;
+
+    padding: 8px 6px !important;
+  }
+
+  /*
+   * Deux lignes de cinq mises.
+   */
+  .table-page .contree-bid-values {
+    gap: 5px !important;
+  }
+
+  .table-page .contree-bid-values .atout-btn {
+    min-height: 96px;
+
+    padding: 8px 4px !important;
+  }
+
+  /*
+   * Couleurs + Passer :
+   * toujours 48 px visibles minimum.
+   */
+  .table-page .contree-suit-actions {
+    gap: 5px !important;
+  }
+
+  .table-page .contree-suit-actions .atout-suit-btn {
+    width: 96px;
+    height: 96px;
+
+    min-width: 96px !important;
+    min-height: 96px !important;
+  }
+
+  .table-page .contree-suit-actions .atout-btn.pass {
+    min-height: 96px;
+
+    padding: 8px 4px !important;
+  }
+
+  /*
+   * MODERNE
+   *
+   * Le panneau d'annonce est peu haut.
+   * On supprime donc le max-height generique et la scrollbar.
+   */
+  .table-page .modern-announcement-panel {
+    max-height: none !important;
+
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+}
+
+/*
+ * Même principe sur les smartphones ayant moins de hauteur.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .contree-bidding-panel {
+    max-height: 440px !important;
+
+    padding-top: 4px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .table-page .modern-announcement-panel {
+    max-height: none !important;
+
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CONTREE_IMPORTANT_ONLY_V10
+   Une seule information prioritaire :
+   la derniere enchere et son auteur.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .contree-bidding-panel .contree-bid-only {
+    width: 100%;
+    min-width: 0;
+
+    margin: 0 !important;
+    padding: 10px 12px !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .table-page .contree-bidding-panel .contree-bid-only .contree-bid-summary {
+    width: 100%;
+
+    color: #ffe58b;
+
+    font-size: 25px;
+    font-weight: 900;
+    line-height: 1.1;
+
+    text-align: center;
+    white-space: nowrap;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CONTREE_WIDE_V11
+   Exploite la largeur disponible :
+   - panneau beaucoup plus large
+   - mises sur une seule ligne
+   - couleurs + Passer sur une seule ligne
+   - aucune descente sur la main
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .contree-bidding-panel {
+    top: 18px !important;
+
+    width: 1180px !important;
+    max-width: 1180px !important;
+
+    max-height: none !important;
+
+    padding: 8px 14px 10px !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1.15fr);
+
+    grid-template-areas:
+      "title title"
+      "turn counter"
+      "values values"
+      "suits suits";
+
+    column-gap: 10px !important;
+    row-gap: 7px !important;
+
+    overflow: visible !important;
+  }
+
+  /*
+   * Derniere enchere : bloc large et lisible.
+   */
+  .table-page .contree-bidding-panel .contree-bid-only {
+    width: 100%;
+
+    padding: 8px 12px !important;
+  }
+
+  .table-page
+    .contree-bidding-panel
+    .contree-bid-only
+    .contree-bid-summary {
+    font-size: 26px;
+    line-height: 1.05;
+
+    white-space: nowrap;
+  }
+
+  /*
+   * Contrer / Surcontrer restent sur la même ligne
+   * que l'information importante.
+   */
+  .table-page .contree-counter-actions {
+    width: 100%;
+
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 8px !important;
+  }
+
+  .table-page .contree-counter-actions .atout-btn {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 10px 8px !important;
+  }
+
+  /*
+   * Les 10 valeurs sur UNE seule ligne.
+   */
+  .table-page .contree-bid-values {
+    width: 100%;
+
+    display: grid !important;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+
+    gap: 6px !important;
+  }
+
+  .table-page .contree-bid-values .atout-btn {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 8px 3px !important;
+
+    font-size: 23px;
+  }
+
+  /*
+   * Couleurs + Passer sur une ligne bien aeree.
+   */
+  .table-page .contree-suit-actions {
+    width: 100%;
+
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    gap: 10px !important;
+  }
+
+  .table-page .contree-suit-actions .atout-suit-btn {
+    justify-self: stretch;
+
+    width: 100%;
+    height: 96px;
+
+    min-width: 0 !important;
+    min-height: 96px !important;
+  }
+
+  .table-page .contree-suit-actions .atout-btn.pass {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 8px 6px !important;
+  }
+}
+
+/*
+ * Smartphones de moindre hauteur :
+ * même architecture horizontale.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .contree-bidding-panel {
+    top: 12px !important;
+
+    width: 1180px !important;
+    max-width: 1180px !important;
+
+    max-height: none !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CONTREE_FINISH_V12
+   Finition visuelle :
+   - panneau Contrée légèrement descendu
+   - chiffres des mises environ 15 % plus gros
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Descend le panneau d'environ 20 px visibles
+   * avec le scale mobile 0.50.
+   */
+  .table-page .contree-bidding-panel {
+    top: 58px !important;
+  }
+
+  /*
+   * V11 = 23px internes.
+   * V12 = 27px : environ +17 %, sans agrandir les cases.
+   */
+  .table-page .contree-bid-values .atout-btn {
+    font-size: 27px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .contree-bidding-panel {
+    top: 48px !important;
+  }
+
+  .table-page .contree-bid-values .atout-btn {
+    font-size: 27px !important;
+    font-weight: 900 !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_SCORE_CONTREE_V13
+   - score mobile independant du board transforme
+   - score centre dans la barre superieure
+   - panneau Contrée réellement descendu
+   ========================================================== */
+
+.mobile-score-header {
+  display: none;
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * L'ancien score appartient au board scale().
+   * On le masque sur smartphone pour eviter les doubles affichages.
+   */
+  .table-page .score-overlay.score-pill {
+    display: none !important;
+  }
+
+  /*
+   * Score indépendant du tapis.
+   * Il reste au centre de la barre supérieure.
+   */
+  .table-page .mobile-score-header {
+    position: fixed;
+
+    top: 4px;
+    left: 50%;
+
+    z-index: 4800;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    min-height: 28px;
+
+    padding: 3px 12px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(255, 220, 150, 0.72);
+    border-radius: 999px;
+
+    background: rgba(68, 8, 18, 0.90);
+    color: #fff;
+
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+
+    transform: translateX(-50%);
+
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+
+    white-space: nowrap;
+
+    pointer-events: none;
+  }
+
+  .table-page .mobile-score-header strong {
+    color: #ffe58b;
+
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .table-page .mobile-score-header-sep {
+    opacity: 0.72;
+  }
+
+  /*
+   * V12 = 58px internes.
+   * Ici on descend réellement le panneau d'environ
+   * 17 px supplémentaires visibles avec scale(0.50).
+   */
+  .table-page .contree-bidding-panel {
+    top: 92px !important;
+  }
+}
+
+/*
+ * Sur une hauteur plus courte, on garde davantage
+ * de place pour la main tout en conservant le score.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .mobile-score-header {
+    top: 3px;
+
+    min-height: 25px;
+
+    padding: 2px 9px;
+
+    font-size: 11px;
+  }
+
+  .table-page .mobile-score-header strong {
+    font-size: 14px;
+  }
+
+  .table-page .contree-bidding-panel {
+    top: 78px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_BOTS_POSITION_V14
+   Le score occupe maintenant le centre du header.
+   Le bouton Bots est donc place sous les commandes de droite.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .start-with-bots-btn {
+    position: fixed;
+
+    top: 38px;
+    right: 7px;
+    left: auto;
+
+    z-index: 4700;
+
+    transform: none;
+
+    min-width: 132px;
+    max-width: none;
+    min-height: 30px;
+
+    padding: 5px 10px;
+
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+
+    white-space: nowrap;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .start-with-bots-btn {
+    top: 34px;
+    right: 5px;
+
+    min-width: 120px;
+    min-height: 27px;
+
+    padding: 4px 7px;
+
+    font-size: 10px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_BOTS_LEFT_OF_SCORE_V15
+   Place "Démarrer avec bots" à gauche du score
+   sur mobile paysage, pour les 3 modes.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .start-with-bots-btn {
+    position: fixed;
+
+    top: 5px;
+    left: calc(50% - 245px);
+    right: auto;
+
+    z-index: 4700;
+
+    transform: none;
+
+    min-width: 150px;
+    max-width: 150px;
+    min-height: 30px;
+
+    padding: 5px 10px;
+
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .start-with-bots-btn {
+    top: 4px;
+    left: calc(50% - 220px);
+
+    min-width: 136px;
+    max-width: 136px;
+    min-height: 27px;
+
+    padding: 4px 8px;
+
+    font-size: 10px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CHAT_IN_HEADER_V16
+   - masque Salon sur smartphone
+   - place la bulle tchat a sa place
+   - conserve le bouton audio juste a gauche
+   - valable Classic / Moderne / Contrée
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Salon 1 n'est plus affiche sur mobile.
+   */
+  .table-page .salon-host__toggle {
+    display: none !important;
+  }
+
+  /*
+   * Le controle audio reste dans le header,
+   * avec la place necessaire pour la bulle a droite.
+   */
+  .table-page .salon-host {
+    right: 39px !important;
+  }
+
+  /*
+   * La bulle de conversation remplace Salon 1.
+   */
+  .table-page .mobile-chat-toggle {
+    position: fixed;
+
+    top: 3px;
+    right: 3px;
+    bottom: auto;
+    left: auto;
+
+    z-index: 4900;
+
+    width: 30px;
+    height: 30px;
+
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    font-size: 16px;
+    line-height: 1;
+
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.30);
+  }
+}
+
+/*
+ * Variante compacte pour les hauteurs plus courtes.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .salon-host {
+    right: 34px !important;
+  }
+
+  .table-page .mobile-chat-toggle {
+    top: 3px;
+    right: 3px;
+
+    width: 27px;
+    height: 27px;
+
+    font-size: 14px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_MINI_CHAT_V17
+   Mini tchat flottant clair commun aux 3 modes.
+   Remplace visuellement le grand tiroir pleine hauteur.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .table-chat-zone {
+    position: fixed;
+
+    top: 40px;
+    right: 6px;
+    bottom: auto;
+    left: auto;
+
+    z-index: 5000;
+
+    width: clamp(280px, 38vw, 340px);
+    min-width: 0;
+    max-width: calc(100vw - 12px);
+
+    height: clamp(190px, 48dvh, 220px);
+    max-height: calc(100dvh - 48px);
+
+    margin: 0;
+    padding: 34px 10px 10px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(255, 220, 150, 0.72);
+    border-radius: 16px;
+
+    background:
+      linear-gradient(
+        180deg,
+        rgba(145, 40, 58, 0.94),
+        rgba(105, 25, 42, 0.94)
+      );
+
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.42),
+      0 0 0 1px rgba(255, 225, 165, 0.10);
+
+    backdrop-filter: blur(7px);
+
+    overflow: hidden;
+  }
+
+  .table-page .table-chat-zone.mobile-open {
+    display: block;
+  }
+
+  .table-page .mobile-chat-close {
+    position: absolute;
+
+    top: 4px;
+    right: 5px;
+
+    width: 28px;
+    height: 28px;
+
+    padding: 0;
+
+    border-radius: 50%;
+
+    background: rgba(70, 12, 25, 0.64);
+
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .table-page .table-chat-zone .tablechat-title {
+    margin-bottom: 5px;
+
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  .table-page .table-chat-zone .tablechat-line {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .table-page .table-chat-zone .tablechat-inputzone {
+    gap: 5px;
+  }
+
+  .table-page .table-chat-zone .tablechat-input {
+    min-height: 36px;
+
+    padding-left: 8px;
+    padding-right: 8px;
+
+    font-size: 12px;
+  }
+
+  .table-page .table-chat-zone .tablechat-emoji-toggle {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .table-page .table-chat-zone .tablechat-button {
+    min-height: 36px;
+
+    padding-left: 9px;
+    padding-right: 9px;
+
+    font-size: 11px;
+  }
+}
+
+/*
+ * Variante pour les hauteurs plus courtes :
+ * fenêtre plus compacte, mais toujours exploitable.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-chat-zone {
+    top: 36px;
+    right: 5px;
+
+    width: min(310px, 48vw);
+    max-width: calc(100vw - 10px);
+
+    height: min(190px, calc(100dvh - 42px));
+    max-height: calc(100dvh - 42px);
+
+    padding: 30px 8px 8px;
+
+    border-radius: 14px;
+  }
+
+  .table-page .mobile-chat-close {
+    top: 3px;
+    right: 4px;
+
+    width: 25px;
+    height: 25px;
+
+    font-size: 18px;
+  }
+
+  .table-page .table-chat-zone .tablechat-input {
+    min-height: 32px;
+  }
+
+  .table-page .table-chat-zone .tablechat-emoji-toggle {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+
+  .table-page .table-chat-zone .tablechat-button {
+    min-height: 32px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_ATOUT_INDICATOR_V18
+   Agrandissement de la pastille d'atout du preneur.
+   Uniquement smartphone paysage.
+   Commun Classique / Moderne / Contrée.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .atout-indicator {
+    min-width: 52px;
+    min-height: 52px;
+
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 8px 12px;
+
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1;
+
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.30),
+      0 0 0 2px rgba(255, 220, 150, 0.32);
+  }
+
+  /*
+   * SA / TA utilisent du texte : on les agrandit également
+   * sans leur donner la taille typographique des symboles.
+   */
+  .table-page .atout-indicator.SA,
+  .table-page .atout-indicator.TA {
+    min-width: 62px;
+    min-height: 52px;
+
+    padding: 8px 10px;
+
+    font-size: 27px;
+    font-weight: 900;
+  }
+}
+
+/*
+ * Le board est encore légèrement plus réduit sur
+ * les hauteurs plus courtes : compensation supplémentaire.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .atout-indicator {
+    min-width: 56px;
+    min-height: 56px;
+
+    padding: 9px 13px;
+
+    font-size: 56px;
+  }
+
+  .table-page .atout-indicator.SA,
+  .table-page .atout-indicator.TA {
+    min-width: 66px;
+    min-height: 56px;
+
+    font-size: 29px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_ATOUT_INDICATOR_SIZE_V19
+   Réduction légère de la V18.
+   L'atout reste très lisible sans dépasser l'avatar.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .atout-indicator {
+    min-width: 42px;
+    min-height: 42px;
+
+    padding: 5px 8px;
+
+    font-size: 38px;
+  }
+
+  .table-page .atout-indicator.SA,
+  .table-page .atout-indicator.TA {
+    min-width: 50px;
+    min-height: 42px;
+
+    padding: 5px 8px;
+
+    font-size: 22px;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .atout-indicator {
+    min-width: 46px;
+    min-height: 46px;
+
+    padding: 6px 9px;
+
+    font-size: 42px;
+  }
+
+  .table-page .atout-indicator.SA,
+  .table-page .atout-indicator.TA {
+    min-width: 54px;
+    min-height: 46px;
+
+    font-size: 24px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_VISIBLE_ANNOUNCEMENT_V20
+   Annonces temporaires :
+   - plus grandes
+   - plus lisibles
+   - decalees vers la droite
+   - animation existante conservee
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  /*
+   * Le centre du tapis reste libre.
+   * On exploite l'espace disponible sur la droite.
+   */
+  .table-page .table-announcement-toast {
+    right: -170px !important;
+  }
+
+  /*
+   * Zone globale de l'annonce.
+   * Environ 180-210 px visibles après scale(0.50).
+   */
+  .table-page .table-announcement-toast > div {
+    min-width: 360px !important;
+    max-width: 420px !important;
+
+    gap: 10px !important;
+  }
+
+  /*
+   * Nom du joueur + annonce + points.
+   */
+  .table-page .table-announcement-toast > div > div:first-child {
+    padding: 9px 16px !important;
+
+    border: 2px solid rgba(255, 220, 150, 0.58) !important;
+    border-radius: 18px !important;
+
+    background: rgba(84, 14, 32, 0.82) !important;
+
+    color: #fff7d1 !important;
+
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+
+    text-shadow: 0 3px 7px rgba(0, 0, 0, 0.72) !important;
+
+    box-shadow:
+      0 5px 14px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  /*
+   * Cartes montrant la Tierce / Cinquante / etc.
+   */
+  .table-page .table-announcement-toast > div > div:nth-child(2) {
+    min-height: 100px !important;
+  }
+
+  .table-page .table-announcement-toast > div > div:nth-child(2) img {
+    width: 90px !important;
+
+    margin-left: -14px !important;
+
+    border-radius: 10px !important;
+
+    box-shadow:
+      0 6px 14px rgba(0, 0, 0, 0.36) !important;
+  }
+
+  .table-page
+    .table-announcement-toast
+    > div
+    > div:nth-child(2)
+    img:first-child {
+    margin-left: 0 !important;
+  }
+}
+
+/*
+ * Compensation pour une hauteur plus courte.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-announcement-toast {
+    right: -130px !important;
+  }
+
+  .table-page .table-announcement-toast > div {
+    min-width: 350px !important;
+    max-width: 400px !important;
+  }
+
+  .table-page .table-announcement-toast > div > div:first-child {
+    padding: 8px 14px !important;
+
+    font-size: 30px !important;
+  }
+
+  .table-page .table-announcement-toast > div > div:nth-child(2) {
+    min-height: 104px !important;
+  }
+
+  .table-page .table-announcement-toast > div > div:nth-child(2) img {
+    width: 96px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_LAST_TRICK_COMPACT_V21
+   Dernier pli mobile :
+   - petite fenetre horizontale
+   - quatre cartes regroupees
+   - isolation des regles pli-joueur du grand tapis
+   - commun aux 3 modes
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .last-trick-btn {
+    position: fixed;
+
+    top: 68px;
+    left: 6px;
+
+    width: auto;
+    max-width: none;
+
+    min-height: 30px;
+
+    padding: 5px 10px;
+
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+
+    z-index: 4700;
+  }
+
+  .table-page .last-trick-mini-table {
+    position: fixed;
+
+    top: 104px;
+    left: 6px;
+
+    z-index: 4690;
+
+    width: 254px;
+    height: 96px;
+
+    box-sizing: border-box;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    justify-items: center;
+
+    gap: 4px;
+
+    padding: 8px;
+
+    border: 1px solid rgba(255, 220, 150, 0.58);
+    border-radius: 14px;
+
+    background: rgba(92, 18, 36, 0.88);
+
+    box-shadow:
+      0 7px 18px rgba(0, 0, 0, 0.34);
+
+    pointer-events: none;
+  }
+
+  /*
+   * IMPORTANT :
+   * les cartes du dernier pli portent aussi pli-joueur1/2/3/4.
+   * On neutralise ici toutes les positions du grand pli.
+   */
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-card,
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-card.pli-joueur1,
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-card.pli-joueur2,
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-card.pli-joueur3,
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-card.pli-joueur4 {
+    position: static !important;
+
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    margin: 0 !important;
+
+    transform: none !important;
+  }
+
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-img {
+    display: block;
+
+    width: 54px;
+    height: auto;
+
+    border-radius: 5px;
+
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.38);
+  }
+}
+
+/*
+ * Variante compacte pour les hauteurs plus courtes.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .last-trick-btn {
+    top: 60px;
+    left: 5px;
+
+    min-height: 27px;
+
+    padding: 4px 8px;
+
+    font-size: 10px;
+  }
+
+  .table-page .last-trick-mini-table {
+    top: 92px;
+    left: 5px;
+
+    width: 226px;
+    height: 84px;
+
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .table-page
+    .last-trick-mini-table
+    .last-trick-mini-img {
+    width: 48px;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_ANNOUNCEMENT_RIGHT_V22
+   Micro-ajustement :
+   l'annonce temporaire est poussee un peu plus a droite
+   pour liberer davantage le pli central.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .table-announcement-toast {
+    right: -210px !important;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .table-announcement-toast {
+    right: -170px !important;
+  }
+}
+
+
+/* ==========================================================
+   MOBILE_CONTREE_RESPONSIVE_V24
+   Contrée réellement responsive :
+   - aucune dépendance à un modèle de téléphone
+   - largeur pilotée par le viewport
+   - compensation des différents scales du board
+   - valeurs 80...500 toujours prioritaires
+   ========================================================== */
+
+/*
+ * Smartphone paysage standard.
+ *
+ * La largeur est exprimée en vw car le panneau vit dans le
+ * board transformé : elle évolue donc avec la largeur réelle
+ * disponible au lieu de rester bloquée à 1180px internes.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 92px !important;
+
+    width: 150vw !important;
+    max-width: none !important;
+
+    z-index: 65 !important;
+
+    padding: 7px 12px 9px !important;
+
+    column-gap: 8px !important;
+    row-gap: 6px !important;
+
+    overflow: visible !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel > .atout-title {
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+
+  /*
+   * Les dix mises restent toujours sur une seule ligne.
+   */
+  .table-page[data-mode="contree"] .contree-bid-values {
+    position: relative !important;
+
+    z-index: 70 !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+
+    width: 100% !important;
+
+    gap: 6px !important;
+
+    margin: 0 !important;
+
+    overflow: visible !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 96px !important;
+
+    padding: 7px 2px !important;
+
+    font-size: 32px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    visibility: visible !important;
+  }
+
+  /*
+   * Une mise indisponible reste lisible :
+   * l'état disabled ne doit pas faire disparaître le chiffre.
+   */
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn:disabled {
+    opacity: 0.62 !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn {
+    min-height: 96px !important;
+
+    font-size: 28px !important;
+  }
+
+  .table-page[data-mode="contree"] .contree-suit-actions {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+
+    width: 100% !important;
+
+    gap: 8px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 96px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 96px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    font-size: 28px !important;
+  }
+}
+
+/*
+ * Hauteur <= 420px.
+ *
+ * Table.css réduit alors davantage le board.
+ * On compense ce scale par des dimensions internes supérieures.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 420px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 80px !important;
+
+    width: 200vw !important;
+
+    padding: 6px 10px 8px !important;
+
+    row-gap: 5px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel > .atout-title {
+    font-size: 28px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn {
+    min-height: 120px !important;
+
+    font-size: 42px !important;
+
+    padding: 6px 2px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn {
+    min-height: 120px !important;
+
+    font-size: 34px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-only .contree-bid-summary {
+    font-size: 34px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    min-height: 120px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 120px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-symbol {
+    width: 66px !important;
+    height: 66px !important;
+
+    font-size: 58px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    font-size: 34px !important;
+  }
+}
+
+/*
+ * Hauteur <= 350px.
+ *
+ * Dernier niveau de compensation : le board est encore réduit,
+ * mais les commandes essentielles gardent une taille exploitable.
+ */
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 70px !important;
+
+    width: 220vw !important;
+
+    padding-top: 5px !important;
+    padding-bottom: 6px !important;
+
+    row-gap: 4px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel > .atout-title {
+    font-size: 30px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn {
+    min-height: 128px !important;
+
+    font-size: 46px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn {
+    min-height: 128px !important;
+
+    font-size: 36px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-only .contree-bid-summary {
+    font-size: 36px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    min-height: 128px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 128px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-symbol {
+    width: 70px !important;
+    height: 70px !important;
+
+    font-size: 62px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    font-size: 36px !important;
+  }
+}
+
+/* ==========================================================
+   MOBILE_CONTREE_HAND_VISIBLE_V25
+   - conserve le titre Encheres (Contree)
+   - libere la vue sur la main apres une enchere de bot
+   - aucune modification de logique
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 44px !important;
+
+    width: 196vw !important;
+    max-width: none !important;
+
+    padding: 5px 10px 7px !important;
+
+    column-gap: 7px !important;
+    row-gap: 4px !important;
+
+    overflow: visible !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel > .atout-title {
+    display: block !important;
+
+    margin: 0 !important;
+
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel .contree-bid-only {
+    padding: 5px 9px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel
+    .contree-bid-only
+    .contree-bid-summary {
+    font-size: 25px !important;
+    line-height: 1 !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    min-height: 96px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 96px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn {
+    padding: 5px 2px !important;
+
+    font-size: 32px !important;
+    line-height: 1 !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+
+    font-size: 27px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-symbol {
+    width: 54px !important;
+    height: 54px !important;
+
+    font-size: 48px !important;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (min-height: 351px)
+  and (max-height: 420px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 42px !important;
+    width: 196vw !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    min-height: 96px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 96px !important;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page[data-mode="contree"] .contree-bidding-panel {
+    top: 34px !important;
+
+    width: 220vw !important;
+
+    padding: 4px 8px 6px !important;
+
+    row-gap: 3px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel > .atout-title {
+    display: block !important;
+
+    font-size: 24px !important;
+    line-height: 1 !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-counter-actions .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn,
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-btn.pass {
+    min-height: 110px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-suit-actions .atout-suit-btn {
+    height: 110px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-values .atout-btn {
+    font-size: 36px !important;
+  }
+
+  .table-page[data-mode="contree"]
+    .contree-bid-only .contree-bid-summary {
+    font-size: 28px !important;
+  }
+}
