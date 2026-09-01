@@ -2780,6 +2780,9 @@ const canStartWithBots =
                 : `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s) d\u00e9tect\u00e9(s). Demande l\u2019autorisation du navigateur ; le microphone sera coup\u00e9 imm\u00e9diatement.`;
 const showTableDebug = false;
 
+// MOBILE_GAME_FIRST_V1
+const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
   return (
     <div
       className="table-page"
@@ -2787,6 +2790,19 @@ const showTableDebug = false;
       data-state={effectivePhaseLabel}
       style={{ position: "relative" }}
     >
+      {/* MOBILE_SCORE_CONTREE_V13 */}
+      {displayScoreUI && (
+        <div
+          className="mobile-score-header"
+          aria-label={`Score Nous ${displayScoreUI.nous}, Eux ${displayScoreUI.eux}`}
+        >
+          <span>NOUS</span>
+          <strong>{displayScoreUI.nous}</strong>
+          <span className="mobile-score-header-sep">–</span>
+          <span>EUX</span>
+          <strong>{displayScoreUI.eux}</strong>
+        </div>
+      )}
       <button className="table-back-btn" onClick={backToSalon}>
         ← Retour au salon
       </button>
@@ -2932,7 +2948,7 @@ const showTableDebug = false;
   effectivePhaseLabel === STATES.ENCHERES &&
   isServerBiddingPhase && (
   <div
-    className="atout-panel"
+    className="atout-panel contree-bidding-panel"
     style={{
       position: "absolute",
       left: "50%",
@@ -2950,6 +2966,19 @@ const showTableDebug = false;
     <div className="atout-title" style={{ marginBottom: 8 }}>
       Enchères (Contrée)
     </div>
+
+    {/* MOBILE_CONTREE_IMPORTANT_ONLY_V10 */}
+    {authoritativeCurrentBid && (
+      <div className="contree-turn-indicator contree-bid-only">
+        <div className="contree-bid-summary">
+          Dernière enchère : {authoritativeCurrentBid.value}{" "}
+          {atoutSymbol(authoritativeCurrentBid.suit)} ×{mult}
+          {" — "}
+          {seatsInfo[currentBidSeatIndex]?.name ||
+            tableSeatPseudos[currentBidSeatIndex]}
+        </div>
+      </div>
+    )}
 
     {authoritativeCurrentBid ? (
       <>
@@ -2979,7 +3008,7 @@ const showTableDebug = false;
         </div>
 
         <div
-          className="atout-actions"
+          className="atout-actions contree-counter-actions"
           style={{ marginBottom: 10, justifyContent: "center", gap: 10 }}
         >
 <button
@@ -3034,7 +3063,7 @@ const showTableDebug = false;
     ) : null}
 
     <div
-      className="atout-actions"
+      className="atout-actions contree-bid-values"
       style={{ gap: 8, flexWrap: "wrap", justifyContent: "center" }}
     >
       {BID_VALUES.map((v) => {
@@ -3063,7 +3092,7 @@ const showTableDebug = false;
     </div>
 
     <div
-      className="atout-actions"
+      className="atout-actions contree-suit-actions"
       style={{ marginTop: 10, justifyContent: "center", gap: 10, flexWrap: "wrap" }}
     >
       {ALL_SUITS.map((suit) => (
@@ -3179,8 +3208,10 @@ const showTableDebug = false;
   </div>
 )}
 
+{/* MOBILE_VISIBLE_ANNOUNCEMENT_V20 */}
 {(mode === "moderne" || mode === "contree") && visibleAnnouncement && (
   <div
+    className="table-announcement-toast"
     style={{
       position: "absolute",
       top: 138,
@@ -3583,13 +3614,34 @@ const showTableDebug = false;
           }
         />
 
-        <div className="table-chat-zone">
-<TableChat
-  currentUserName={pseudo || "Invité"}
-  messages={tableChatMessages}
-  onSendMessage={sendTableMessage}
-/>
+        <div
+          className={`table-chat-zone${mobileChatOpen ? " mobile-open" : ""}`}
+        >
+          <button
+            type="button"
+            className="mobile-chat-close"
+            onClick={() => setMobileChatOpen(false)}
+            aria-label="Fermer le tchat"
+          >
+            ×
+          </button>
+
+          <TableChat
+            currentUserName={pseudo || "Invité"}
+            messages={tableChatMessages}
+            onSendMessage={sendTableMessage}
+          />
         </div>
+
+        <button
+          type="button"
+          className="mobile-chat-toggle"
+          onClick={() => setMobileChatOpen(true)}
+          aria-label="Ouvrir le tchat"
+          aria-expanded={mobileChatOpen}
+        >
+          💬
+        </button>
       </div>
     </div>
   );
