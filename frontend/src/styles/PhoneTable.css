@@ -3629,3 +3629,196 @@
     font-size: 28px !important;
   }
 }
+
+/* ==========================================================
+   SCORE_MENE_EN_COURS_V1
+   Score de partie + score permanent de la mene.
+   ========================================================== */
+
+.table-page .score-overlay.score-pill {
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 14px;
+  row-gap: 3px;
+}
+
+.table-page .score-overlay .score-mene-current {
+  flex: 0 0 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  color: #ffe58b;
+
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.05;
+
+  letter-spacing: 0.35px;
+  white-space: nowrap;
+}
+
+.table-page .score-overlay .score-mene-current strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.mobile-score-main,
+.mobile-score-mene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+}
+
+.mobile-score-mene {
+  color: #ffe58b;
+
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+
+  letter-spacing: 0.25px;
+  white-space: nowrap;
+}
+
+.mobile-score-mene strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .mobile-score-header {
+    flex-direction: row;
+
+    gap: 10px;
+
+    min-height: 30px;
+
+    padding: 3px 12px;
+  }
+
+  .table-page .mobile-score-mene {
+    padding-left: 10px;
+
+    border-left: 1px solid rgba(255, 220, 150, 0.58);
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .mobile-score-header {
+    gap: 7px;
+
+    min-height: 27px;
+
+    padding: 2px 8px;
+  }
+
+  .table-page .mobile-score-mene {
+    padding-left: 7px;
+
+    font-size: 14px;
+  }
+
+  .table-page .mobile-score-mene strong {
+    font-size: 15px;
+  }
+}
+
+/* ==========================================================
+   SCORE_MENE_SHIFT_RIGHT_V3
+   Décalage horizontal léger du score mobile uniquement.
+   Aucun changement du bouton Démarrer avec bots.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page .mobile-score-header {
+    left: calc(50% + 40px);
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page .mobile-score-header {
+    left: calc(50% + 30px);
+  }
+}
+
+/* ==========================================================
+   SCORE_MENE_DESKTOP_INLINE_V4
+   Desktop uniquement : score de partie + mène sur une ligne.
+   Le rendu mobile reste inchangé.
+   ========================================================== */
+
+@media
+  (hover: hover)
+  and (pointer: fine) {
+
+  .table-page .score-overlay.score-pill {
+    flex-wrap: nowrap;
+  }
+
+  .table-page .score-overlay .score-mene-current {
+    flex: 0 0 auto;
+
+    margin-left: 12px;
+  }
+}
+
+/* ==========================================================
+   SCORE_MENE_TABLET_RESPONSIVE_V6
+   Tablette tactile paysage :
+   NOUS / EUX / MENE restent toujours sur une seule ligne.
+   Espacements adaptatifs selon la largeur disponible.
+   Telephone et desktop restent inchanges.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (min-height: 600px) {
+
+  .table-page .score-overlay.score-pill {
+    flex-wrap: nowrap;
+
+    column-gap: clamp(8px, 1.4vw, 18px);
+
+    max-width: calc(100vw - 32px);
+
+    white-space: nowrap;
+  }
+
+  .table-page .score-overlay .score-mene-current {
+    flex: 0 0 auto;
+
+    margin-left: clamp(6px, 1.2vw, 14px);
+
+    gap: clamp(5px, 0.8vw, 9px);
+
+    white-space: nowrap;
+  }
+}

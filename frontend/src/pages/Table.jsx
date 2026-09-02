@@ -2393,6 +2393,12 @@ const serverScores = serverHand?.scores || null;
 const scoreUI = serverHand
   ? serverScores || { nous: 0, eux: 0 }
   : scorePartie;
+
+// SCORE_MENE_EN_COURS_V1
+// Score de la mene deja calcule par le serveur.
+const scoreMancheUI = serverHand
+  ? serverHand?.scoreManche || { nous: 0, eux: 0 }
+  : game?.scoreManche || { nous: 0, eux: 0 };
 const isServerGameOver =
   !!serverHand &&
   (serverHand?.partieTerminee || serverPhaseLabel === "FIN_DE_PARTIE");
@@ -2460,6 +2466,11 @@ const displayScoreUI =
   scoreUI && localSeatTeam === "eux"
     ? { nous: scoreUI.eux, eux: scoreUI.nous }
     : scoreUI;
+
+const displayScoreMancheUI =
+  scoreMancheUI && localSeatTeam === "eux"
+    ? { nous: scoreMancheUI.eux, eux: scoreMancheUI.nous }
+    : scoreMancheUI;
 
 const currentBidSeatIndex =
   typeof authoritativeCurrentBid?.seatIndex === "number"
@@ -2791,16 +2802,25 @@ const [mobileChatOpen, setMobileChatOpen] = useState(false);
       style={{ position: "relative" }}
     >
       {/* MOBILE_SCORE_CONTREE_V13 */}
-      {displayScoreUI && (
+      {displayScoreUI && displayScoreMancheUI && (
         <div
           className="mobile-score-header"
-          aria-label={`Score Nous ${displayScoreUI.nous}, Eux ${displayScoreUI.eux}`}
+          aria-label={`Score Nous ${displayScoreUI.nous}, Eux ${displayScoreUI.eux}. Mène ${displayScoreMancheUI.nous} à ${displayScoreMancheUI.eux}`}
         >
-          <span>NOUS</span>
-          <strong>{displayScoreUI.nous}</strong>
-          <span className="mobile-score-header-sep">–</span>
-          <span>EUX</span>
-          <strong>{displayScoreUI.eux}</strong>
+          <div className="mobile-score-main">
+            <span>NOUS</span>
+            <strong>{displayScoreUI.nous}</strong>
+            <span className="mobile-score-header-sep">–</span>
+            <span>EUX</span>
+            <strong>{displayScoreUI.eux}</strong>
+          </div>
+
+          <div className="mobile-score-mene">
+            <span>MÈNE</span>
+            <strong>{displayScoreMancheUI.nous}</strong>
+            <span className="mobile-score-header-sep">–</span>
+            <strong>{displayScoreMancheUI.eux}</strong>
+          </div>
         </div>
       )}
       <button className="table-back-btn" onClick={backToSalon}>
@@ -3282,15 +3302,27 @@ const [mobileChatOpen, setMobileChatOpen] = useState(false);
   </div>
 )}
 
-{displayScoreUI && (
+{displayScoreUI && displayScoreMancheUI && (
               <div className="score-overlay score-pill">
                 <span className="score-side">Nous</span>
+
                 <div className="score-pill-box">
                   {displayScoreUI.nous}
                   <span className="score-sep">–</span>
                   {displayScoreUI.eux}
                 </div>
+
                 <span className="score-side">Eux</span>
+
+                <div
+                  className="score-mene-current"
+                  aria-label={`Mène ${displayScoreMancheUI.nous} à ${displayScoreMancheUI.eux}`}
+                >
+                  <span>MÈNE</span>
+                  <strong>{displayScoreMancheUI.nous}</strong>
+                  <span className="score-sep">–</span>
+                  <strong>{displayScoreMancheUI.eux}</strong>
+                </div>
               </div>
             )}
 
