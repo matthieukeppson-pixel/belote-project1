@@ -3822,3 +3822,139 @@
     white-space: nowrap;
   }
 }
+
+/* ==========================================================
+   MOBILE_MODERNE_SINGLE_LINE_V15
+   Smartphone paysage :
+   - tour 1 : Prendre / SA / TA / Passer sur une seule ligne
+   - tour 2 : couleurs / SA / TA / Passer sur une seule ligne
+   - aucune scrollbar dans le panneau d'enchere Moderne
+   - Classique et Contree non touches
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page[data-mode="moderne"] .atout-panel.atout-panel--glass {
+    width: 960px !important;
+    max-width: 960px !important;
+
+    max-height: none !important;
+
+    padding: 10px 14px 12px !important;
+
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+
+  .table-page[data-mode="moderne"]
+    .atout-panel.atout-panel--glass
+    > .atout-actions {
+    width: 100%;
+
+    display: grid !important;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+
+    align-items: center;
+
+    gap: 8px !important;
+
+    flex-wrap: nowrap !important;
+  }
+
+  .table-page[data-mode="moderne"]
+    .atout-panel.atout-panel--glass
+    > .atout-actions
+    > .atout-btn {
+    width: 100%;
+
+    min-width: 0 !important;
+    min-height: 96px;
+
+    padding: 10px 6px !important;
+
+    box-sizing: border-box;
+  }
+
+  .table-page[data-mode="moderne"]
+    .atout-panel.atout-panel--glass
+    > .atout-actions
+    > .atout-suit-btn {
+    width: 100%;
+    height: 96px;
+
+    min-width: 0 !important;
+    min-height: 96px !important;
+
+    justify-self: stretch;
+  }
+}
+
+/* ==========================================================
+   MOBILE_MODERNE_POSITION_V16
+   Position verticale smartphone :
+   enchères Moderne descendues comme la Contree.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page[data-mode="moderne"] .atout-panel.atout-panel--glass {
+    top: 180px !important;
+    bottom: auto !important;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page[data-mode="moderne"] .atout-panel.atout-panel--glass {
+    top: 155px !important;
+  }
+}
+
+/* ==========================================================
+   MOBILE_MODERNE_ATOUT_LEFT_V17
+   Smartphone paysage :
+   la carte d'atout Moderne reste completement a gauche
+   du panneau d'encheres large et ne le recouvre plus.
+   ========================================================== */
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .table-page[data-mode="moderne"] .atout-card {
+    top: 238px !important;
+    bottom: auto !important;
+
+    left: calc(50% - 640px) !important;
+    right: auto !important;
+
+    z-index: 25;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .table-page[data-mode="moderne"] .atout-card {
+    top: 217px !important;
+    left: calc(50% - 640px) !important;
+  }
+}
