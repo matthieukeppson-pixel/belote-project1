@@ -419,7 +419,18 @@ export default function Admin() {
 
             {isAdmin &&
               renderUsersSection("Demandes en attente", "Aucune demande en attente.", pendingUsers, "pending")}
-            {renderUsersSection("Joueurs validés", "Aucun joueur validé.", approvedUsers, "approved")}
+            {renderUsersSection(
+                "Joueurs validés",
+                "Aucun joueur validé.",
+                [...approvedUsers].sort((a, b) =>
+                  String(a.pseudo || a.username || "").localeCompare(
+                    String(b.pseudo || b.username || ""),
+                    "fr",
+                    { sensitivity: "base" }
+                  )
+                ),
+                "approved"
+              )}
             {renderUsersSection("Joueurs bannis", "Aucun joueur banni.", bannedUsers, "banned")}
           </>
         )}
