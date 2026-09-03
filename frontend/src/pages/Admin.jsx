@@ -423,11 +423,14 @@ export default function Admin() {
                 "Joueurs validés",
                 "Aucun joueur validé.",
                 [...approvedUsers].sort((a, b) =>
-                  String(a.pseudo || a.username || "").localeCompare(
-                    String(b.pseudo || b.username || ""),
-                    "fr",
-                    { sensitivity: "base" }
-                  )
+                  String(a.pseudo || a.username || "")
+                    .replace(/^[^\p{L}\p{N}]+/u, "")
+                    .localeCompare(
+                      String(b.pseudo || b.username || "")
+                        .replace(/^[^\p{L}\p{N}]+/u, ""),
+                      "fr",
+                      { sensitivity: "base" }
+                    )
                 ),
                 "approved"
               )}
