@@ -3958,3 +3958,19 @@
     left: calc(50% - 640px) !important;
   }
 }
+
+/* ==========================================================
+   SCORE_DESKTOP_PILL_NOWRAP_V7
+   Desktop souris uniquement :
+   empeche les scores longs (ex. 1462 - 912) de passer sur 2 lignes.
+   Aucun changement smartphone / tablette tactile.
+   ========================================================== */
+@media
+  (hover: hover)
+  and (pointer: fine) {
+
+  .table-page .score-overlay .score-pill-box {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+}
