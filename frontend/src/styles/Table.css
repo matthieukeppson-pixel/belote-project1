@@ -1348,3 +1348,21 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================
+   CONTREE_DESKTOP_HIDE_BLACK_LAST_BID_LINE_V1
+   Desktop souris uniquement :
+   masque la ligne "Derniere enchere" au-dessus du cadre dore.
+   Le cadre dore du contrat reste affiche.
+   Aucun changement smartphone / tablette tactile.
+   ========================================================== */
+@media
+  (hover: hover)
+  and (pointer: fine) {
+
+  .table-page[data-mode="contree"]
+    .contree-bidding-panel
+    .contree-turn-indicator.contree-bid-only {
+    display: none !important;
+  }
+}
