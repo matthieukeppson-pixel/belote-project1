@@ -15,6 +15,13 @@ import Profil from "./Profil.jsx";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4001";
 
+const PLAYLIST_AUDIO_URL = String(
+  import.meta.env.VITE_PLAYLIST_AUDIO_URL || ""
+).trim();
+
+/* SALON_PC_RADIO_RIGHT_V2 */
+
+
 const SALON_EMOJIS = [
   { code: ":langue:", src: "/emojis/langue.png", alt: "langue" },
   { code: ":pouce:", src: "/emojis/pouce.png", alt: "pouce" },
@@ -154,6 +161,44 @@ export default function SalonJeu({ user }) {
   const isAdminUser = currentUserRole === "admin";
   const isModeratorUser = currentUserRole === "moderator";
   const isStaffUser = isAdminUser || isModeratorUser;
+
+  /* SALON_PC_RADIO_RIGHT_V2 */
+  const [salonRadioPlaying, setSalonRadioPlaying] = useState(false);
+  const [salonRadioPanelOpen, setSalonRadioPanelOpen] = useState(false);
+  const [salonRadioError, setSalonRadioError] = useState("");
+  const [salonRadioVolume, setSalonRadioVolume] = useState(0.65);
+  const salonRadioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = salonRadioRef.current;
+    if (audio) audio.volume = salonRadioVolume;
+  }, [salonRadioVolume]);
+
+  async function toggleSalonRadio() {
+    const audio = salonRadioRef.current;
+
+    if (!audio || !PLAYLIST_AUDIO_URL) {
+      setSalonRadioError("Flux indisponible");
+      return;
+    }
+
+    if (salonRadioPlaying) {
+      audio.pause();
+      setSalonRadioPlaying(false);
+      return;
+    }
+
+    try {
+      audio.volume = salonRadioVolume;
+      await audio.play();
+      setSalonRadioPlaying(true);
+      setSalonRadioError("");
+    } catch {
+      setSalonRadioPlaying(false);
+      setSalonRadioError("Lecture impossible");
+    }
+  }
+
 
   useEffect(() => {
     if (!isAdminUser) {
@@ -779,6 +824,75 @@ const statusText = isHumanFull
           </div>
         </div>
       </div>
+
+      {/* SALON_PC_RADIO_RIGHT_V2 */}
+      <aside
+        className={`salon-radio-right${salonRadioPanelOpen ? " is-open" : ""}`}
+        aria-label="Radio"
+      >
+        <button
+          type="button"
+          className="salon-radio-right-toggle"
+          onClick={() => setSalonRadioPanelOpen((open) => !open)}
+          aria-expanded={salonRadioPanelOpen}
+          aria-label={
+            salonRadioPanelOpen
+              ? "Fermer les commandes de la radio"
+              : "Ouvrir les commandes de la radio"
+          }
+          title="Radio"
+        >
+          {salonRadioPanelOpen ? "×" : "📻"}
+        </button>
+
+        <audio
+          ref={salonRadioRef}
+          src={PLAYLIST_AUDIO_URL || undefined}
+          preload="none"
+          onPlay={() => setSalonRadioPlaying(true)}
+          onPause={() => setSalonRadioPlaying(false)}
+          onError={() => setSalonRadioError("Flux indisponible")}
+        />
+
+        <div className="salon-radio-right-head">
+          <span className="salon-radio-right-icon">📻</span>
+          <span className="salon-radio-right-label">Radio</span>
+        </div>
+
+        <button
+          type="button"
+          className="salon-radio-right-play"
+          onClick={toggleSalonRadio}
+          disabled={!PLAYLIST_AUDIO_URL}
+          aria-label={salonRadioPlaying ? "Couper la radio" : "Écouter la radio"}
+        >
+          {salonRadioPlaying ? "⏸" : "▶"}
+          <span className="salon-radio-right-play-text">
+            {salonRadioPlaying ? "Couper" : "Écouter"}
+          </span>
+        </button>
+
+        <label className="salon-radio-right-volume">
+          <span>🔊</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={salonRadioVolume}
+            onChange={(event) =>
+              setSalonRadioVolume(Number(event.target.value))
+            }
+            aria-label="Volume radio"
+          />
+        </label>
+
+        {salonRadioError && (
+          <div className="salon-radio-right-error">
+            {salonRadioError}
+          </div>
+        )}
+      </aside>
 
       {showProfil && (
         <Profil

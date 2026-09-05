@@ -1241,3 +1241,1220 @@
   width: auto;
   height: 44px;
 }
+
+/* ==========================================================
+   SALON_PC_RADIO_RIGHT_V2
+   Radio indépendante de la grille Tables / Tchat / Joueurs.
+   ========================================================== */
+
+.salon-radio-right {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+  .salon-radio-right {
+    position: fixed;
+    z-index: 30;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+
+    top: 120px;
+    right: 12px;
+
+    width: 196px;
+    padding: 14px;
+
+    border: 1px solid rgba(110, 185, 255, 0.32);
+    border-radius: 16px;
+
+    background: rgba(0, 25, 80, 0.78);
+
+    box-shadow:
+      0 0 14px rgba(0, 150, 255, 0.40),
+      0 0 28px rgba(0, 150, 255, 0.18),
+      inset 0 0 10px rgba(0, 120, 255, 0.18);
+
+    backdrop-filter: blur(4px);
+  }
+
+  .salon-radio-right audio {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    color: white;
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-shadow: 0 0 7px black;
+  }
+
+  .salon-radio-right-icon {
+    line-height: 1;
+  }
+
+  .salon-radio-right-play {
+    min-height: 38px;
+    border: 1px solid rgba(130, 195, 255, 0.35);
+    border-radius: 10px;
+    background: linear-gradient(180deg, #2479ff 0%, #145bd0 100%);
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .salon-radio-right-volume {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .salon-radio-right-volume input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .salon-radio-right-error {
+    color: #ffd0d0;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+}
+
+/*
+   Quand la marge droite n'est plus assez large pour le panneau complet,
+   on garde toujours la Radio visible à droite mais en format compact.
+   La grille centrale n'est jamais modifiée.
+*/
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1699px) {
+
+  .salon-radio-right {
+    top: 120px;
+    right: 8px;
+
+    width: 54px;
+    padding: 9px 7px;
+    gap: 8px;
+
+    align-items: center;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text,
+  .salon-radio-right-volume,
+  .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    font-size: 1.25rem;
+  }
+
+  .salon-radio-right-play {
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    font-size: 1rem;
+  }
+}
+
+/* ==========================================================
+   RADIO PETIT PC PORTABLE
+   <= 1499px : onglet au bord droit.
+   Ouverture en superposition sans modifier la grille.
+   ========================================================== */
+
+.salon-radio-right-toggle {
+  display: none;
+}
+
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1499px) {
+
+  .salon-radio-right {
+    top: 120px;
+    right: 0;
+
+    width: 50px;
+    min-height: 50px;
+
+    padding: 5px;
+    gap: 8px;
+
+    align-items: center;
+    overflow: hidden;
+
+    transition:
+      width 160ms ease,
+      right 160ms ease,
+      padding 160ms ease;
+  }
+
+  .salon-radio-right-toggle {
+    display: flex;
+
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: 1px solid rgba(130, 195, 255, 0.40);
+    border-radius: 10px;
+
+    background: linear-gradient(180deg, #2479ff 0%, #145bd0 100%);
+    color: white;
+
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1;
+
+    cursor: pointer;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    right: 8px;
+
+    width: 196px;
+    padding: 10px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle {
+    align-self: flex-end;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-error {
+    display: block;
+  }
+}
+
+/* ==========================================================
+   RADIO_LAPTOP_FINAL_V1
+   Grand PC inchangé.
+   Portable moyen : mini lecteur complet.
+   Petit portable : capsule horizontale ouvrable.
+   ========================================================== */
+
+/* 1400 à 1699 px : mini-radio complète et élégante */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1400px)
+  and (max-width: 1699px) {
+
+  .salon-radio-right {
+    top: 120px;
+    right: 10px;
+
+    width: 168px;
+    min-height: auto;
+    padding: 12px;
+    gap: 9px;
+
+    align-items: stretch;
+    overflow: visible;
+
+    border-radius: 16px;
+
+    background: rgba(0, 25, 80, 0.84);
+
+    box-shadow:
+      0 0 12px rgba(0, 150, 255, 0.38),
+      0 0 24px rgba(0, 150, 255, 0.16),
+      inset 0 0 9px rgba(0, 120, 255, 0.17);
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-play {
+    display: block;
+
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 8px;
+
+    font-size: 0.82rem;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume {
+    display: grid;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: block;
+  }
+
+  .salon-radio-right-head {
+    font-size: 0.98rem;
+  }
+}
+
+/* 1399 px et moins : capsule fermée "Radio" */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1399px) {
+
+  .salon-radio-right:not(.is-open) {
+    top: 120px;
+    right: 0;
+
+    width: 112px;
+    min-height: 48px;
+
+    padding: 4px 5px;
+    gap: 0;
+
+    align-items: stretch;
+    overflow: hidden;
+
+    border-radius: 17px 0 0 17px;
+
+    background: rgba(0, 25, 80, 0.90);
+
+    box-shadow:
+      0 0 12px rgba(0, 150, 255, 0.40),
+      inset 0 0 8px rgba(0, 120, 255, 0.20);
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 102px;
+    height: 40px;
+    flex: 0 0 40px;
+
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 0 10px;
+
+    border-radius: 12px;
+
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: "Radio";
+
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  .salon-radio-right.is-open {
+    top: 120px;
+    right: 8px;
+
+    width: 184px;
+    padding: 10px;
+    gap: 9px;
+
+    align-items: stretch;
+    overflow: visible;
+
+    border-radius: 16px;
+
+    background: rgba(0, 25, 80, 0.95);
+
+    box-shadow:
+      0 0 14px rgba(0, 150, 255, 0.42),
+      0 0 26px rgba(0, 150, 255, 0.18),
+      inset 0 0 10px rgba(0, 120, 255, 0.18);
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+
+    padding: 0;
+
+    align-self: flex-end;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+
+    font-size: 0.95rem;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 8px;
+
+    font-size: 0.82rem;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-error {
+    display: block;
+  }
+}
+
+/* ==========================================================
+   RADIO_ALIGN_JOUEURS_V1
+   Grand PC : Radio alignée avec le titre Joueurs et placée
+   juste à droite de la grille centrale de 1240px.
+   ========================================================== */
+
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1700px) {
+
+  .salon-radio-right {
+    top: 70px;
+
+    left: calc(50% + 630px);
+    right: auto;
+  }
+}
+
+/* ==========================================================
+   RADIO_LAPTOP_LABEL_FIX_V1
+   Portable moyen : conserve explicitement le mot "Radio".
+   ========================================================== */
+
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1400px)
+  and (max-width: 1699px) {
+
+  .salon-radio-right .salon-radio-right-label {
+    display: inline;
+  }
+}
+
+/* ==========================================================
+   RADIO_PC_AUTOFIT_FINAL_V1
+   La Radio utilise uniquement la place réellement disponible
+   à droite de la grille centrale de 1240px.
+   Aucun chevauchement permanent avec Joueurs.
+   ========================================================== */
+
+/* GRAND PC */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1700px) {
+
+  .salon-radio-right {
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: 196px;
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* PORTABLE LARGE : toute la Radio tient encore */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1600px)
+  and (max-width: 1699px) {
+
+  .salon-radio-right {
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: clamp(160px, calc(50vw - 640px), 168px);
+    padding: 11px;
+    gap: 8px;
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    display: flex;
+    font-size: 0.95rem;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right-play {
+    display: block;
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 7px;
+    font-size: 0.8rem;
+  }
+
+  .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* PORTABLE MOYEN : titre + bouton, sans slider encombrant */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1500px)
+  and (max-width: 1599px) {
+
+  .salon-radio-right {
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: calc(50vw - 640px);
+    min-width: 110px;
+
+    padding: 9px;
+    gap: 7px;
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    display: flex;
+    font-size: 0.9rem;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right-play {
+    display: block;
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 5px;
+    font-size: 0.76rem;
+  }
+
+  .salon-radio-right-volume,
+  .salon-radio-right-error {
+    display: none;
+  }
+}
+
+/* 1440–1499 : capsule Radio dans la marge disponible */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1440px)
+  and (max-width: 1499px) {
+
+  .salon-radio-right:not(.is-open) {
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: calc(50vw - 640px);
+    min-width: 80px;
+    min-height: 46px;
+
+    padding: 4px;
+    gap: 0;
+
+    border-radius: 14px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 100%;
+    height: 38px;
+    flex: 0 0 38px;
+
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    padding: 0 6px;
+    border-radius: 10px;
+
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: "Radio";
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    top: 70px;
+    bottom: auto;
+
+    left: auto;
+    right: 8px;
+
+    width: 184px;
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle {
+    display: flex;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    padding: 0;
+    align-self: flex-end;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+    width: 100%;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* 1360–1439 : uniquement un joli bouton Radio */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1360px)
+  and (max-width: 1439px) {
+
+  .salon-radio-right:not(.is-open) {
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: clamp(46px, calc(50vw - 640px), 78px);
+    min-height: 46px;
+
+    padding: 4px;
+    gap: 0;
+
+    border-radius: 14px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 100%;
+    height: 38px;
+    flex: 0 0 38px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    border-radius: 10px;
+
+    font-size: 1rem;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    top: 70px;
+    bottom: auto;
+
+    left: auto;
+    right: 8px;
+
+    width: 184px;
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+    width: 100%;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* Très petit PC : on évite la zone du joueur */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1359px) {
+
+  .salon-radio-right:not(.is-open) {
+    top: auto;
+    bottom: 18px;
+
+    left: auto;
+    right: 0;
+
+    width: 46px;
+    min-height: 46px;
+
+    padding: 4px;
+    gap: 0;
+
+    border-radius: 14px 0 0 14px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    border-radius: 10px;
+
+    font-size: 1rem;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    top: auto;
+    bottom: 18px;
+
+    left: auto;
+    right: 8px;
+
+    width: 184px;
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+    width: 100%;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* ==========================================================
+   RADIO_PC_RESPONSIVE_TOP_FINAL_V2
+
+   Règle définitive :
+   - toujours EN HAUT
+   - toujours à droite de Joueurs quand la marge le permet
+   - c'est la Radio qui se réduit, jamais le salon
+   - téléphone/tablette tactile exclus
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   GRAND PC >= 1700
+   Lecteur complet aligné avec Joueurs.
+   ---------------------------------------------------------- */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1700px) {
+
+  .salon-radio-right {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: 196px;
+    min-width: 0;
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right-play {
+    display: block;
+  }
+
+  .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* ----------------------------------------------------------
+   PORTABLE LARGE 1550 -> 1699
+   Lecteur complet réduit selon la marge réellement disponible.
+   ---------------------------------------------------------- */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1550px)
+  and (max-width: 1699px) {
+
+  .salon-radio-right {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: clamp(125px, calc(50vw - 640px), 168px);
+    min-width: 0;
+
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right-toggle {
+    display: none;
+  }
+
+  .salon-radio-right-head {
+    display: flex;
+    font-size: 0.94rem;
+  }
+
+  .salon-radio-right-label,
+  .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right-play {
+    display: block;
+
+    width: 100%;
+    min-height: 34px;
+
+    padding: 6px 5px;
+
+    font-size: 0.78rem;
+  }
+
+  .salon-radio-right-volume {
+    display: grid;
+  }
+
+  .salon-radio-right-error {
+    display: block;
+  }
+}
+
+/* ----------------------------------------------------------
+   PORTABLE MOYEN 1450 -> 1549
+   Capsule RADIO dans la marge disponible.
+   ---------------------------------------------------------- */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1450px)
+  and (max-width: 1549px) {
+
+  .salon-radio-right:not(.is-open) {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: clamp(80px, calc(50vw - 640px), 110px);
+    min-width: 0;
+    min-height: 46px;
+
+    padding: 4px;
+    gap: 0;
+
+    align-items: stretch;
+    overflow: hidden;
+
+    border-radius: 14px;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 100%;
+    height: 38px;
+    flex: 0 0 38px;
+
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    padding: 0 5px;
+
+    border-radius: 10px;
+
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: "Radio";
+
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: auto;
+    right: 8px;
+
+    width: 184px;
+    min-width: 0;
+
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle {
+    display: flex;
+
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+
+    padding: 0;
+
+    align-self: flex-end;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-label,
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+    width: 100%;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+}
+
+/* ----------------------------------------------------------
+   PETIT PC < 1450
+   Bouton Radio très compact EN HAUT.
+   Ouverture temporaire des commandes en superposition.
+   ---------------------------------------------------------- */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1449px) {
+
+  .salon-radio-right:not(.is-open) {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: min(calc(50% + 630px), calc(100vw - 48px));
+    right: auto;
+
+    width: 44px;
+    min-width: 0;
+    min-height: 46px;
+
+    padding: 4px;
+    gap: 0;
+
+    align-items: stretch;
+    overflow: hidden;
+
+    border-radius: 14px;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle {
+    display: flex;
+
+    width: 36px;
+    height: 38px;
+    flex: 0 0 38px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border-radius: 10px;
+
+    font-size: 1rem;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right:not(.is-open) .salon-radio-right-head,
+  .salon-radio-right:not(.is-open) .salon-radio-right-play,
+  .salon-radio-right:not(.is-open) .salon-radio-right-volume,
+  .salon-radio-right:not(.is-open) .salon-radio-right-error {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    position: fixed;
+
+    top: 70px;
+    bottom: auto;
+
+    left: auto;
+    right: 8px;
+
+    width: 184px;
+    min-width: 0;
+
+    padding: 10px;
+    gap: 8px;
+
+    align-items: stretch;
+    overflow: visible;
+
+    border-radius: 16px;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle {
+    display: flex;
+
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+
+    padding: 0;
+
+    align-self: flex-end;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-toggle::after {
+    content: none;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-head {
+    display: flex;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-label,
+  .salon-radio-right.is-open .salon-radio-right-play-text {
+    display: inline;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-play {
+    display: block;
+    width: 100%;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-volume {
+    display: grid;
+  }
+
+  .salon-radio-right.is-open .salon-radio-right-error {
+    display: block;
+  }
+}
