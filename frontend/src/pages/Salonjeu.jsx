@@ -169,6 +169,36 @@ export default function SalonJeu({ user }) {
   const [salonRadioVolume, setSalonRadioVolume] = useState(0.65);
   const salonRadioRef = useRef(null);
 
+
+  // SALON_DJ_PC_FINAL_V1
+  const [salonDjState, setSalonDjState] = useState({
+    mode: "playlist",
+    hostPseudo: null,
+    title: "Playlist en continu",
+  });
+
+  const normalizeSalonDjPseudo = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+  const salonDjCurrentPseudo = normalizeSalonDjPseudo(currentName);
+
+  const salonDjCanControl =
+    salonDjCurrentPseudo === "matt" ||
+    salonDjCurrentPseudo === "vero";
+
+  const salonDjIsLive = salonDjState.mode === "live";
+
+  const salonDjIsMine =
+    salonDjIsLive &&
+    normalizeSalonDjPseudo(salonDjState.hostPseudo) === salonDjCurrentPseudo;
+
+  const salonDjOccupiedByOther =
+    salonDjIsLive && !salonDjIsMine;
+
   useEffect(() => {
     const audio = salonRadioRef.current;
     if (audio) audio.volume = salonRadioVolume;
@@ -279,6 +309,17 @@ export default function SalonJeu({ user }) {
     ws.send(JSON.stringify(obj));
   }
 
+
+  function toggleSalonDj() {
+    if (!salonDjCanControl || salonDjOccupiedByOther) return;
+
+    sendWS({
+      type: salonDjIsMine
+        ? "stop_live_animation"
+        : "start_live_animation",
+    });
+  }
+
   function setTableMode(tableId, newMode) {
     // ✅ demande au serveur (source de vérité)
     sendWS({ type: "set_table_mode", tableId, mode: newMode });
@@ -372,6 +413,7 @@ export default function SalonJeu({ user }) {
       // état initial
       ws.send(JSON.stringify({ type: "get_players" }));
       ws.send(JSON.stringify({ type: "get_tables" }));
+      ws.send(JSON.stringify({ type: "get_animation_state" }));
     };
 
 ws.onmessage = (event) => {
@@ -401,9 +443,17 @@ ws.onmessage = (event) => {
       window.alert(data.reason || "La table ne peut pas être fermée.");
       return;
 
-    case "animation_state":
-      // Capacit? DJ conserv?e c?t? serveur pour les soir?es programm?es.
-      return;
+      case "animation_state":
+        setSalonDjState({
+          mode: data.mode === "live" ? "live" : "playlist",
+          hostPseudo: data.hostPseudo || data.host || null,
+          title:
+            data.title ||
+            (data.mode === "live"
+              ? `Direct DJ - ${data.hostPseudo || data.host || "DJ"}`
+              : "Playlist en continu"),
+        });
+        return;
 
     case "joined_table":
       navigate(`/table/${data.tableId}`, {
@@ -893,6 +943,55 @@ const statusText = isHumanFull
           </div>
         )}
       </aside>
+
+        {/* SALON_DJ_PC_FINAL_V1 */}
+        <button
+          type="button"
+          className={`salon-dj-pc${salonDjIsLive ? " is-live" : ""}${
+            salonDjIsMine ? " is-mine" : ""
+          }`}
+          onClick={toggleSalonDj}
+          disabled={!salonDjCanControl || salonDjOccupiedByOther}
+          aria-pressed={salonDjIsMine}
+          title={
+            salonDjIsMine
+              ? "Arrêter le direct DJ"
+              : salonDjOccupiedByOther
+                ? `${salonDjState.hostPseudo || "DJ"} est actuellement en direct`
+                : salonDjCanControl
+                  ? "Prendre le direct DJ"
+                  : salonDjIsLive
+                    ? salonDjState.title
+                    : "DJ réservé à Matt et Véro"
+          }
+        >
+          <span
+            className="salon-dj-pc-icon"
+            aria-hidden="true"
+          >
+            {salonDjIsLive ? "🔴" : "🎧"}
+          </span>
+
+          <span className="salon-dj-pc-copy">
+            <strong>
+              {salonDjIsMine
+                ? "DJ en direct"
+                : salonDjIsLive
+                  ? `${salonDjState.hostPseudo || "DJ"} en direct`
+                  : "DJ"}
+            </strong>
+
+            <small>
+              {salonDjIsMine
+                ? "Arrêter le direct"
+                : salonDjOccupiedByOther
+                  ? "Direct en cours"
+                  : salonDjCanControl
+                    ? "Prendre le direct"
+                    : "Matt & Véro"}
+            </small>
+          </span>
+        </button>
 
       {showProfil && (
         <Profil

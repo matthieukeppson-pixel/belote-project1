@@ -2458,3 +2458,271 @@
     display: block;
   }
 }
+
+/* ==========================================================
+   SALON_DJ_PC_FINAL_V1
+   DJ uniquement ordinateur.
+   Positionne sous la Radio.
+   Telephone et tablette tactile exclus.
+   ========================================================== */
+
+.salon-dj-pc {
+  display: none;
+}
+
+@media
+  (hover: hover)
+  and (pointer: fine) {
+
+  .salon-dj-pc {
+    position: fixed;
+    z-index: 31;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+
+    min-height: 52px;
+
+    padding: 8px 11px;
+
+    box-sizing: border-box;
+
+    border:
+      1px solid rgba(80, 175, 255, 0.8);
+
+    border-radius: 15px;
+
+    background:
+      linear-gradient(
+        180deg,
+        rgba(22, 118, 245, 0.97),
+        rgba(4, 65, 170, 0.97)
+      );
+
+    color: #fff;
+
+    font: inherit;
+
+    cursor: pointer;
+
+    box-shadow:
+      0 0 12px rgba(0, 150, 255, 0.45),
+      0 0 24px rgba(0, 120, 255, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+    transition:
+      transform 120ms ease,
+      filter 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .salon-dj-pc:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+
+  .salon-dj-pc:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .salon-dj-pc:disabled {
+    cursor: default;
+  }
+
+  .salon-dj-pc:disabled:not(.is-live) {
+    opacity: 0.64;
+  }
+
+  .salon-dj-pc.is-live {
+    border-color:
+      rgba(255, 105, 115, 0.92);
+
+    background:
+      linear-gradient(
+        180deg,
+        rgba(210, 44, 61, 0.98),
+        rgba(126, 12, 29, 0.98)
+      );
+
+    box-shadow:
+      0 0 14px rgba(255, 55, 75, 0.68),
+      0 0 27px rgba(255, 55, 75, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .salon-dj-pc.is-live:disabled {
+    opacity: 1;
+  }
+
+  .salon-dj-pc-icon {
+    flex: 0 0 auto;
+
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .salon-dj-pc-copy {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    line-height: 1.05;
+  }
+
+  .salon-dj-pc-copy strong {
+    max-width: 100%;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 0.88rem;
+    font-weight: 850;
+  }
+
+  .salon-dj-pc-copy small {
+    max-width: 100%;
+
+    margin-top: 4px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 0.66rem;
+    font-weight: 700;
+
+    opacity: 0.82;
+  }
+}
+
+/* GRAND PC */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1700px) {
+
+  .salon-dj-pc {
+    top: 214px;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width: 196px;
+  }
+}
+
+/* PORTABLE LARGE */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1550px)
+  and (max-width: 1699px) {
+
+  .salon-dj-pc {
+    top: 214px;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width:
+      clamp(
+        125px,
+        calc(50vw - 640px),
+        168px
+      );
+
+    padding-inline: 7px;
+  }
+
+  .salon-dj-pc-copy strong {
+    font-size: 0.78rem;
+  }
+
+  .salon-dj-pc-copy small {
+    font-size: 0.61rem;
+  }
+}
+
+/* PORTABLE MOYEN */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (min-width: 1450px)
+  and (max-width: 1549px) {
+
+  .salon-dj-pc {
+    top: 124px;
+
+    left: calc(50% + 630px);
+    right: auto;
+
+    width:
+      clamp(
+        80px,
+        calc(50vw - 640px),
+        110px
+      );
+
+    min-height: 44px;
+
+    padding: 5px 6px;
+
+    gap: 5px;
+  }
+
+  .salon-dj-pc-copy strong {
+    font-size: 0.72rem;
+  }
+
+  .salon-dj-pc-copy small {
+    display: none;
+  }
+
+  .salon-radio-right.is-open + .salon-dj-pc {
+    top: 238px;
+  }
+}
+
+/* PETIT PC */
+@media
+  (hover: hover)
+  and (pointer: fine)
+  and (max-width: 1449px) {
+
+  .salon-dj-pc {
+    top: 124px;
+
+    left:
+      min(
+        calc(50% + 630px),
+        calc(100vw - 48px)
+      );
+
+    right: auto;
+
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+
+    padding: 4px;
+
+    justify-content: center;
+
+    gap: 0;
+
+    border-radius: 14px;
+  }
+
+  .salon-dj-pc-copy {
+    display: none;
+  }
+
+  .salon-radio-right.is-open + .salon-dj-pc {
+    top: 238px;
+  }
+}
