@@ -1588,19 +1588,12 @@ function canChoosePosition(position) {
   const seat = seatForPosition(position);
   return !seat?.name || seat?.isBot;
 }
-// TABLE_DJ_PC_FINAL_V1
+// TABLE_DJ_STATE_SYNC_V1
 const [tableDjState, setTableDjState] = useState({
   mode: "playlist",
   hostPseudo: null,
   title: "Playlist en continu",
 });
-
-const normalizeTableDjPseudo = (value) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
 
 useEffect(() => {
   if (!tableId) return;
@@ -2718,30 +2711,7 @@ useEffect(() => {
 
   
 
- function toggleTableDj() {
-  const ws = wsTableRef.current;
-
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-  const currentPseudo = normalizeTableDjPseudo(pseudo);
-  const currentHost = normalizeTableDjPseudo(tableDjState.hostPseudo);
-  const isLive = tableDjState.mode === "live";
-
-  if (currentPseudo !== "matt" && currentPseudo !== "vero") return;
-
-  if (isLive && currentHost && currentHost !== currentPseudo) return;
-
-  ws.send(
-    JSON.stringify({
-      type:
-        isLive && currentHost === currentPseudo
-          ? "stop_live_animation"
-          : "start_live_animation",
-    })
-  );
-}
-
-function backToSalon() {
+ function backToSalon() {
   const ws = wsTableRef.current;
   if (ws && ws.readyState === WebSocket.OPEN && tableId) {
     ws.send(JSON.stringify({ type: "leave_table", tableId }));
@@ -2842,35 +2812,6 @@ const canStartWithBots =
               : tableMicroState === "error"
                 ? tableMicroError || "Activation du microphone indisponible."
                 : `Audio pr\u00eat avec ${tableAudioPeers.length} pair(s) d\u00e9tect\u00e9(s). Demande l\u2019autorisation du navigateur ; le microphone sera coup\u00e9 imm\u00e9diatement.`;
-const tableDjCurrentPseudo = normalizeTableDjPseudo(pseudo);
-const tableDjCanControl =
-  tableDjCurrentPseudo === "matt" ||
-  tableDjCurrentPseudo === "vero";
-const tableDjIsLive = tableDjState.mode === "live";
-const tableDjIsMine =
-  tableDjIsLive &&
-  normalizeTableDjPseudo(tableDjState.hostPseudo) === tableDjCurrentPseudo;
-const tableDjOccupiedByOther =
-  tableDjIsLive && !tableDjIsMine;
-const tableDjHostLabel =
-  String(tableDjState.hostPseudo || "").trim();
-const tableDjButtonDisabled =
-  !tableDjCanControl || tableDjOccupiedByOther;
-const tableDjPrimaryLabel =
-  tableDjIsMine
-    ? "DJ en direct"
-    : tableDjOccupiedByOther
-      ? `${tableDjHostLabel || "DJ"} en direct`
-      : "DJ";
-const tableDjSecondaryLabel =
-  tableDjIsMine
-    ? "Arrêter le direct"
-    : tableDjOccupiedByOther
-      ? "Direct en cours"
-      : tableDjCanControl
-        ? "Lancer le direct"
-        : "Matt & Véro";
-
 const showTableDebug = false;
 
 // MOBILE_GAME_FIRST_V1
@@ -3024,33 +2965,6 @@ const [mobileChatOpen, setMobileChatOpen] = useState(false);
                 <span aria-hidden="true">{"\u{1F399}"}</span>
                 {tableMicroLabel}
               </button>
-            )}
-            {/* TABLE_DJ_PC_FINAL_V1 */}
-            {tableDjCanControl && (
-              <button
-              type="button"
-              className={`table-dj-pc${tableDjIsLive ? " live" : ""}`}
-              onClick={toggleTableDj}
-              disabled={tableDjButtonDisabled}
-              aria-pressed={tableDjIsMine}
-              title={
-                tableDjOccupiedByOther
-                  ? `${tableDjHostLabel || "Un autre DJ"} tient déjà le direct.`
-                  : tableDjIsMine
-                    ? "Arrêter le direct DJ."
-                    : tableDjCanControl
-                      ? "Lancer le direct DJ."
-                      : "Le direct DJ est réservé à Matt et Véro."
-              }
-            >
-              <span className="table-dj-pc__icon" aria-hidden="true">
-                {tableDjIsLive ? "🔴" : "🎧"}
-              </span>
-              <span className="table-dj-pc__copy">
-                <strong>{tableDjPrimaryLabel}</strong>
-                <small>{tableDjSecondaryLabel}</small>
-              </span>
-            </button>
             )}
             {beloteToast && (
               <div

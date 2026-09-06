@@ -4891,7 +4891,8 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "start_live_animation") {
-      if (!isAnimationHost(pseudo)) {
+            // DJ_AUTH_SOCKET_V1 — autorisation issue du compte authentifié lors du join_salon.
+if (!ws.isSalonHost) {
         ws.send(
           JSON.stringify({
             type: "animation_denied",
@@ -4909,7 +4910,7 @@ wss.on("connection", (ws) => {
     }
 
     if (msg.type === "stop_live_animation") {
-      if (!isAnimationHost(pseudo)) {
+      if (!ws.isSalonHost) {
         ws.send(
           JSON.stringify({
             type: "animation_denied",
