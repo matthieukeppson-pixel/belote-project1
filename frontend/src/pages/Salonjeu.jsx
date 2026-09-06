@@ -945,7 +945,8 @@ const statusText = isHumanFull
       </aside>
 
         {/* SALON_DJ_PC_FINAL_V1 */}
-        <button
+        {salonDjCanControl && (
+          <button
           type="button"
           className={`salon-dj-pc${salonDjIsLive ? " is-live" : ""}${
             salonDjIsMine ? " is-mine" : ""
@@ -959,7 +960,7 @@ const statusText = isHumanFull
               : salonDjOccupiedByOther
                 ? `${salonDjState.hostPseudo || "DJ"} est actuellement en direct`
                 : salonDjCanControl
-                  ? "Prendre le direct DJ"
+                  ? "Lancer le direct DJ"
                   : salonDjIsLive
                     ? salonDjState.title
                     : "DJ réservé à Matt et Véro"
@@ -987,11 +988,12 @@ const statusText = isHumanFull
                 : salonDjOccupiedByOther
                   ? "Direct en cours"
                   : salonDjCanControl
-                    ? "Prendre le direct"
+                    ? "Lancer le direct"
                     : "Matt & Véro"}
             </small>
           </span>
         </button>
+        )}
 
       {showProfil && (
         <Profil
