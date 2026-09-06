@@ -1028,6 +1028,27 @@ function isAnimationHost(pseudo) {
   return ["vero", "matt"].includes(normalized);
 }
 
+// DJ_EXTRA_AUTH_V1
+const extraDjUserIds = new Set(
+  String(process.env.BELOTE_DJ_USER_IDS || "")
+    .split(",")
+    .map((value) => Number(String(value || "").trim()))
+    .filter((value) => Number.isInteger(value) && value > 0)
+);
+
+function isDjAuthorizedUser(user) {
+  if (!user) return false;
+
+  const userId = Number(user.id);
+
+  return (
+    isAnimationHost(user.username) ||
+    (Number.isInteger(userId) &&
+      userId > 0 &&
+      extraDjUserIds.has(userId))
+  );
+}
+
 function isBotPseudo(pseudo) {
   return typeof pseudo === "string" && pseudo.startsWith(BOT_PREFIX);
 }
@@ -4709,9 +4730,7 @@ wss.on("connection", (ws) => {
 
       ws.pseudo = pseudo;
       ws.authUserId = authUser?.id ? Number(authUser.id) : null;
-      ws.isSalonHost = Boolean(
-        authUser && isAnimationHost(authUser.username)
-      );
+      ws.isSalonHost = isDjAuthorizedUser(authUser);
 
       const requestedAvatar =
         String(msg.avatar || "").trim();

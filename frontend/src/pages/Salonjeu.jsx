@@ -186,9 +186,8 @@ export default function SalonJeu({ user }) {
 
   const salonDjCurrentPseudo = normalizeSalonDjPseudo(currentName);
 
-  const salonDjCanControl =
-    salonDjCurrentPseudo === "matt" ||
-    salonDjCurrentPseudo === "vero";
+  // SALON_DJ_SERVER_ACCESS_V1
+  const [salonDjCanControl, setSalonDjCanControl] = useState(false);
 
   const salonDjIsLive = salonDjState.mode === "live";
 
@@ -443,7 +442,11 @@ ws.onmessage = (event) => {
       window.alert(data.reason || "La table ne peut pas être fermée.");
       return;
 
-      case "animation_state":
+      case "salon_host_access":
+  setSalonDjCanControl(Boolean(data.allowed));
+  return;
+
+case "animation_state":
         setSalonDjState({
           mode: data.mode === "live" ? "live" : "playlist",
           hostPseudo: data.hostPseudo || data.host || null,
