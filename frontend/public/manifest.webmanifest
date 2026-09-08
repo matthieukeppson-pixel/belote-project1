@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Belote et Amis",
+  "short_name": "Belote & Amis",
+  "description": "Belote en ligne entre amis",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#001950",
+  "theme_color": "#001950",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

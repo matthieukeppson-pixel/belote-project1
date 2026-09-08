@@ -11,6 +11,7 @@ import Accueil from "./pages/Accueil.jsx";
 import SalonJeu from "./pages/Salonjeu.jsx";
 import Table from "./pages/Table.jsx";
 import LandscapeTabletGuard from "./components/LandscapeTabletGuard.jsx";
+import PwaInstallPrompt from "./components/PwaInstallPrompt.jsx";
 import Admin from "./pages/Admin.jsx";
 
 const API_BASE_URL =
@@ -138,7 +139,15 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Accueil setPseudo={setPseudo} />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <Accueil setPseudo={setPseudo} />
+              <PwaInstallPrompt />
+            </>
+          }
+        />
 
         <Route
           path="/salon"
