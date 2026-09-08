@@ -634,8 +634,62 @@ return () => {
               </div>
             )}
           </div>
+
+          {/* SALON_PUBLIC_MOBILE_RADIO_ONLY_V1 */}
+          <div className="salon-mobile-media-actions">
+            <button
+              type="button"
+              className={
+                salonRadioPlaying
+                  ? "salon-mobile-radio-btn is-playing"
+                  : "salon-mobile-radio-btn"
+              }
+              onClick={toggleSalonRadio}
+              aria-pressed={salonRadioPlaying}
+              aria-label={
+                salonRadioPlaying
+                  ? "Couper la radio"
+                  : "Ecouter la radio"
+              }
+              title={
+                salonRadioPlaying
+                  ? "Couper la radio"
+                  : "Ecouter la radio"
+              }
+            >
+              {salonRadioPlaying ? "\u23F8 Radio" : "\u{1F4FB} Radio"}
+            </button>
+          </div>
         </div>
       )}
+
+      {!isStaffUser && (
+        <div className="salon-mobile-media-actions salon-mobile-media-actions--solo">
+          <button
+            type="button"
+            className={
+              salonRadioPlaying
+                ? "salon-mobile-radio-btn is-playing"
+                : "salon-mobile-radio-btn"
+            }
+            onClick={toggleSalonRadio}
+            aria-pressed={salonRadioPlaying}
+            aria-label={
+              salonRadioPlaying
+                ? "Couper la radio"
+                : "Ecouter la radio"
+            }
+            title={
+              salonRadioPlaying
+                ? "Couper la radio"
+                : "Ecouter la radio"
+            }
+          >
+            {salonRadioPlaying ? "\u23F8 Radio" : "\u{1F4FB} Radio"}
+          </button>
+        </div>
+      )}
+
       <div className="salon-grid">
         {/* TABLES */}
         <div className="panel panel-side">

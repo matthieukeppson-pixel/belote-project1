@@ -595,3 +595,141 @@
     padding-top: 24px;
   }
 }
+
+/* ==========================================================
+   SALON_PUBLIC_MOBILE_RADIO_ONLY_V1
+   Telephone / tablette tactile :
+   Radio directe dans la barre haute.
+   ========================================================== */
+
+.salon-mobile-media-actions {
+  display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+
+  .salon-mobile-media-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+    flex: 0 0 auto;
+  }
+
+  .salon-mobile-media-actions--solo {
+    position: fixed;
+    top: 2px;
+    left: 2px;
+    z-index: 30;
+
+    transform: scale(0.62);
+    transform-origin: top left;
+  }
+
+  .salon-mobile-radio-btn {
+    min-height: 38px;
+    padding: 6px 10px;
+
+    border: 1px solid rgba(110, 185, 255, 0.55);
+    border-radius: 9px;
+
+    background: rgba(20, 91, 208, 0.94);
+    color: #fff;
+
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  /*
+   * Pour le staff, la Radio suit naturellement
+   * Administration / Moderation + Fermer table.
+   */
+  .salon-staff-actions > .salon-mobile-media-actions {
+    align-self: flex-start;
+  }
+
+  /*
+   * Le gros bouton Radio flottant du bas disparait.
+   * Le panneau existant reste utilise lorsqu'il est ouvert.
+   */
+  .salon-radio-right {
+    display: none;
+  }
+
+  .salon-radio-right.is-open {
+    display: flex;
+
+    right: 10px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+
+    width: min(210px, calc(100vw - 20px));
+  }
+
+  .salon-radio-right .salon-radio-right-toggle {
+    display: none !important;
+  }
+
+  body:has(.salon-mobile-media-actions--solo)
+    .salon-grid > .panel:first-child {
+    padding-top: 38px;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 599px) {
+
+  .salon-mobile-media-actions--solo {
+    transform: scale(0.52);
+  }
+
+  body:has(.salon-mobile-media-actions--solo)
+    .salon-grid > .panel:first-child {
+    padding-top: 30px;
+  }
+}
+
+@media
+  (hover: none)
+  and (pointer: coarse)
+  and (orientation: landscape)
+  and (max-height: 350px) {
+
+  .salon-mobile-media-actions--solo {
+    transform: scale(0.45);
+  }
+
+  body:has(.salon-mobile-media-actions--solo)
+    .salon-grid > .panel:first-child {
+    padding-top: 24px;
+  }
+}
+
+/* ==========================================================
+   SALON_MOBILE_RADIO_DIRECT_V1
+   Telephone / tablette :
+   Radio = lecture / pause directe.
+   Aucun panneau audio flottant.
+   ========================================================== */
+
+@media (hover: none), (pointer: coarse) {
+
+  .salon-radio-right,
+  .salon-radio-right.is-open {
+    display: none !important;
+  }
+
+  .salon-mobile-radio-btn.is-playing {
+    box-shadow:
+      0 0 8px rgba(90, 190, 255, 0.75),
+      inset 0 0 5px rgba(255, 255, 255, 0.15);
+  }
+}
