@@ -2732,3 +2732,7 @@
   width: auto;
   height: 52px;
 }
+.salon-chat-emoji-btn-img[src$="/emojis/bye_bye.png"] {
+  width: auto;
+  height: 35px;
+}

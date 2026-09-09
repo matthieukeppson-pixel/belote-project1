@@ -448,3 +448,7 @@
   width: auto;
   height: 52px;
 }
+.tablechat-emoji-btn-img[src$="/emojis/bye_bye.png"] {
+  width: auto;
+  height: 35px;
+}
