@@ -2730,5 +2730,5 @@
 /* Taille speciale de l'emoji Bye bye */
 .salon-chat-custom-emoji[src$="/emojis/bye_bye.png"] {
   width: auto;
-  height: 48px;
+  height: 52px;
 }

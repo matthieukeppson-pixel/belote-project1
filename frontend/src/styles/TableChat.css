@@ -446,5 +446,5 @@
 /* Taille speciale de l'emoji Bye bye */
 .tablechat-custom-emoji[src$="/emojis/bye_bye.png"] {
   width: auto;
-  height: 48px;
+  height: 52px;
 }
