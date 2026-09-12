@@ -2736,3 +2736,14 @@
   width: auto;
   height: 35px;
 }
+
+/* Guitariste anime */
+.salon-chat-custom-emoji[src$="/emojis/guitariste-belote-et-amis.gif"] {
+  width: auto;
+  height: 60px;
+}
+
+.salon-chat-emoji-btn-img[src$="/emojis/guitariste-belote-et-amis.gif"] {
+  width: auto;
+  height: 32px;
+}

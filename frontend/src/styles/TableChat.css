@@ -452,3 +452,14 @@
   width: auto;
   height: 35px;
 }
+
+/* Guitariste anime */
+.tablechat-custom-emoji[src$="/emojis/guitariste-belote-et-amis.gif"] {
+  width: auto;
+  height: 60px;
+}
+
+.tablechat-emoji-btn-img[src$="/emojis/guitariste-belote-et-amis.gif"] {
+  width: auto;
+  height: 32px;
+}

@@ -679,6 +679,7 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
   }
 
   let connection;
+  let initialAudioTransceiver = null;
 
   try {
     connection = new RTCPeerConnection({
@@ -686,17 +687,17 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
       iceTransportPolicy: "relay",
     });
 
-    if (initiator) {
-      const localMicroStream = tableMicroStreamRef.current;
-      const localMicroTrack =
-        localMicroStream?.getAudioTracks?.().find(
-          (track) =>
-            track &&
-            track.kind === "audio" &&
-            track.readyState === "live"
-        ) || null;
+    const localMicroStream = tableMicroStreamRef.current;
+    const localMicroTrack =
+      localMicroStream?.getAudioTracks?.().find(
+        (track) =>
+          track &&
+          track.kind === "audio" &&
+          track.readyState === "live"
+      ) || null;
 
-      connection.addTransceiver(localMicroTrack || "audio", {
+    if (initiator) {
+      initialAudioTransceiver = connection.addTransceiver(localMicroTrack || "audio", {
         direction: "sendrecv",
       });
     }
@@ -707,6 +708,12 @@ const createTableRelayConnection = useCallback((audioPeerId, initiator = false) 
 
   tableRelayConnectionsRef.current.set(peerId, connection);
   ensureTableRelayNegotiationState(peerId);
+
+  const initialRemoteAudioTrack = initialAudioTransceiver?.receiver?.track || null;
+
+  if (initialRemoteAudioTrack) {
+    registerTableRemoteAudioTrack(peerId, connection, initialRemoteAudioTrack);
+  }
 
   connection.ontrack = (event) => {
     registerTableRemoteAudioTrack(peerId, connection, event?.track);
@@ -891,16 +898,6 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
 
     try {
       await connection.setRemoteDescription(description);
-      await flushTableRelayCandidates(peerId, connection);
-
-      const localMicroStream = tableMicroStreamRef.current;
-      const localMicroTrack =
-        localMicroStream?.getAudioTracks?.().find(
-          (track) =>
-            track &&
-            track.kind === "audio" &&
-            track.readyState === "live"
-        ) || null;
 
       const audioTransceiver = connection
         .getTransceivers()
@@ -916,6 +913,21 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
       }
 
       audioTransceiver.direction = "sendrecv";
+      registerTableRemoteAudioTrack(
+        peerId,
+        connection,
+        audioTransceiver.receiver?.track
+      );
+      await flushTableRelayCandidates(peerId, connection);
+
+      const localMicroStream = tableMicroStreamRef.current;
+      const localMicroTrack =
+        localMicroStream?.getAudioTracks?.().find(
+          (track) =>
+            track &&
+            track.kind === "audio" &&
+            track.readyState === "live"
+        ) || null;
 
       if (localMicroTrack) {
         await audioTransceiver.sender.replaceTrack(localMicroTrack);
@@ -977,6 +989,7 @@ const handleTableRelaySignal = useCallback(async (fromAudioPeerId, signal) => {
   createTableRelayConnection,
   ensureTableRelayNegotiationState,
   flushTableRelayCandidates,
+  registerTableRemoteAudioTrack,
   sendTableRelaySignal,
 ]);
 
@@ -1119,31 +1132,19 @@ const linkMutedTableMicroToRelayConnections = useCallback(async (stream) => {
       throw new Error("RELAY_MIC_LINK_NOT_READY");
     }
 
-    targets.push({ peerId, connection, audioTransceiver });
+    targets.push({ peerId, connection, negotiationState, audioTransceiver });
   }
 
-  try {
-    for (const { peerId, connection, audioTransceiver } of targets) {
-      if (tableRelayConnectionsRef.current.get(peerId) !== connection) {
-        throw new Error("RELAY_MIC_LINK_NOT_READY");
-      }
-
-      await audioTransceiver.sender.replaceTrack(localTrack);
-    }
-  } catch (error) {
-    targets.forEach(({ peerId, connection }) => {
-      if (tableRelayConnectionsRef.current.get(peerId) === connection) {
-        closeTableRelayConnection(peerId);
-      }
-    });
-
-    throw error;
+  for (const { audioTransceiver } of targets) {
+    await audioTransceiver.sender.replaceTrack(localTrack);
+    audioTransceiver.direction = "sendrecv";
   }
 
   return targets.length;
 }, [
   closeTableRelayConnection,
   ensureTableRelayNegotiationState,
+  sendTableRelaySignal,
 ]);
 
 function toggleTableMicroTransmission() {
