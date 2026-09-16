@@ -25,6 +25,24 @@ async function apiRequest(path, options = {}) {
   return data;
 }
 
+function userSortKey(player) {
+  return String(player?.pseudo || player?.username || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .toLocaleLowerCase("fr");
+}
+
+function sortUsersAlphabetically(users) {
+  return [...users].sort((a, b) =>
+    userSortKey(a).localeCompare(userSortKey(b), "fr", {
+      sensitivity: "base",
+      numeric: true,
+    })
+  );
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const [adminUser, setAdminUser] = useState(null);
@@ -124,9 +142,9 @@ export default function Admin() {
       apiRequest("/api/admin/users?status=banned"),
     ]);
 
-    setPendingUsers(Array.isArray(pendingData.users) ? pendingData.users : []);
-    setApprovedUsers(Array.isArray(approvedData.users) ? approvedData.users : []);
-    setBannedUsers(Array.isArray(bannedData.users) ? bannedData.users : []);
+    setPendingUsers(sortUsersAlphabetically(Array.isArray(pendingData.users) ? pendingData.users : []));
+    setApprovedUsers(sortUsersAlphabetically(Array.isArray(approvedData.users) ? approvedData.users : []));
+    setBannedUsers(sortUsersAlphabetically(Array.isArray(bannedData.users) ? bannedData.users : []));
   };
 
   const loadTournamentTeams = async (tournamentId) => {
@@ -228,9 +246,9 @@ export default function Admin() {
         if (cancelled) return;
 
         setAdminUser(meData.user || null);
-        setPendingUsers(Array.isArray(pendingData.users) ? pendingData.users : []);
-        setApprovedUsers(Array.isArray(approvedData.users) ? approvedData.users : []);
-        setBannedUsers(Array.isArray(bannedData.users) ? bannedData.users : []);
+        setPendingUsers(sortUsersAlphabetically(Array.isArray(pendingData.users) ? pendingData.users : []));
+        setApprovedUsers(sortUsersAlphabetically(Array.isArray(approvedData.users) ? approvedData.users : []));
+        setBannedUsers(sortUsersAlphabetically(Array.isArray(bannedData.users) ? bannedData.users : []));
       } catch (err) {
         if (cancelled) return;
         setError(err.message || "Accès administration impossible.");
