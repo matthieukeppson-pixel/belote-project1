@@ -1,3 +1,9 @@
+import {
+  initializeTournamentRuntime,
+  persistTournamentResultIfManaged,
+  publicTournamentTableMeta,
+  tournamentTableAccess,
+} from "./tournamentRuntime.js";
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -984,6 +990,789 @@ app.get("/api/admin/me", async (req, res) => {
     return res.status(500).json({ error: "Erreur serveur" });
   }
 });
+const tournamentRuntime =
+  await initializeTournamentRuntime({
+    env: process.env,
+  });
+
+console.log(
+  tournamentRuntime.enabled
+    ? `[TOURNAMENT] runtime actif : ${tournamentRuntime.dbPath}`
+    : "[TOURNAMENT] runtime desactive"
+);
+
+const TOURNAMENT_ADMIN_MODES =
+  new Set(["classic", "moderne", "contree"]);
+
+function tournamentAdminId(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${randomBytes(5).toString("hex")}`;
+}
+
+function tournamentAdminOrchestrator(res) {
+  if (
+    !tournamentRuntime.enabled ||
+    !tournamentRuntime.orchestrator
+  ) {
+    res.status(503).json({
+      error: "Le moteur Tournois est indisponible.",
+    });
+    return null;
+  }
+
+  return tournamentRuntime.orchestrator;
+}
+
+function adminTournamentPayload(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    name: row.name,
+    mode: row.mode,
+    startsAt: row.starts_at || null,
+    maxTeams:
+      row.max_teams == null
+        ? null
+        : Number(row.max_teams),
+    status: row.status,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+function adminTournamentTeamPayload(row) {
+  if (!row) return null;
+
+  const players = Array.isArray(row.players)
+    ? [...row.players].sort(
+        (a, b) =>
+          Number(a.player_slot) -
+          Number(b.player_slot)
+      )
+    : [];
+
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    name: row.name || "",
+    player1:
+      players.find(
+        (player) =>
+          Number(player.player_slot) === 1
+      )?.pseudo || null,
+    player2:
+      players.find(
+        (player) =>
+          Number(player.player_slot) === 2
+      )?.pseudo || null,
+    players: players.map((player) => ({
+      slot: Number(player.player_slot),
+      pseudo: player.pseudo,
+    })),
+  };
+}
+
+function adminTournamentMatchPayload(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    roundNumber: Number(row.round_number),
+    tableId:
+      row.table_id == null
+        ? null
+        : Number(row.table_id),
+    teamAId: row.team_a_id,
+    teamBId: row.team_b_id,
+    status: row.status,
+    winnerTeamId: row.winner_team_id || null,
+    scoreNous:
+      row.score_nous == null
+        ? null
+        : Number(row.score_nous),
+    scoreEux:
+      row.score_eux == null
+        ? null
+        : Number(row.score_eux),
+    createdAt: row.created_at || null,
+    finishedAt: row.finished_at || null,
+  };
+}
+
+app.get("/api/admin/tournaments", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const orchestrator =
+      tournamentAdminOrchestrator(res);
+    if (!orchestrator) return;
+
+    const tournaments =
+      (
+        await orchestrator.listTournaments()
+      ).filter(
+        (tournament) =>
+          !["finished", "cancelled"].includes(
+            String(tournament.status || "")
+          )
+      );
+
+    return res.json({
+      tournaments:
+        tournaments.map(adminTournamentPayload),
+    });
+  } catch (err) {
+    console.error(
+      "Erreur /api/admin/tournaments GET",
+      err
+    );
+    return res.status(500).json({
+      error: "Erreur serveur",
+    });
+  }
+});
+
+app.post("/api/admin/tournaments", async (req, res) => {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) return;
+
+    const orchestrator =
+      tournamentAdminOrchestrator(res);
+    if (!orchestrator) return;
+
+    const name =
+      String(req.body?.name || "").trim();
+
+    const mode =
+      String(req.body?.mode || "").trim();
+
+    const startsAt =
+      String(req.body?.startsAt || "").trim() ||
+      null;
+
+    const rawMaxTeams = req.body?.maxTeams;
+
+    let maxTeams = null;
+
+    if (
+      rawMaxTeams != null &&
+      String(rawMaxTeams).trim() !== ""
+    ) {
+      maxTeams = Number(rawMaxTeams);
+
+      if (
+        !Number.isInteger(maxTeams) ||
+        maxTeams < 2
+      ) {
+        return res.status(400).json({
+          error:
+            "Le nombre maximal d'equipes doit etre un entier superieur ou egal a 2.",
+        });
+      }
+    }
+
+    if (!name) {
+      return res.status(400).json({
+        error: "Le nom du tournoi est obligatoire.",
+      });
+    }
+
+    if (!TOURNAMENT_ADMIN_MODES.has(mode)) {
+      return res.status(400).json({
+        error: "Mode de tournoi invalide.",
+      });
+    }
+
+    const tournament =
+      await orchestrator.createTournament({
+        id: tournamentAdminId("tournoi"),
+        name,
+        mode,
+        startsAt,
+        maxTeams,
+        status: "draft",
+      });
+
+    return res.status(201).json({
+      tournament:
+        adminTournamentPayload(tournament),
+    });
+  } catch (err) {
+    console.error(
+      "Erreur /api/admin/tournaments POST",
+      err
+    );
+    return res.status(500).json({
+      error: "Erreur serveur",
+    });
+  }
+});
+
+app.post(
+  "/api/admin/tournaments/:tournamentId/finish",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const tournament =
+        await orchestrator.finishTournament(
+          tournamentId
+        );
+
+      system(
+        `Tournoi ${tournamentId} termine par ${admin.username}`
+      );
+
+      return res.json({
+        tournament:
+          adminTournamentPayload(tournament),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur fin Tournois HTTP",
+        {
+          tournamentId:
+            req.params.tournamentId,
+          message:
+            String(err?.message || err),
+        }
+      );
+
+      return res.status(409).json({
+        error:
+          String(err?.message || "") ||
+          "Fin du tournoi impossible.",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/tournaments/:tournamentId/teams",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const tournaments =
+        await orchestrator.listTournaments();
+
+      const tournament =
+        tournaments.find(
+          (item) =>
+            String(item.id) === tournamentId
+        );
+
+      if (!tournament) {
+        return res.status(404).json({
+          error: "Tournoi introuvable.",
+        });
+      }
+
+      const teams =
+        await orchestrator.listTournamentTeams(
+          tournamentId
+        );
+
+      return res.json({
+        tournament:
+          adminTournamentPayload(tournament),
+        teams:
+          teams.map(adminTournamentTeamPayload),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur /api/admin/tournaments/:tournamentId/teams GET",
+        err
+      );
+      return res.status(500).json({
+        error: "Erreur serveur",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/admin/tournaments/:tournamentId/teams",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const name =
+        String(req.body?.name || "").trim();
+
+      const player1 =
+        String(req.body?.player1 || "").trim();
+
+      const player2 =
+        String(req.body?.player2 || "").trim();
+
+      if (!player1 || !player2) {
+        return res.status(400).json({
+          error:
+            "Deux joueurs sont obligatoires.",
+        });
+      }
+
+      if (player1 === player2) {
+        return res.status(400).json({
+          error:
+            "Une equipe doit contenir deux joueurs differents.",
+        });
+      }
+
+      const tournaments =
+        await orchestrator.listTournaments();
+
+      const tournament =
+        tournaments.find(
+          (item) =>
+            String(item.id) === tournamentId
+        );
+
+      if (!tournament) {
+        return res.status(404).json({
+          error: "Tournoi introuvable.",
+        });
+      }
+
+      if (
+        tournament.status === "finished" ||
+        tournament.status === "cancelled"
+      ) {
+        return res.status(409).json({
+          error:
+            "Ce tournoi n'accepte plus de nouvelles equipes.",
+        });
+      }
+
+      const approvedPlayers =
+        await dbAll(
+          `
+            SELECT username
+            FROM users
+            WHERE username IN (?, ?)
+              AND COALESCE(is_approved, 0) = 1
+              AND COALESCE(is_banned, 0) = 0
+          `,
+          [player1, player2]
+        );
+
+      const approvedNames =
+        new Set(
+          approvedPlayers.map(
+            (row) =>
+              String(row.username || "").trim()
+          )
+        );
+
+      if (
+        !approvedNames.has(player1) ||
+        !approvedNames.has(player2)
+      ) {
+        return res.status(400).json({
+          error:
+            "Les deux joueurs doivent etre valides et non bannis.",
+        });
+      }
+
+      const existingTeams =
+        await orchestrator.listTournamentTeams(
+          tournamentId
+        );
+
+      if (
+        tournament.max_teams != null &&
+        existingTeams.length >=
+          Number(tournament.max_teams)
+      ) {
+        return res.status(409).json({
+          error:
+            "Le nombre maximal d'equipes est atteint.",
+        });
+      }
+
+      const alreadyRegistered =
+        new Set(
+          existingTeams.flatMap((team) =>
+            Array.isArray(team.players)
+              ? team.players.map(
+                  (player) =>
+                    String(
+                      player.pseudo || ""
+                    ).trim()
+                )
+              : []
+          )
+        );
+
+      const duplicatePlayers =
+        [player1, player2].filter(
+          (pseudo) =>
+            alreadyRegistered.has(pseudo)
+        );
+
+      if (duplicatePlayers.length > 0) {
+        return res.status(409).json({
+          error:
+            "Un joueur selectionne appartient deja a une equipe de ce tournoi.",
+          players: duplicatePlayers,
+        });
+      }
+
+      const team =
+        await orchestrator.registerTeam({
+          id: tournamentAdminId("equipe"),
+          tournamentId,
+          name,
+          player1,
+          player2,
+        });
+
+      return res.status(201).json({
+        team:
+          adminTournamentTeamPayload(team),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur /api/admin/tournaments/:tournamentId/teams POST",
+        err
+      );
+      return res.status(500).json({
+        error: "Erreur serveur",
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/tournaments/:tournamentId/matches",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const tournaments =
+        await orchestrator.listTournaments();
+
+      const tournament =
+        tournaments.find(
+          (item) =>
+            String(item.id) === tournamentId
+        );
+
+      if (!tournament) {
+        return res.status(404).json({
+          error: "Tournoi introuvable.",
+        });
+      }
+
+      const matches =
+        await orchestrator.listTournamentMatches(
+          tournamentId
+        );
+
+      return res.json({
+        tournament:
+          adminTournamentPayload(tournament),
+        matches:
+          matches.map(adminTournamentMatchPayload),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur liste matchs Tournois",
+        err
+      );
+
+      return res.status(500).json({
+        error: "Erreur serveur",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/admin/tournaments/:tournamentId/matches",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const teamAId =
+        String(req.body?.teamAId || "").trim();
+
+      const teamBId =
+        String(req.body?.teamBId || "").trim();
+
+      const roundNumber =
+        Number(req.body?.roundNumber);
+
+      if (
+        !Number.isInteger(roundNumber) ||
+        roundNumber <= 0
+      ) {
+        return res.status(400).json({
+          error:
+            "Le numero de tour doit etre un entier positif.",
+        });
+      }
+
+      if (!teamAId || !teamBId) {
+        return res.status(400).json({
+          error:
+            "Deux equipes sont obligatoires.",
+        });
+      }
+
+      if (teamAId === teamBId) {
+        return res.status(400).json({
+          error:
+            "Une equipe ne peut pas jouer contre elle-meme.",
+        });
+      }
+
+      const tournaments =
+        await orchestrator.listTournaments();
+
+      const tournament =
+        tournaments.find(
+          (item) =>
+            String(item.id) === tournamentId
+        );
+
+      if (!tournament) {
+        return res.status(404).json({
+          error: "Tournoi introuvable.",
+        });
+      }
+
+      if (
+        tournament.status === "finished" ||
+        tournament.status === "cancelled"
+      ) {
+        return res.status(409).json({
+          error:
+            "Ce tournoi n'accepte plus de nouveaux matchs.",
+        });
+      }
+
+      const scheduled =
+        await orchestrator.scheduleMatch({
+          id: tournamentAdminId("match"),
+          tournamentId,
+          roundNumber,
+          tableId: null,
+          teamAId,
+          teamBId,
+        });
+
+      return res.status(201).json({
+        match:
+          adminTournamentMatchPayload(
+            scheduled.match
+          ),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur creation match Tournois",
+        err
+      );
+
+      return res.status(400).json({
+        error:
+          String(err?.message || "") ||
+          "Creation du match impossible.",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/admin/tournaments/:tournamentId/matches/:matchId/open",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const matchId =
+        String(req.params.matchId || "").trim();
+
+      const opened =
+        await openTournamentMatchTable({
+          tournamentId,
+          matchId,
+        });
+
+      const table = opened.table;
+
+      if (!opened.alreadyOpen) {
+        system(
+          `Table ${table.id} du match ${matchId} ouverte par ${admin.username}`
+        );
+
+        broadcastTables();
+      }
+
+      return res.json({
+        matchId,
+        tableId: table.id,
+        mode: table.mode,
+        alreadyOpen:
+          Boolean(opened.alreadyOpen),
+        restored:
+          Boolean(opened.restored),
+        tournament:
+          publicTournamentTableMeta(
+            table,
+            true
+          ),
+      });
+    } catch (err) {
+      const reason =
+        typeof err?.code === "string" &&
+        err.code
+          ? err.code
+          : "TOURNAMENT_OPEN_FAILED";
+
+      console.error(
+        "Erreur ouverture match Tournois HTTP",
+        {
+          tournamentId:
+            req.params.tournamentId,
+          matchId:
+            req.params.matchId,
+          reason,
+          message:
+            String(err?.message || err),
+        }
+      );
+
+      return res.status(409).json({
+        error:
+          String(err?.message || "") ||
+          "Ouverture du match impossible.",
+        reason,
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/admin/tournaments/:tournamentId/matches/:matchId/close",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const closed =
+        await closeTournamentMatchTable({
+          tournamentId:
+            req.params.tournamentId,
+          matchId:
+            req.params.matchId,
+        });
+
+      if (closed.tableId != null) {
+        system(
+          `Table ${closed.tableId} du match ${closed.matchId} fermee par ${admin.username}`
+        );
+
+        broadcastTables();
+      }
+
+      return res.json(closed);
+    } catch (err) {
+      const reason =
+        typeof err?.code === "string" &&
+        err.code
+          ? err.code
+          : "TOURNAMENT_CLOSE_FAILED";
+
+      console.error(
+        "Erreur fermeture match Tournois HTTP",
+        {
+          tournamentId:
+            req.params.tournamentId,
+          matchId:
+            req.params.matchId,
+          reason,
+          message:
+            String(err?.message || err),
+        }
+      );
+
+      return res.status(409).json({
+        error:
+          String(err?.message || "") ||
+          "Fermeture du match impossible.",
+        reason,
+      });
+    }
+  }
+);
+
 app.listen(HTTP_PORT, () => {
   console.log(`âœ… Backend HTTP actif sur http://localhost:${HTTP_PORT}`);
 });
@@ -1000,6 +1789,7 @@ console.log(`âœ… WebSocket actif sur ws://localhost:${WS_PORT}`);
 const playersMap = new Map();
 
 // tableId(number) -> { id, mode, seats: [pseudo|null, ...] }
+const TOURNAMENTS_ENABLED = tournamentRuntime.enabled;
 const tablesMap = new Map();
 const BOT_PREFIX = "__bot__";
 
@@ -1874,6 +2664,14 @@ function getHumanSeatCount(table) {
 function syncBotsForTable(table) {
   if (!table) return;
 
+  if (TOURNAMENTS_ENABLED && table.tournament) {
+    table.botsEnabled = false;
+    table.seats = table.seats.map((pseudo) =>
+      isBotPseudo(pseudo) ? null : pseudo
+    );
+    return;
+  }
+
   const humanCount = getHumanSeatCount(table);
 
   // aucun humain => table vide, pas de bots, reset du mode bots
@@ -1991,23 +2789,863 @@ function createEmptyServerGame() {
 
 const MAX_TABLES = 12;
 
-function createTable(mode = "classic") {
-  const id = Array.from(
-    { length: MAX_TABLES },
-    (_unused, index) => index + 1
-  ).find((candidateId) => !tablesMap.has(candidateId));
+const reservedTableIds = new Set();
 
-  if (id == null) return null;
+function normalizedTableCreationId(tableId) {
+  const id = Number(tableId);
 
-  tablesMap.set(id, {
+  if (
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    id > MAX_TABLES
+  ) {
+    return null;
+  }
+
+  return id;
+}
+
+function tableIdAvailable(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  return Boolean(
+    id != null &&
+    !tablesMap.has(id) &&
+    !reservedTableIds.has(id)
+  );
+}
+
+function findAvailableTableId() {
+  return (
+    Array.from(
+      { length: MAX_TABLES },
+      (_unused, index) => index + 1
+    ).find(
+      (candidateId) =>
+        tableIdAvailable(candidateId)
+    ) ?? null
+  );
+}
+
+function isReusableTournamentSalonTable(table) {
+  if (!table) return false;
+
+  const id =
+    normalizedTableCreationId(table.id);
+
+  if (
+    id == null ||
+    table.tournament ||
+    reservedTableIds.has(id)
+  ) {
+    return false;
+  }
+
+  const seatsEmpty =
+    Array.isArray(table.seats) &&
+    table.seats.every(
+      (seatPseudo) => !seatPseudo
+    );
+
+  const visitorsEmpty =
+    !Array.isArray(table.visitors) ||
+    table.visitors.every(
+      (visitorPseudo) => !visitorPseudo
+    );
+
+  const gameWaiting =
+    !table.game ||
+    table.game.status ===
+      "WAITING_FOR_PLAYERS";
+
+  const timersIdle =
+    !table.botPlayTimer &&
+    !table.nextHandTimer &&
+    !table.nextTrickTimer;
+
+  return Boolean(
+    seatsEmpty &&
+    visitorsEmpty &&
+    gameWaiting &&
+    timersIdle
+  );
+}
+
+function reserveReusableTournamentSalonTable(
+  table
+) {
+  if (
+    !isReusableTournamentSalonTable(table)
+  ) {
+    return false;
+  }
+
+  const id =
+    normalizedTableCreationId(table.id);
+
+  if (id == null) {
+    return false;
+  }
+
+  reservedTableIds.add(id);
+  return true;
+}
+
+function findReusableTournamentSalonTable() {
+  for (
+    let tableId = 1;
+    tableId <= MAX_TABLES;
+    tableId += 1
+  ) {
+    const table =
+      tablesMap.get(tableId);
+
+    if (
+      isReusableTournamentSalonTable(table)
+    ) {
+      return table;
+    }
+  }
+
+  return null;
+}
+
+function reserveTableId(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  if (
+    id == null ||
+    !tableIdAvailable(id)
+  ) {
+    return false;
+  }
+
+  reservedTableIds.add(id);
+
+  return true;
+}
+
+function releaseTableIdReservation(tableId) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  if (id == null) {
+    return false;
+  }
+
+  return reservedTableIds.delete(id);
+}
+
+function createTableAtId(
+  tableId,
+  mode = "classic",
+  {
+    consumeReservation = false,
+  } = {}
+) {
+  const id =
+    normalizedTableCreationId(tableId);
+
+  if (
+    id == null ||
+    tablesMap.has(id)
+  ) {
+    return null;
+  }
+
+  if (consumeReservation) {
+    if (!reservedTableIds.has(id)) {
+      return null;
+    }
+
+    reservedTableIds.delete(id);
+  } else if (reservedTableIds.has(id)) {
+    return null;
+  }
+
+  const table = {
     id,
     mode,
     seats: [null, null, null, null],
     visitors: [],
     botsEnabled: false,
     game: createEmptyServerGame(),
+  };
+
+  tablesMap.set(id, table);
+
+  return table;
+}
+
+function createTable(mode = "classic") {
+  const id = findAvailableTableId();
+
+  if (id == null) return null;
+
+  return createTableAtId(id, mode);
+}
+
+const openingTournamentMatches = new Set();
+
+function normalizeTournamentOpenId(value) {
+  return String(value ?? "").trim();
+}
+
+function tournamentMatchOpenKey(
+  tournamentId,
+  matchId
+) {
+  return `${tournamentId}::${matchId}`;
+}
+
+function tournamentOpenError(
+  code,
+  message
+) {
+  const err = new Error(message);
+  err.code = code;
+  return err;
+}
+
+function findTournamentMatchTable(
+  tournamentId,
+  matchId
+) {
+  return (
+    Array.from(tablesMap.values()).find(
+      (table) =>
+        String(
+          table?.tournament?.tournamentId ?? ""
+        ).trim() === tournamentId &&
+        String(
+          table?.tournament?.matchId ?? ""
+        ).trim() === matchId
+    ) || null
+  );
+}
+
+function sameTournamentTableMeta(
+  table,
+  tableMeta
+) {
+  if (!table || !tableMeta) {
+    return false;
+  }
+
+  const tableTournament =
+    table.tournament;
+
+  if (!tableTournament) {
+    return false;
+  }
+
+  const expectedTableId =
+    normalizedTableCreationId(
+      tableMeta.tableId
+    );
+
+  if (
+    expectedTableId == null ||
+    Number(table.id) !== expectedTableId
+  ) {
+    return false;
+  }
+
+  if (
+    String(
+      tableTournament.tournamentId ?? ""
+    ).trim() !==
+      String(
+        tableMeta.tournamentId ?? ""
+      ).trim() ||
+    String(
+      tableTournament.matchId ?? ""
+    ).trim() !==
+      String(
+        tableMeta.matchId ?? ""
+      ).trim() ||
+    Number(tableTournament.roundNumber) !==
+      Number(tableMeta.roundNumber)
+  ) {
+    return false;
+  }
+
+  const currentSeats =
+    Array.isArray(
+      tableTournament.seatAssignments
+    )
+      ? tableTournament.seatAssignments
+      : [];
+
+  const expectedSeats =
+    Array.isArray(
+      tableMeta.seatAssignments
+    )
+      ? tableMeta.seatAssignments
+      : [];
+
+  return (
+    currentSeats.length === 4 &&
+    expectedSeats.length === 4 &&
+    JSON.stringify(currentSeats) ===
+      JSON.stringify(expectedSeats)
+  );
+}
+
+async function openTournamentMatchTable({
+  tournamentId,
+  matchId,
+} = {}) {
+  const normalizedTournamentId =
+    normalizeTournamentOpenId(
+      tournamentId
+    );
+
+  const normalizedMatchId =
+    normalizeTournamentOpenId(
+      matchId
+    );
+
+  if (
+    !normalizedTournamentId ||
+    !normalizedMatchId
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENT_IDENTIFIERS_REQUIRED",
+      "Identifiants tournoi et match obligatoires"
+    );
+  }
+
+  if (
+    !TOURNAMENTS_ENABLED ||
+    !tournamentRuntime?.enabled
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENTS_DISABLED",
+      "Mini-tournois desactives"
+    );
+  }
+
+  const orchestrator =
+    tournamentRuntime.orchestrator;
+
+  if (
+    !orchestrator ||
+    typeof orchestrator.getTableMeta !==
+      "function" ||
+    typeof orchestrator.assignMatchTable !==
+      "function"
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENT_RUNTIME_UNAVAILABLE",
+      "Orchestrateur tournoi indisponible"
+    );
+  }
+
+  const openKey =
+    tournamentMatchOpenKey(
+      normalizedTournamentId,
+      normalizedMatchId
+    );
+
+  if (
+    openingTournamentMatches.has(openKey)
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENT_MATCH_OPENING",
+      "Ouverture de ce match deja en cours"
+    );
+  }
+
+  openingTournamentMatches.add(openKey);
+
+  let reservedTableId = null;
+  let borrowedTable = null;
+
+  try {
+    const currentMeta =
+      await orchestrator.getTableMeta({
+        tournamentId:
+          normalizedTournamentId,
+        matchId:
+          normalizedMatchId,
+      });
+
+    const inMemoryMatchTable =
+      findTournamentMatchTable(
+        normalizedTournamentId,
+        normalizedMatchId
+      );
+
+    const persistedTableId =
+      currentMeta?.tableId == null
+        ? null
+        : normalizedTableCreationId(
+            currentMeta.tableId
+          );
+
+    if (
+      currentMeta?.tableId != null &&
+      persistedTableId == null
+    ) {
+      throw tournamentOpenError(
+        "TOURNAMENT_TABLE_ID_INVALID",
+        "Identifiant de table persiste invalide"
+      );
+    }
+
+    if (inMemoryMatchTable) {
+      if (
+        persistedTableId != null &&
+        sameTournamentTableMeta(
+          inMemoryMatchTable,
+          currentMeta
+        )
+      ) {
+        return {
+          table: inMemoryMatchTable,
+          tableMeta: currentMeta,
+          assignment: null,
+          alreadyOpen: true,
+          restored: false,
+        };
+      }
+
+      throw tournamentOpenError(
+        "TOURNAMENT_TABLE_STATE_CONFLICT",
+        "Etat memoire et affectation persistante incoherents"
+      );
+    }
+
+    if (persistedTableId != null) {
+      const existingTable =
+        tablesMap.get(
+          persistedTableId
+        );
+
+      if (existingTable) {
+        if (
+          !reserveReusableTournamentSalonTable(
+            existingTable
+          )
+        ) {
+          throw tournamentOpenError(
+            "TOURNAMENT_TABLE_CONFLICT",
+            `La table ${persistedTableId} est deja occupee`
+          );
+        }
+
+        borrowedTable = existingTable;
+        reservedTableId =
+          persistedTableId;
+      } else {
+        if (
+          !reserveTableId(
+            persistedTableId
+          )
+        ) {
+          throw tournamentOpenError(
+            "TOURNAMENT_TABLE_UNAVAILABLE",
+            `La table ${persistedTableId} est temporairement indisponible`
+          );
+        }
+
+        reservedTableId =
+          persistedTableId;
+      }
+    } else {
+      const reusableTable =
+        findReusableTournamentSalonTable();
+
+      if (reusableTable) {
+        if (
+          !reserveReusableTournamentSalonTable(
+            reusableTable
+          )
+        ) {
+          throw tournamentOpenError(
+            "TOURNAMENT_TABLE_UNAVAILABLE",
+            "La table choisie n'est plus disponible"
+          );
+        }
+
+        borrowedTable =
+          reusableTable;
+
+        reservedTableId =
+          Number(reusableTable.id);
+      } else {
+        const availableTableId =
+          findAvailableTableId();
+
+        if (availableTableId == null) {
+          throw tournamentOpenError(
+            "TOURNAMENT_TABLE_CAPACITY",
+            "Aucune table disponible"
+          );
+        }
+
+        if (
+          !reserveTableId(
+            availableTableId
+          )
+        ) {
+          throw tournamentOpenError(
+            "TOURNAMENT_TABLE_UNAVAILABLE",
+            "La table choisie n'est plus disponible"
+          );
+        }
+
+        reservedTableId =
+          availableTableId;
+      }
+    }
+
+    const opened =
+      await orchestrator.assignMatchTable({
+        tournamentId:
+          normalizedTournamentId,
+        matchId:
+          normalizedMatchId,
+        tableId:
+          reservedTableId,
+      });
+
+    const officialTableId =
+      normalizedTableCreationId(
+        opened?.tableMeta?.tableId ??
+          opened?.assignment?.match
+            ?.table_id
+      );
+
+    if (
+      officialTableId == null ||
+      officialTableId !==
+        reservedTableId
+    ) {
+      throw tournamentOpenError(
+        "TOURNAMENT_TABLE_ASSIGNMENT_MISMATCH",
+        "Affectation de table tournoi incoherente"
+      );
+    }
+
+    const officialMode =
+      String(
+        opened?.tournament?.mode ?? ""
+      ).trim();
+
+    if (
+      ![
+        "classic",
+        "contree",
+        "moderne",
+      ].includes(officialMode)
+    ) {
+      throw tournamentOpenError(
+        "TOURNAMENT_MODE_INVALID",
+        "Mode officiel du tournoi invalide"
+      );
+    }
+
+    let table = null;
+
+    if (borrowedTable) {
+      const originalMode =
+        ["classic", "contree", "moderne"].includes(
+          String(borrowedTable.mode || "")
+        )
+          ? String(borrowedTable.mode)
+          : "classic";
+
+      table = borrowedTable;
+
+      table.mode = officialMode;
+      table.seats = [
+        null,
+        null,
+        null,
+        null,
+      ];
+      table.visitors = [];
+      table.botsEnabled = false;
+      table.game =
+        createEmptyServerGame();
+
+      table.tournament = {
+        ...opened.tableMeta,
+        pausedPlayers: [],
+        borrowedFromSalon: true,
+        originalMode,
+      };
+
+      releaseTableIdReservation(
+        reservedTableId
+      );
+
+      reservedTableId = null;
+    } else {
+      table =
+        createTableAtId(
+          reservedTableId,
+          officialMode,
+          {
+            consumeReservation: true,
+          }
+        );
+
+      if (!table) {
+        throw tournamentOpenError(
+          "TOURNAMENT_TABLE_CREATION_FAILED",
+          "Creation physique de la table impossible"
+        );
+      }
+
+      reservedTableId = null;
+
+      table.botsEnabled = false;
+
+      table.tournament = {
+        ...opened.tableMeta,
+        pausedPlayers: [],
+      };
+    }
+
+    return {
+      table,
+      tableMeta: opened.tableMeta,
+      assignment:
+        opened.assignment ?? null,
+      alreadyOpen: false,
+      restored:
+        persistedTableId != null,
+    };
+  } finally {
+    if (reservedTableId != null) {
+      releaseTableIdReservation(
+        reservedTableId
+      );
+    }
+
+    openingTournamentMatches.delete(
+      openKey
+    );
+  }
+}
+
+async function closeTournamentMatchTable({
+  tournamentId,
+  matchId,
+} = {}) {
+  const normalizedTournamentId =
+    normalizeTournamentOpenId(
+      tournamentId
+    );
+
+  const normalizedMatchId =
+    normalizeTournamentOpenId(
+      matchId
+    );
+
+  if (
+    !normalizedTournamentId ||
+    !normalizedMatchId
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENT_IDENTIFIERS_REQUIRED",
+      "Identifiants tournoi et match obligatoires"
+    );
+  }
+
+  if (
+    !TOURNAMENTS_ENABLED ||
+    !tournamentRuntime?.enabled
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENTS_DISABLED",
+      "Tournois desactives"
+    );
+  }
+
+  const orchestrator =
+    tournamentRuntime.orchestrator;
+
+  if (
+    !orchestrator ||
+    typeof orchestrator.listTournamentMatches !==
+      "function" ||
+    typeof orchestrator.releaseMatchTable !==
+      "function"
+  ) {
+    throw tournamentOpenError(
+      "TOURNAMENT_RUNTIME_UNAVAILABLE",
+      "Orchestrateur tournoi indisponible"
+    );
+  }
+
+  const matches =
+    await orchestrator.listTournamentMatches(
+      normalizedTournamentId
+    );
+
+  const match =
+    matches.find(
+      (item) =>
+        String(item.id) ===
+        normalizedMatchId
+    );
+
+  if (!match) {
+    throw tournamentOpenError(
+      "TOURNAMENT_MATCH_NOT_FOUND",
+      "Match de tournoi introuvable"
+    );
+  }
+
+  if (match.status === "playing") {
+    throw tournamentOpenError(
+      "TOURNAMENT_MATCH_PLAYING",
+      "Un match en cours ne peut pas etre ferme"
+    );
+  }
+
+  const table =
+    findTournamentMatchTable(
+      normalizedTournamentId,
+      normalizedMatchId
+    );
+
+  if (table) {
+    const hasOccupiedSeat =
+      Array.isArray(table.seats) &&
+      table.seats.some(
+        (seatPseudo) => !!seatPseudo
+      );
+
+    const hasVisitor =
+      Array.isArray(table.visitors) &&
+      table.visitors.some(
+        (visitorPseudo) => !!visitorPseudo
+      );
+
+    if (
+      hasOccupiedSeat ||
+      hasVisitor
+    ) {
+      throw tournamentOpenError(
+        "TOURNAMENT_TABLE_NOT_EMPTY",
+        "La table doit etre completement vide avant sa fermeture"
+      );
+    }
+  }
+
+  let released = null;
+
+  if (match.status === "ready") {
+    released =
+      await orchestrator.releaseMatchTable({
+        tournamentId:
+          normalizedTournamentId,
+        matchId:
+          normalizedMatchId,
+      });
+  }
+
+  if (!table) {
+    return {
+      tournamentId:
+        normalizedTournamentId,
+      matchId:
+        normalizedMatchId,
+      tableId:
+        match.table_id == null
+          ? null
+          : Number(match.table_id),
+      closed: false,
+      alreadyClosed: true,
+      released:
+        Boolean(released?.released),
+    };
+  }
+
+  [
+    "botPlayTimer",
+    "nextHandTimer",
+    "nextTrickTimer",
+  ].forEach((timerName) => {
+    if (table[timerName]) {
+      clearTimeout(table[timerName]);
+      table[timerName] = null;
+    }
   });
-  return tablesMap.get(id);
+
+  for (const client of wss.clients) {
+    if (
+      Number(client.tableId) ===
+      Number(table.id)
+    ) {
+      clearAudioIdentityForTable(
+        client,
+        table.id
+      );
+
+      client.tableId = null;
+      client.tableRole = null;
+    }
+  }
+
+  const borrowedFromSalon =
+    Boolean(
+      table.tournament
+        ?.borrowedFromSalon
+    );
+
+  if (borrowedFromSalon) {
+    const originalMode =
+      String(
+        table.tournament
+          ?.originalMode || ""
+      );
+
+    table.mode =
+      [
+        "classic",
+        "contree",
+        "moderne",
+      ].includes(originalMode)
+        ? originalMode
+        : "classic";
+
+    table.seats = [
+      null,
+      null,
+      null,
+      null,
+    ];
+
+    table.visitors = [];
+    table.botsEnabled = false;
+    table.game =
+      createEmptyServerGame();
+
+    delete table.tournament;
+  } else {
+    tablesMap.delete(table.id);
+  }
+
+  return {
+    tournamentId:
+      normalizedTournamentId,
+    matchId:
+      normalizedMatchId,
+    tableId:
+      Number(table.id),
+    closed: true,
+    alreadyClosed: false,
+    released:
+      Boolean(released?.released),
+  };
 }
 
 function ensureDefaultTables() {
@@ -2097,6 +3735,10 @@ function tablesArray() {
     const visitors = Array.isArray(t.visitors) ? t.visitors.filter(Boolean) : [];
     const visitorsInfo = visitors.map((pseudo) => seatInfoFromPseudo(pseudo));
     const count = seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
+    const tournamentMeta = publicTournamentTableMeta(
+      t,
+      TOURNAMENTS_ENABLED
+    );
 
     return {
       id: t.id,
@@ -2106,6 +3748,9 @@ function tablesArray() {
       visitors,
       visitorsInfo,
       count,
+      ...(tournamentMeta
+        ? { tournament: tournamentMeta }
+        : {}),
 game: {
   status: t.game?.status || "WAITING_FOR_PLAYERS",
   players: t.game?.players || [],
@@ -4376,7 +6021,7 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
   if (hand.phase !== "PLI_TERMINE") return false;
   if (table.nextTrickTimer) return false;
 
-  table.nextTrickTimer = setTimeout(() => {
+  table.nextTrickTimer = setTimeout(async () => {
     table.nextTrickTimer = null;
 
     const currentHand = {
@@ -4540,6 +6185,33 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       winnerIndex: null,
     };
 
+    if (partieTerminee && TOURNAMENTS_ENABLED && table.tournament) {
+      try {
+        const persistence =
+          await persistTournamentResultIfManaged({
+            runtime: tournamentRuntime,
+            table,
+            authoritativeHand: nextHand,
+          });
+
+        if (
+          persistence &&
+          persistence.reason !== "RECORDED" &&
+          persistence.reason !== "ALREADY_RECORDED"
+        ) {
+          throw new Error(
+            `Etat de persistance tournoi inattendu: ${persistence.reason}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[TOURNAMENT] resultat non persiste table ${table.id}`,
+          error
+        );
+        return;
+      }
+    }
+
     table.game = {
       ...(table.game || createEmptyServerGame()),
       dealerSeatIndex:
@@ -4574,6 +6246,10 @@ function refreshServerGameForTable(table) {
   if (!table) return;
 
   syncBotsForTable(table);
+
+  if (tournamentTablePaused(table)) {
+    return;
+  }
 
   const seated = getSeatedPlayersInOrder(table);
   const count = seated.length;
@@ -4643,8 +6319,124 @@ function refreshServerGameForTable(table) {
     hand: sharedHand,
   };
 }
+function isManagedTournamentTable(table) {
+  return Boolean(
+    TOURNAMENTS_ENABLED &&
+    table?.tournament
+  );
+}
+
+function getTournamentPausedPlayers(table) {
+  if (!isManagedTournamentTable(table)) {
+    return [];
+  }
+
+  const paused =
+    table.tournament?.pausedPlayers;
+
+  if (!Array.isArray(paused)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      paused
+        .map((pseudo) =>
+          String(pseudo ?? "").trim()
+        )
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function tournamentTablePaused(table) {
+  return getTournamentPausedPlayers(table).length > 0;
+}
+
+function pauseTournamentPlayerAtTable(
+  table,
+  pseudo
+) {
+  if (!isManagedTournamentTable(table)) {
+    return false;
+  }
+
+  const normalizedPseudo =
+    String(pseudo ?? "").trim();
+
+  if (
+    !normalizedPseudo ||
+    !Array.isArray(table.seats) ||
+    !table.seats.includes(normalizedPseudo)
+  ) {
+    return false;
+  }
+
+  const paused =
+    getTournamentPausedPlayers(table);
+
+  if (!paused.includes(normalizedPseudo)) {
+    table.tournament = {
+      ...table.tournament,
+      pausedPlayers: [
+        ...paused,
+        normalizedPseudo,
+      ],
+    };
+  }
+
+  [
+    "botPlayTimer",
+    "nextHandTimer",
+    "nextTrickTimer",
+  ].forEach((timerName) => {
+    if (table[timerName]) {
+      clearTimeout(table[timerName]);
+      table[timerName] = null;
+    }
+  });
+
+  return true;
+}
+
+function resumeTournamentPlayerAtTable(
+  table,
+  pseudo
+) {
+  if (!isManagedTournamentTable(table)) {
+    return false;
+  }
+
+  const normalizedPseudo =
+    String(pseudo ?? "").trim();
+
+  const paused =
+    getTournamentPausedPlayers(table);
+
+  if (
+    !normalizedPseudo ||
+    !paused.includes(normalizedPseudo)
+  ) {
+    return false;
+  }
+
+  table.tournament = {
+    ...table.tournament,
+    pausedPlayers: paused.filter(
+      (pausedPseudo) =>
+        pausedPseudo !== normalizedPseudo
+    ),
+  };
+
+  return true;
+}
+
 function resumeTableAfterSeatChange(table) {
   if (!table?.game?.hand) return;
+
+  if (tournamentTablePaused(table)) {
+    return;
+  }
 
   playBotCardsUntilHumanTurn(table);
   scheduleAdvanceCompletedTrick(table);
@@ -4992,6 +6784,18 @@ if (msg.type === "table_game_action") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
+  if (tournamentTablePaused(t)) {
+    ws.send(
+      JSON.stringify({
+        type: "table_game_action_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_MATCH_PAUSED",
+      })
+    );
+    return;
+  }
+
   if (!isPlayerInTable(t.id, pseudo)) return;
 
   const roundId = String(msg.roundId || "");
@@ -5004,6 +6808,21 @@ if (msg.type === "table_game_action") {
   }
 
   if (action.type === "RESET_ROUND") {
+    if (
+      TOURNAMENTS_ENABLED &&
+      t.tournament &&
+      t.game?.hand?.phase === "FIN_DE_PARTIE"
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "table_game_action_denied",
+          tableId: t.id,
+          reason: "TOURNAMENT_MATCH_FINISHED",
+        })
+      );
+      return;
+    }
+
     const nextHand = buildFreshAuthoritativeHand(
       t,
       typeof t.game?.dealerSeatIndex === "number" ? t.game.dealerSeatIndex : 0
@@ -5187,8 +7006,133 @@ if (
       return;
     }
 
+    if (msg.type === "open_tournament_match") {
+      if (!TOURNAMENTS_ENABLED) {
+        ws.send(
+          JSON.stringify({
+            type:
+              "open_tournament_match_denied",
+            reason:
+              "TOURNAMENTS_DISABLED",
+          })
+        );
+        return;
+      }
+
+      const adminUser =
+        await getAdminUserForSocket(ws);
+
+      if (!adminUser) {
+        ws.send(
+          JSON.stringify({
+            type:
+              "open_tournament_match_denied",
+            reason:
+              "TOURNAMENT_HOST_REQUIRED",
+          })
+        );
+        return;
+      }
+
+      const tournamentId =
+        normalizeTournamentOpenId(
+          msg.tournamentId
+        );
+
+      const matchId =
+        normalizeTournamentOpenId(
+          msg.matchId
+        );
+
+      if (
+        !tournamentId ||
+        !matchId
+      ) {
+        ws.send(
+          JSON.stringify({
+            type:
+              "open_tournament_match_denied",
+            reason:
+              "TOURNAMENT_IDENTIFIERS_REQUIRED",
+          })
+        );
+        return;
+      }
+
+      try {
+        const opened =
+          await openTournamentMatchTable({
+            tournamentId,
+            matchId,
+          });
+
+        const table =
+          opened.table;
+
+        if (!opened.alreadyOpen) {
+          system(
+            `Table ${table.id} du match ${matchId} ouverte par ${adminUser.username}`
+          );
+
+          broadcastTables();
+        }
+
+        ws.send(
+          JSON.stringify({
+            type:
+              "tournament_match_opened",
+            tableId: table.id,
+            mode: table.mode,
+            alreadyOpen:
+              opened.alreadyOpen,
+            restored:
+              opened.restored,
+            tournament:
+              publicTournamentTableMeta(
+                table,
+                true
+              ),
+          })
+        );
+      } catch (err) {
+        const reason =
+          typeof err?.code === "string" &&
+          err.code
+            ? err.code
+            : "TOURNAMENT_OPEN_FAILED";
+
+        console.error(
+          "Erreur open_tournament_match",
+          {
+            tournamentId,
+            matchId,
+            adminUserId:
+              adminUser.id,
+            reason,
+            message:
+              String(
+                err?.message || err
+              ),
+          }
+        );
+
+        ws.send(
+          JSON.stringify({
+            type:
+              "open_tournament_match_denied",
+            reason,
+          })
+        );
+      }
+
+      return;
+    }
+
     if (msg.type === "create_table") {
-      if (tablesMap.size >= MAX_TABLES) {
+      const mode = String(msg.mode || "classic").trim() || "classic";
+      const t = createTable(mode);
+
+      if (!t) {
         ws.send(
           JSON.stringify({
             type: "create_table_denied",
@@ -5199,8 +7143,6 @@ if (
         return;
       }
 
-      const mode = String(msg.mode || "classic").trim() || "classic";
-      const t = createTable(mode);
       system(`ðŸŸ¢ Table ${t.id} crÃ©Ã©e (${mode})`);
       broadcastTables();
       return;
@@ -5227,6 +7169,18 @@ if (
           JSON.stringify({
             type: "close_table_denied",
             reason: "Cette table n’existe plus.",
+          })
+        );
+        return;
+      }
+
+      if (isManagedTournamentTable(t)) {
+        ws.send(
+          JSON.stringify({
+            type: "close_table_denied",
+            tableId: t.id,
+            reason:
+              "TOURNAMENT_CLOSE_REQUIRES_HOST",
           })
         );
         return;
@@ -5279,6 +7233,18 @@ if (
       const t = tableId ? tablesMap.get(tableId) : null;
       if (!t) return;
 
+      if (isManagedTournamentTable(t)) {
+        ws.send(
+          JSON.stringify({
+            type: "set_table_mode_denied",
+            tableId: t.id,
+            reason:
+              "TOURNAMENT_MODE_LOCKED",
+          })
+        );
+        return;
+      }
+
       if (!["classic", "contree", "moderne"].includes(mode)) return;
 
       const count = t.seats.filter(Boolean).length;
@@ -5297,6 +7263,18 @@ if (msg.type === "start_with_bots") {
   const tableId = normalizeTableId(msg.tableId);
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
+
+  if (TOURNAMENTS_ENABLED && t.tournament) {
+    syncBotsForTable(t);
+    ws.send(
+      JSON.stringify({
+        type: "start_with_bots_denied",
+        tableId: t.id,
+        reason: "TOURNAMENT_BOTS_FORBIDDEN",
+      })
+    );
+    return;
+  }
 
   if (!isPlayerInTable(t.id, pseudo)) {
     return;
@@ -5325,6 +7303,26 @@ if (msg.type === "watch_table") {
   const tableId = normalizeTableId(msg.tableId);
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
+
+  const tournamentSeat =
+    findPlayerTable(pseudo);
+
+  if (
+    tournamentSeat &&
+    isManagedTournamentTable(
+      tournamentSeat.table
+    )
+  ) {
+    ws.send(
+      JSON.stringify({
+        type: "watch_table_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_SEAT_RESERVED",
+      })
+    );
+    return;
+  }
 
   if (Number(ws.tableId) !== Number(t.id)) {
     clearAudioIdentity(ws);
@@ -5367,6 +7365,26 @@ if (msg.type === "join_table") {
   const t = tableId ? tablesMap.get(tableId) : null;
   if (!t) return;
 
+    const tournamentAccess = tournamentTableAccess(
+      t,
+      pseudo,
+      TOURNAMENTS_ENABLED
+    );
+
+    if (
+      tournamentAccess.managed &&
+      !tournamentAccess.allowed
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "join_table_denied",
+          tableId: t.id,
+          reason: tournamentAccess.reason,
+        })
+      );
+      return;
+    }
+
   const leftVisitorTableId = removeVisitorFromAnyTable(pseudo);
   if (leftVisitorTableId) {
     clearAudioIdentity(ws);
@@ -5376,10 +7394,42 @@ if (msg.type === "join_table") {
   const wasAlreadyInTargetTable =
     prev && Number(prev.table.id) === Number(t.id);
 
+  if (
+    prev &&
+    !wasAlreadyInTargetTable &&
+    isManagedTournamentTable(prev.table)
+  ) {
+    ws.send(
+      JSON.stringify({
+        type: "join_table_denied",
+        tableId: t.id,
+        reason:
+          "TOURNAMENT_SEAT_RESERVED",
+      })
+    );
+    return;
+  }
+
   // dÃ©jÃ  assis dans cette table : on rattache juste le socket
   if (wasAlreadyInTargetTable) {
   ws.tableId = t.id;
+  ws.tableRole = "player";
+
+  const resumedTournamentSeat =
+    resumeTournamentPlayerAtTable(
+      t,
+      pseudo
+    );
+
   refreshServerGameForTable(t);
+
+  if (
+    resumedTournamentSeat &&
+    !tournamentTablePaused(t)
+  ) {
+    resumeTableAfterSeatChange(t);
+  }
+
   broadcastTables();
 
   ws.send(
@@ -5395,7 +7445,30 @@ if (msg.type === "join_table") {
   // place libre OU place occupÃ©e par un bot remplaÃ§able
   const freeIdx = t.seats.findIndex((s) => !s);
   const botIdx = t.seats.findIndex((s) => isBotPseudo(s));
-  const targetIdx = freeIdx !== -1 ? freeIdx : botIdx;
+    const targetIdx = tournamentAccess.managed
+      ? tournamentAccess.seatIndex
+      : freeIdx !== -1
+        ? freeIdx
+        : botIdx;
+
+    if (tournamentAccess.managed) {
+      const assignedSeat = t.seats[targetIdx];
+
+      if (
+        assignedSeat &&
+        !isBotPseudo(assignedSeat) &&
+        assignedSeat !== pseudo
+      ) {
+        ws.send(
+          JSON.stringify({
+            type: "join_table_denied",
+            tableId: t.id,
+            reason: "TOURNAMENT_SEAT_UNAVAILABLE",
+          })
+        );
+        return;
+      }
+    }
 
   // vraiment pleine = 4 humains
   if (targetIdx === -1) {
@@ -5482,6 +7555,41 @@ if (msg.type === "choose_seat") {
     );
     return;
   }
+
+    const tournamentAccess = tournamentTableAccess(
+      t,
+      pseudo,
+      TOURNAMENTS_ENABLED
+    );
+
+    if (
+      tournamentAccess.managed &&
+      !tournamentAccess.allowed
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "choose_seat_denied",
+          tableId: t.id,
+          reason: tournamentAccess.reason,
+        })
+      );
+      return;
+    }
+
+    if (
+      tournamentAccess.managed &&
+      seatIndex !== tournamentAccess.seatIndex
+    ) {
+      ws.send(
+        JSON.stringify({
+          type: "choose_seat_denied",
+          tableId: t.id,
+          reason: "TOURNAMENT_SEAT_LOCKED",
+          assignedSeatIndex: tournamentAccess.seatIndex,
+        })
+      );
+      return;
+    }
 
   // sÃ©curitÃ© forte :
   // le joueur doit dÃ©jÃ  Ãªtre rÃ©ellement assis dans CETTE table
@@ -5572,6 +7680,61 @@ if (msg.type === "choose_seat") {
     if (msg.type === "leave_table") {
       // si tableId absent -> quitte n'importe quelle table
       const tableId = msg.tableId != null ? normalizeTableId(msg.tableId) : null;
+
+      const tournamentSeat =
+        tableId
+          ? (() => {
+              const candidate =
+                tablesMap.get(tableId);
+
+              if (
+                !candidate ||
+                !candidate.seats.includes(pseudo)
+              ) {
+                return null;
+              }
+
+              return {
+                table: candidate,
+              };
+            })()
+          : findPlayerTable(pseudo);
+
+      if (
+        tournamentSeat &&
+        pauseTournamentPlayerAtTable(
+          tournamentSeat.table,
+          pseudo
+        )
+      ) {
+        clearAudioIdentityForTable(
+          ws,
+          tournamentSeat.table.id
+        );
+
+        if (
+          Number(ws.tableId) ===
+          Number(tournamentSeat.table.id)
+        ) {
+          ws.tableId = null;
+          ws.tableRole = null;
+        }
+
+        broadcastTables();
+
+        broadcastToTable(
+          tournamentSeat.table.id,
+          {
+            type: "table_system",
+            tableId:
+              tournamentSeat.table.id,
+            text:
+              `${pseudo} est temporairement absent - partie tournoi en pause`,
+          }
+        );
+
+        return;
+      }
 
       if (tableId) {
         const t = tablesMap.get(tableId);
@@ -5671,7 +7834,13 @@ if (leftTable) {
         broadcastPlayers();
         broadcastTables();
 
-        if (leftTableId) {
+        if (
+          leftTableId &&
+          !(
+            leftTable &&
+            tournamentTablePaused(leftTable)
+          )
+        ) {
           broadcastToTable(leftTableId, {
             type: "table_system",
             tableId: leftTableId,

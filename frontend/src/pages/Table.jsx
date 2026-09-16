@@ -1500,6 +1500,18 @@ const mySeatIndex = tableSeatPseudos.findIndex(
 );
 
 const viewSeatIndex = tableRole === "visitor" ? -1 : mySeatIndex;
+
+const tournamentSeatAssignments =
+  Array.isArray(
+    _tableSnapshot?.tournament?.seatAssignments
+  ) &&
+  _tableSnapshot.tournament.seatAssignments.length === 4
+    ? _tableSnapshot.tournament.seatAssignments.map(
+        (assignedPseudo) =>
+          normalizePseudo(assignedPseudo)
+      )
+    : [];
+
 const humanSeatIndices = seatsInfo.reduce((acc, seat, index) => {
   if (seat?.name && !seat?.isBot) acc.push(index);
   return acc;
@@ -1571,12 +1583,30 @@ function seatAvatarForPosition(position) {
 
 function seatNameForPosition(position) {
   const seat = seatForPosition(position);
+  const seatIndex =
+    seatIndexForPosition(position);
 
-  if (position === "bottom" && viewSeatIndex !== -1) {
-    return seat?.name || pseudo;
+  const reservedPseudo =
+    seatIndex != null
+      ? tournamentSeatAssignments[seatIndex] || ""
+      : "";
+
+  if (
+    position === "bottom" &&
+    viewSeatIndex !== -1
+  ) {
+    return (
+      seat?.name ||
+      reservedPseudo ||
+      pseudo
+    );
   }
 
-  return seat?.name || "Place libre";
+  return (
+    seat?.name ||
+    reservedPseudo ||
+    "Place libre"
+  );
 }
 
 function canChoosePosition(position) {

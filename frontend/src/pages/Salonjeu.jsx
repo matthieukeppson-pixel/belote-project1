@@ -731,22 +731,53 @@ const statusText = isHumanFull
     ? "Jouable"
     : "En attente";
 
+const tournamentReservedPlayers =
+  Array.isArray(t.tournament?.seatAssignments)
+    ? t.tournament.seatAssignments
+        .map((pseudo) =>
+          String(pseudo || "").trim()
+        )
+        .filter(Boolean)
+    : [];
+
+
               return (
                 <div key={t.id} className="table-card">
                   <div className="table-title">Table {t.id}</div>
                 <div className="table-info">Joueurs : {humanCount} / 4</div>
 <div className="table-info">Statut : {statusText}</div>
                   <div className="table-seated-players">
-  {(t.seatsInfo || [])
-    .filter((seat) => seat?.name)
-    .map((seat) => (
-      <div key={seat.name} className="table-seated-player">
-        {seat.name}
+  {tournamentReservedPlayers.length > 0 ? (
+    tournamentReservedPlayers.map((pseudo) => (
+      <div
+        key={`tournament-reserved-${t.id}-${pseudo}`}
+        className="table-seated-player"
+      >
+        {pseudo}
       </div>
-    ))}
+    ))
+  ) : (
+    <>
+      {(t.seatsInfo || [])
+        .filter((seat) => seat?.name)
+        .map((seat) => (
+          <div
+            key={seat.name}
+            className="table-seated-player"
+          >
+            {seat.name}
+          </div>
+        ))}
 
-  {(!t.seatsInfo || t.seatsInfo.filter((seat) => seat?.name).length === 0) && (
-    <div className="table-seated-player empty">Aucun joueur</div>
+      {(!t.seatsInfo ||
+        t.seatsInfo.filter(
+          (seat) => seat?.name
+        ).length === 0) && (
+        <div className="table-seated-player empty">
+          Aucun joueur
+        </div>
+      )}
+    </>
   )}
 </div>
                   {/* Mode */}
