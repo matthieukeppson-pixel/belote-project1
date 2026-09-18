@@ -6361,6 +6361,10 @@ function pauseTournamentPlayerAtTable(
     return false;
   }
 
+  if (table?.game?.status === "WAITING_FOR_PLAYERS") {
+    return false;
+  }
+
   const normalizedPseudo =
     String(pseudo ?? "").trim();
 
