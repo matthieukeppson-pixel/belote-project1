@@ -62,6 +62,7 @@ const SALON_EMOJIS = [
   { code: ":sucette_or:", src: "/emojis/sucette_or.png", alt: "sucette or" },
   { code: ":bye_bye:", src: "/emojis/bye_bye.png", alt: "bye bye" },
   { code: ":guitariste:", src: "/emojis/guitariste-belote-et-amis.gif", alt: "guitariste" },
+  { code: ":zouk:", src: "/emojis/zouk.gif", alt: "zouk" },
 
   // Emojis Vero pack 3
   { code: ":fetard:", src: "/emojis/fetard.png", alt: "fêtard" },

@@ -2747,3 +2747,14 @@
   width: auto;
   height: 32px;
 }
+
+/* Taille speciale du zouk anime */
+.salon-chat-custom-emoji[src$="/emojis/zouk.gif"] {
+  width: auto;
+  height: 72px;
+}
+
+.salon-chat-emoji-btn-img[src$="/emojis/zouk.gif"] {
+  width: auto;
+  height: 38px;
+}
