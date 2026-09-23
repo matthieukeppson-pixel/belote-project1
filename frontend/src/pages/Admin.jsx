@@ -62,7 +62,7 @@ export default function Admin() {
   const [tournamentError, setTournamentError] = useState("");
 
   const [tournamentName, setTournamentName] = useState("");
-  const [tournamentMode, setTournamentMode] = useState("classic");
+
 
   const [teamName, setTeamName] = useState("");
   const [teamPlayer1, setTeamPlayer1] = useState("");
@@ -74,6 +74,11 @@ export default function Admin() {
   const [matchTeamAId, setMatchTeamAId] = useState("");
   const [matchTeamBId, setMatchTeamBId] = useState("");
   const [matchScheduleError, setMatchScheduleError] = useState("");
+
+  const [replaceTeamId, setReplaceTeamId] = useState("");
+  const [replacePlayerSlot, setReplacePlayerSlot] = useState(null);
+  const [replacementPseudo, setReplacementPseudo] = useState("");
+  const [rankingOpen, setRankingOpen] = useState(false);
 
   const tournamentAssignedPlayerKeys = new Set(
     tournamentTeams
@@ -97,15 +102,11 @@ export default function Admin() {
     );
   });
 
-  const normalizedMatchRoundNumber =
-    Number(matchRoundNumber);
-
-  const tournamentUsedTeamIdsForRound = new Set(
+  const tournamentUsedTeamIdsForPairings = new Set(
     tournamentMatches
       .filter(
         (match) =>
-          Number(match.roundNumber) ===
-          normalizedMatchRoundNumber
+          Number(match.roundNumber) === 1
       )
       .flatMap(
         (match) => [
@@ -122,10 +123,49 @@ export default function Admin() {
   const availableTournamentMatchTeams =
     tournamentTeams.filter(
       (team) =>
-        !tournamentUsedTeamIdsForRound.has(
+        !tournamentUsedTeamIdsForPairings.has(
           String(team.id)
         )
     );
+
+  const isTournamentRoundComplete = (roundNumber) => {
+    const roundMatches = tournamentMatches.filter(
+      (match) =>
+        Number(match.roundNumber) === Number(roundNumber)
+    );
+
+    return (
+      roundMatches.length > 0 &&
+      roundMatches.every((match) =>
+        ["finished", "forfeit"].includes(
+          String(match.status || "")
+            .trim()
+            .toLowerCase()
+        )
+      )
+    );
+  };
+
+  const isTournamentMatchPhaseUnlocked = (match) => {
+    if (
+      match?.tableId != null ||
+      String(match?.status || "") === "ready"
+    ) {
+      return true;
+    }
+
+    const roundNumber = Number(match?.roundNumber);
+
+    if (roundNumber === 2) {
+      return isTournamentRoundComplete(1);
+    }
+
+    if (roundNumber === 3) {
+      return isTournamentRoundComplete(2);
+    }
+
+    return true;
+  };
 
   const currentRole = String(adminUser?.role || "player");
   const isAdmin = currentRole === "admin";
@@ -290,7 +330,7 @@ export default function Admin() {
         method: "POST",
         body: JSON.stringify({
           name,
-          mode: tournamentMode,
+          mode: "classic",
         }),
       });
 
@@ -388,24 +428,63 @@ export default function Admin() {
     }
   };
 
+  const replaceTournamentPlayer = async () => {
+    if (
+      !selectedTournamentId ||
+      !replaceTeamId ||
+      ![1, 2].includes(Number(replacePlayerSlot)) ||
+      !replacementPseudo
+    ) {
+      setTournamentError(
+        "Selectionnez le joueur a remplacer et son remplacant."
+      );
+      return;
+    }
+
+    setTournamentLoading(true);
+    setTournamentError("");
+    setMessage("");
+
+    try {
+      await apiRequest(
+        `/api/admin/tournaments/${encodeURIComponent(selectedTournamentId)}/teams/${encodeURIComponent(replaceTeamId)}/player`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            playerSlot: Number(replacePlayerSlot),
+            pseudo: replacementPseudo,
+          }),
+        }
+      );
+
+      setReplaceTeamId("");
+      setReplacePlayerSlot(null);
+      setReplacementPseudo("");
+
+      setMessageType("success");
+      setMessage(
+        "Le joueur a ete remplace pour la suite du tournoi."
+      );
+
+      await loadTournamentTeams(
+        selectedTournamentId
+      );
+    } catch (err) {
+      setTournamentError(
+        err.message ||
+          "Remplacement du joueur impossible."
+      );
+    } finally {
+      setTournamentLoading(false);
+    }
+  };
+
   const scheduleTournamentMatch = async (event) => {
     event.preventDefault();
     setMatchScheduleError("");
 
-    const roundNumber = Number(matchRoundNumber);
-
     if (!selectedTournamentId) {
       setMatchScheduleError("Selectionnez d'abord un tournoi.");
-      return;
-    }
-
-    if (
-      !Number.isInteger(roundNumber) ||
-      roundNumber <= 0
-    ) {
-      setMatchScheduleError(
-        "Le numero de tour doit etre un entier positif."
-      );
       return;
     }
 
@@ -421,84 +500,86 @@ export default function Admin() {
       return;
     }
 
+    const phaseRounds = [1, 2, 3];
+
+    const samePair = (match) =>
+      (
+        String(match.teamAId) === String(matchTeamAId) &&
+        String(match.teamBId) === String(matchTeamBId)
+      ) ||
+      (
+        String(match.teamAId) === String(matchTeamBId) &&
+        String(match.teamBId) === String(matchTeamAId)
+      );
+
+    const missingRounds =
+      phaseRounds.filter(
+        (roundNumber) =>
+          !tournamentMatches.some(
+            (match) =>
+              Number(match.roundNumber) === roundNumber &&
+              samePair(match)
+          )
+      );
+
+    if (missingRounds.length === 0) {
+      setMatchScheduleError(
+        "Les trois phases sont deja programmees pour ces equipes."
+      );
+      return;
+    }
+
     setTournamentLoading(true);
     setMatchScheduleError("");
     setMessage("");
 
-    let createdMatchId = "";
+    let createdCount = 0;
 
     try {
-      const scheduled = await apiRequest(
-        `/api/admin/tournaments/${encodeURIComponent(selectedTournamentId)}/matches`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            roundNumber,
-            teamAId: matchTeamAId,
-            teamBId: matchTeamBId,
-          }),
-        }
-      );
-
-      createdMatchId = String(
-        scheduled.match?.id || ""
-      ).trim();
-
-      if (!createdMatchId) {
-        throw new Error(
-          "Le match a ete cree sans identifiant."
+      for (const roundNumber of missingRounds) {
+        await apiRequest(
+          `/api/admin/tournaments/${encodeURIComponent(selectedTournamentId)}/matches`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              roundNumber,
+              teamAId: matchTeamAId,
+              teamBId: matchTeamBId,
+            }),
+          }
         );
-      }
 
-      const opened = await apiRequest(
-        `/api/admin/tournaments/${encodeURIComponent(selectedTournamentId)}/matches/${encodeURIComponent(createdMatchId)}/open`,
-        {
-          method: "POST",
-          body: JSON.stringify({}),
-        }
-      );
+        createdCount += 1;
+      }
 
       setMatchTeamAId("");
       setMatchTeamBId("");
 
       setMessageType("success");
-
-      if (opened.alreadyOpen) {
-        setMessage(
-          `Table ${opened.tableId} deja ouverte.`
-        );
-      } else if (opened.restored) {
-        setMessage(
-          `Table ${opened.tableId} restauree.`
-        );
-      } else {
-        setMessage(
-          `Table ${opened.tableId} ouverte.`
-        );
-      }
+      setMessage(
+        missingRounds.length === 3
+          ? "Les 3 phases sont programmees."
+          : "Les phases manquantes sont programmees."
+      );
 
       await loadTournamentMatches(
         selectedTournamentId
       );
     } catch (err) {
-      if (createdMatchId) {
-        setMatchScheduleError(
-          `Match programme, mais ouverture impossible : ${
-            err.message || "Erreur serveur"
-          }`
-        );
+      setMatchScheduleError(
+        createdCount > 0
+          ? `Preparation partielle : ${createdCount} phase(s) ajoutee(s). ${
+              err.message || "Erreur serveur"
+            }`
+          : err.message || "Programmation des phases impossible."
+      );
 
-        try {
-          await loadTournamentMatches(
-            selectedTournamentId
-          );
-        } catch {
-          // Le message principal reste celui de l'ouverture.
-        }
-      } else {
-        setMatchScheduleError(
-          err.message || "Ouverture de la table impossible."
+      try {
+        await loadTournamentMatches(
+          selectedTournamentId
         );
+      } catch {
+        // Le message principal reste celui de la programmation.
       }
     } finally {
       setTournamentLoading(false);
@@ -856,6 +937,69 @@ export default function Admin() {
       (item) => String(item.id) === String(selectedTournamentId)
     ) || null;
 
+  const tournamentRanking = tournamentTeams
+    .map((team, teamIndex) => {
+      const phaseScores = {
+        classic: null,
+        moderne: null,
+        contree: null,
+      };
+
+      tournamentMatches
+        .filter(
+          (match) =>
+            String(match.status || "") === "finished" &&
+            (
+              String(match.teamAId) === String(team.id) ||
+              String(match.teamBId) === String(team.id)
+            )
+        )
+        .forEach((match) => {
+          const mode = String(match.mode || "").trim();
+
+          if (!(mode in phaseScores)) return;
+
+          const score =
+            String(match.teamAId) === String(team.id)
+              ? Number(match.scoreNous)
+              : Number(match.scoreEux);
+
+          if (Number.isFinite(score)) {
+            phaseScores[mode] = score;
+          }
+        });
+
+      const total = Object.values(phaseScores)
+        .filter((score) => Number.isFinite(score))
+        .reduce((sum, score) => sum + score, 0);
+
+      return {
+        teamId: team.id,
+        teamName:
+          team.name || `Équipe ${teamIndex + 1}`,
+        player1: team.player1 || "",
+        player2: team.player2 || "",
+        ...phaseScores,
+        total,
+      };
+    })
+    .sort((a, b) => b.total - a.total)
+    .map((row, index, rows) => ({
+      ...row,
+      rank:
+        rows.findIndex(
+          (candidate) =>
+            candidate.total === row.total
+        ) + 1,
+    }));
+
+  const tournamentHasResults =
+    tournamentRanking.some((row) =>
+      [row.classic, row.moderne, row.contree].some(
+        (score) => Number.isFinite(score)
+      )
+    );
+
   const finishTournament = async () => {
     if (!selectedTournamentId) return;
 
@@ -984,6 +1128,15 @@ export default function Admin() {
 
                 <button
                   type="button"
+                  className="admin-tab-btn"
+                  onClick={() => setRankingOpen(true)}
+                  disabled={!selectedTournament || tournamentLoading}
+                >
+                  Classement
+                </button>
+
+                <button
+                  type="button"
                   className={`admin-tab-btn ${adminView === "tournaments" ? "active" : ""}`}
                   onClick={() => setAdminView("tournaments")}
                 >
@@ -1064,23 +1217,6 @@ export default function Admin() {
                         />
                       </label>
 
-                      <label>
-                        Mode
-                        <select
-                          value={tournamentMode}
-                          onChange={(event) =>
-                            setTournamentMode(event.target.value)
-                          }
-                          disabled={tournamentLoading}
-                        >
-                          <option value="classic">Classique</option>
-                          <option value="moderne">Moderne</option>
-                          <option value="contree">
-                            {"Contr\u00e9e"}
-                          </option>
-                        </select>
-                      </label>
-
                       <button
                         type="submit"
                         className="admin-tournament-primary-btn"
@@ -1122,10 +1258,7 @@ export default function Admin() {
                           <div className="admin-tournament-summary">
                             <strong>{selectedTournament.name}</strong>
                             <span>
-                              Mode :{" "}
-                              {tournamentModeLabel(
-                                selectedTournament.mode
-                              )}
+                              {"Phases : Classique → Moderne → Contrée"}
                             </span>
                             <span>
                               Statut :{" "}
@@ -1136,14 +1269,16 @@ export default function Admin() {
                             <span>
                               Equipes : {tournamentTeams.length}
                             </span>
-                            <button
-                              type="button"
-                              className="admin-tournament-primary-btn"
-                              onClick={finishTournament}
-                              disabled={tournamentLoading}
-                            >
-                              Terminer le tournoi
-                            </button>
+                            <div className="admin-tournament-summary-actions">
+                              <button
+                                type="button"
+                                className="admin-tournament-primary-btn"
+                                onClick={finishTournament}
+                                disabled={tournamentLoading}
+                              >
+                                Terminer le tournoi
+                              </button>
+                            </div>
                           </div>
                         )}
                       </>
@@ -1269,10 +1404,114 @@ export default function Admin() {
                                     `Equipe ${index + 1}`}
                                 </strong>
                               </div>
+
                               <div className="admin-tournament-team-players">
-                                {team.player1 || "-"}
-                                <span> + </span>
-                                {team.player2 || "-"}
+                                <div className="admin-tournament-team-player">
+                                  <span>{team.player1 || "-"}</span>
+                                  <button
+                                    type="button"
+                                    className="admin-tournament-replace-btn"
+                                    disabled={tournamentLoading}
+                                    onClick={() => {
+                                      setReplaceTeamId(team.id);
+                                      setReplacePlayerSlot(1);
+                                      setReplacementPseudo("");
+                                      setTournamentError("");
+                                    }}
+                                  >
+                                    Remplacer
+                                  </button>
+                                </div>
+
+                                <div className="admin-tournament-team-player">
+                                  <span>{team.player2 || "-"}</span>
+                                  <button
+                                    type="button"
+                                    className="admin-tournament-replace-btn"
+                                    disabled={tournamentLoading}
+                                    onClick={() => {
+                                      setReplaceTeamId(team.id);
+                                      setReplacePlayerSlot(2);
+                                      setReplacementPseudo("");
+                                      setTournamentError("");
+                                    }}
+                                  >
+                                    Remplacer
+                                  </button>
+                                </div>
+
+                                {String(replaceTeamId) === String(team.id) &&
+                                  [1, 2].includes(Number(replacePlayerSlot)) && (
+                                    <div className="admin-tournament-replace-player">
+                                      <div>
+                                        Remplacer{" "}
+                                        <strong>
+                                          {Number(replacePlayerSlot) === 1
+                                            ? team.player1
+                                            : team.player2}
+                                        </strong>
+                                      </div>
+
+                                      <select
+                                        value={replacementPseudo}
+                                        onChange={(event) =>
+                                          setReplacementPseudo(
+                                            event.target.value
+                                          )
+                                        }
+                                        disabled={tournamentLoading}
+                                      >
+                                        <option value="">
+                                          Selectionner le remplacant
+                                        </option>
+
+                                        {availableTournamentPlayers.map(
+                                          (player) => {
+                                            const pseudo =
+                                              player.pseudo ||
+                                              player.username ||
+                                              "";
+
+                                            return (
+                                              <option
+                                                key={`replacement-${team.id}-${player.id}`}
+                                                value={pseudo}
+                                              >
+                                                {pseudo}
+                                              </option>
+                                            );
+                                          }
+                                        )}
+                                      </select>
+
+                                      <div className="admin-tournament-replace-actions">
+                                        <button
+                                          type="button"
+                                          className="admin-tournament-primary-btn"
+                                          disabled={
+                                            tournamentLoading ||
+                                            !replacementPseudo
+                                          }
+                                          onClick={replaceTournamentPlayer}
+                                        >
+                                          Confirmer
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          className="admin-tournament-replace-btn"
+                                          disabled={tournamentLoading}
+                                          onClick={() => {
+                                            setReplaceTeamId("");
+                                            setReplacePlayerSlot(null);
+                                            setReplacementPseudo("");
+                                          }}
+                                        >
+                                          Annuler
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           ))}
@@ -1285,30 +1524,15 @@ export default function Admin() {
                 {selectedTournament && (
                   <div className="admin-tournament-matches">
                     <div className="admin-tournament-panel">
-                      <h3>Ouvrir une table</h3>
+                      <h3>Programmer une rencontre</h3>
 
                       <form
                         className="admin-tournament-form"
                         onSubmit={scheduleTournamentMatch}
                       >
-                        <label>
-                          {"Num\u00e9ro du tour"}
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={matchRoundNumber}
-                            onChange={(event) => {
-                              setMatchRoundNumber(
-                                event.target.value
-                              );
-                              setMatchTeamAId("");
-                              setMatchTeamBId("");
-                              setMatchScheduleError("");
-                            }}
-                            disabled={tournamentLoading}
-                          />
-                        </label>
+                        <div className="admin-info">
+                          Classique → Moderne → Contrée : mêmes adversaires.
+                        </div>
 
                         <label>
                           {"\u00c9quipe A"}
@@ -1380,7 +1604,7 @@ export default function Admin() {
                             !matchTeamBId
                           }
                         >
-                          Ouvrir la table
+                          Préparer les 3 phases
                         </button>
 
                         {matchScheduleError && (
@@ -1411,7 +1635,8 @@ export default function Admin() {
                             >
                               <div className="admin-tournament-match-main">
                                 <div className="admin-tournament-match-title">
-                                  Tour {match.roundNumber} :{" "}
+                                  Tour {match.roundNumber} —{" "}
+                                  {tournamentModeLabel(match.mode)} :{" "}
                                   {tournamentTeamLabel(
                                     match.teamAId
                                   )}{" "}
@@ -1465,7 +1690,10 @@ export default function Admin() {
                                     onClick={() =>
                                       openTournamentMatch(match)
                                     }
-                                    disabled={tournamentLoading}
+                                    disabled={
+                                      tournamentLoading ||
+                                      !isTournamentMatchPhaseUnlocked(match)
+                                    }
                                   >
                                     Ouvrir la table
                                   </button>
@@ -1492,6 +1720,104 @@ export default function Admin() {
                     </div>
                   </div>
                 )}
+              {rankingOpen && selectedTournament && (
+                <div
+                  className="admin-tournament-ranking-overlay"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="tournament-ranking-title"
+                >
+                  <div className="admin-tournament-ranking-modal">
+                    <div className="admin-tournament-ranking-header">
+                      <div>
+                        <h3 id="tournament-ranking-title">
+                          Classement du tournoi
+                        </h3>
+                        <strong>{selectedTournament.name}</strong>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="admin-tournament-replace-btn"
+                        onClick={() => setRankingOpen(false)}
+                      >
+                        Fermer
+                      </button>
+                    </div>
+
+                    {tournamentRanking.length === 0 ? (
+                      <div className="admin-empty">
+                        Aucune équipe dans ce tournoi.
+                      </div>
+                    ) : (
+                      <div className="admin-tournament-ranking-table-wrap">
+                        <table className="admin-tournament-ranking-table">
+                          <thead>
+                            <tr>
+                              <th>Rang</th>
+                              <th>Équipe</th>
+                              <th>Classique</th>
+                              <th>Moderne</th>
+                              <th>Contrée</th>
+                              <th>Total</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {tournamentRanking.map((row) => (
+                              <tr key={row.teamId}>
+                                <td>
+                                  <strong>
+                                    {tournamentHasResults
+                                      ? row.rank
+                                      : "—"}
+                                  </strong>
+                                </td>
+
+                                <td>
+                                  <div className="admin-tournament-ranking-team">
+                                    <strong>
+                                      {row.teamName ||
+                                        tournamentTeamLabel(row.teamId)}
+                                    </strong>
+                                    <span>
+                                      {row.player1 || "-"} +{" "}
+                                      {row.player2 || "-"}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                <td>
+                                  {Number.isFinite(row.classic)
+                                    ? row.classic
+                                    : "—"}
+                                </td>
+
+                                <td>
+                                  {Number.isFinite(row.moderne)
+                                    ? row.moderne
+                                    : "—"}
+                                </td>
+
+                                <td>
+                                  {Number.isFinite(row.contree)
+                                    ? row.contree
+                                    : "—"}
+                                </td>
+
+                                <td>
+                                  <strong>{row.total}</strong>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               </section>
             )}
           </>

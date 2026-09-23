@@ -66,6 +66,7 @@ export function createTournamentOrchestrator({ store }) {
   requireStoreMethod(store, "listTournaments");
   requireStoreMethod(store, "finishTournament");
   requireStoreMethod(store, "addTeam");
+  requireStoreMethod(store, "replaceTeamPlayer");
   requireStoreMethod(store, "getTeam");
   requireStoreMethod(store, "listTournamentTeams");
   requireStoreMethod(store, "createMatch");
@@ -125,6 +126,7 @@ export function createTournamentOrchestrator({ store }) {
       id: storedMatch.id,
       tournamentId: storedMatch.tournament_id,
       roundNumber: storedMatch.round_number,
+      mode: storedMatch.mode,
       tableId: storedMatch.table_id,
       teamA,
       teamB,
@@ -227,10 +229,65 @@ export function createTournamentOrchestrator({ store }) {
       return store.listTournamentMatches(tournamentId);
     },
 
+    async replaceTeamPlayer({
+      tournamentId,
+      teamId,
+      playerSlot,
+      pseudo,
+    }) {
+      const team =
+        await store.getTeam(teamId);
+
+      if (
+        !team ||
+        String(team.tournament_id) !==
+          String(tournamentId)
+      ) {
+        throw new Error(
+          "Equipe de tournoi introuvable"
+        );
+      }
+
+      const matches =
+        await store.listTournamentMatches(
+          tournamentId
+        );
+
+      const activeMatch =
+        matches.find(
+          (match) =>
+            (
+              String(match.team_a_id) ===
+                String(teamId) ||
+              String(match.team_b_id) ===
+                String(teamId)
+            ) &&
+            ["ready", "playing"].includes(
+              String(match.status || "")
+                .trim()
+                .toLowerCase()
+            )
+        );
+
+      if (activeMatch) {
+        throw new Error(
+          "Impossible de remplacer un joueur pendant une rencontre active de cette equipe"
+        );
+      }
+
+      return store.replaceTeamPlayer({
+        tournamentId,
+        teamId,
+        playerSlot,
+        pseudo,
+      });
+    },
+
     async scheduleMatch({
       id,
       tournamentId,
       roundNumber,
+      mode = null,
       tableId,
       teamAId,
       teamBId,
@@ -325,6 +382,7 @@ export function createTournamentOrchestrator({ store }) {
         id,
         tournamentId,
         roundNumber,
+        mode,
         tableId,
         teamA,
         teamB,
@@ -334,6 +392,7 @@ export function createTournamentOrchestrator({ store }) {
         id: match.id,
         tournamentId: match.tournamentId,
         roundNumber: match.roundNumber,
+        mode: match.mode,
         tableId: match.tableId,
         teamAId: match.teamAId,
         teamBId: match.teamBId,
@@ -375,7 +434,7 @@ export function createTournamentOrchestrator({ store }) {
         assignment,
         tournament: {
           id: tournament.id,
-          mode: tournament.mode,
+          mode: domainMatch.mode || tournament.mode,
         },
         tableMeta: buildTournamentTableMeta(
           domainMatch

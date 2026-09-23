@@ -280,6 +280,44 @@ export async function openTournamentStore({
     `
   );
 
+  const tournamentMatchColumns =
+    await all(
+      db,
+      "PRAGMA table_info(tournament_matches);"
+    );
+
+  if (
+    !tournamentMatchColumns.some(
+      (column) => String(column.name) === "mode"
+    )
+  ) {
+    await run(
+      db,
+      `
+        ALTER TABLE tournament_matches
+        ADD COLUMN mode TEXT
+          CHECK (
+            mode IS NULL OR
+            mode IN ('classic', 'moderne', 'contree')
+          )
+      `
+    );
+  }
+
+  await run(
+    db,
+    `
+      UPDATE tournament_matches
+      SET mode = (
+        SELECT tournaments.mode
+        FROM tournaments
+        WHERE tournaments.id =
+          tournament_matches.tournament_id
+      )
+      WHERE mode IS NULL
+    `
+  );
+
   return {
     dbPath: resolvedPath,
 
@@ -471,6 +509,83 @@ export async function openTournamentStore({
       return this.getTeam(teamId);
     },
 
+    async replaceTeamPlayer({
+      tournamentId,
+      teamId,
+      playerSlot,
+      pseudo,
+    }) {
+      const normalizedTournamentId =
+        requireText(
+          tournamentId,
+          "team.tournamentId"
+        );
+
+      const normalizedTeamId =
+        requireText(
+          teamId,
+          "team.id"
+        );
+
+      const normalizedPseudo =
+        requireText(
+          pseudo,
+          "team.player"
+        );
+
+      const normalizedPlayerSlot =
+        Number(playerSlot);
+
+      if (![1, 2].includes(normalizedPlayerSlot)) {
+        throw new Error(
+          "team.playerSlot doit etre 1 ou 2"
+        );
+      }
+
+      let write;
+
+      try {
+        write = await run(
+          db,
+          `
+            UPDATE tournament_team_players
+            SET pseudo = ?
+            WHERE tournament_id = ?
+              AND team_id = ?
+              AND player_slot = ?
+          `,
+          [
+            normalizedPseudo,
+            normalizedTournamentId,
+            normalizedTeamId,
+            normalizedPlayerSlot,
+          ]
+        );
+      } catch (err) {
+        if (
+          String(err?.message || "").includes(
+            "UNIQUE constraint failed: tournament_team_players.tournament_id, tournament_team_players.pseudo"
+          )
+        ) {
+          throw new Error(
+            "Ce joueur appartient deja a une equipe de ce tournoi"
+          );
+        }
+
+        throw err;
+      }
+
+      if (write.changes !== 1) {
+        throw new Error(
+          "Equipe ou joueur de tournoi introuvable"
+        );
+      }
+
+      return this.getTeam(
+        normalizedTeamId
+      );
+    },
+
     async getTeam(teamId) {
       const team = await get(
         db,
@@ -543,6 +658,7 @@ export async function openTournamentStore({
       id,
       tournamentId,
       roundNumber,
+      mode = null,
       tableId = null,
       teamAId,
       teamBId,
@@ -572,6 +688,20 @@ export async function openTournamentStore({
           "match.teamBId"
         );
 
+      const normalizedMode =
+        mode == null || String(mode).trim() === ""
+          ? null
+          : requireText(mode, "match.mode");
+
+      if (
+        normalizedMode != null &&
+        !["classic", "moderne", "contree"].includes(
+          normalizedMode
+        )
+      ) {
+        throw new Error("match.mode invalide");
+      }
+
       try {
         await run(
         db,
@@ -580,17 +710,19 @@ export async function openTournamentStore({
             id,
             tournament_id,
             round_number,
+            mode,
             table_id,
             team_a_id,
             team_b_id,
             status
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           normalizedId,
           normalizedTournamentId,
           Number(roundNumber),
+          normalizedMode,
           tableId == null ? null : Number(tableId),
           normalizedTeamAId,
           normalizedTeamBId,

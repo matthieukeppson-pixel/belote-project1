@@ -142,6 +142,7 @@ export function createTournamentMatch({
   id,
   tournamentId,
   roundNumber,
+  mode = null,
   tableId = null,
   teamA,
   teamB,
@@ -157,6 +158,11 @@ export function createTournamentMatch({
     "match.roundNumber"
   );
 
+  const normalizedMode =
+    mode == null || String(mode).trim() === ""
+      ? null
+      : normalizeTournamentMode(mode);
+
   if (!teamA?.id || !teamB?.id) {
     throw new Error("Deux equipes valides sont obligatoires");
   }
@@ -171,6 +177,7 @@ export function createTournamentMatch({
     id: matchId,
     tournamentId: normalizedTournamentId,
     roundNumber: normalizedRoundNumber,
+    mode: normalizedMode,
     tableId:
       tableId == null
         ? null
@@ -196,6 +203,10 @@ export function buildTournamentTableMeta(match) {
     tournamentId: match.tournamentId,
     matchId: match.id,
     roundNumber: match.roundNumber,
+    mode:
+      match.mode == null
+        ? null
+        : normalizeTournamentMode(match.mode),
     tableId:
       match.tableId == null
         ? null

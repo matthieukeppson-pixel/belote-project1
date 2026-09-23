@@ -215,6 +215,38 @@ async function getAuthUserFromRequest(req) {
   return getAuthUserFromToken(getAuthTokenFromRequest(req));
 }
 
+async function getAdminUserForSocket(ws) {
+  const userId = Number(ws?.authUserId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return null;
+  }
+
+  const user = await dbGet(
+    `
+      SELECT id, username, role, is_banned
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (!user || Number(user.is_banned) === 1) {
+    return null;
+  }
+
+  if (String(user.role || "player") !== "admin") {
+    return null;
+  }
+
+  if (!isAnimationHost(user.username)) {
+    return null;
+  }
+
+  return user;
+}
+
 async function requireAdminUser(req, res) {
   const user = await getAuthUserFromRequest(req);
 
@@ -1079,6 +1111,7 @@ function adminTournamentMatchPayload(row) {
     id: row.id,
     tournamentId: row.tournament_id,
     roundNumber: Number(row.round_number),
+    mode: row.mode || null,
     tableId:
       row.table_id == null
         ? null
@@ -1480,6 +1513,197 @@ app.post(
   }
 );
 
+app.patch(
+  "/api/admin/tournaments/:tournamentId/teams/:teamId/player",
+  async (req, res) => {
+    try {
+      const admin =
+        await requireAdminUser(req, res);
+      if (!admin) return;
+
+      const orchestrator =
+        tournamentAdminOrchestrator(res);
+      if (!orchestrator) return;
+
+      const tournamentId =
+        String(
+          req.params.tournamentId || ""
+        ).trim();
+
+      const teamId =
+        String(
+          req.params.teamId || ""
+        ).trim();
+
+      const playerSlot =
+        Number(req.body?.playerSlot);
+
+      const pseudo =
+        String(
+          req.body?.pseudo || ""
+        ).trim();
+
+      if (
+        !teamId ||
+        ![1, 2].includes(playerSlot) ||
+        !pseudo
+      ) {
+        return res.status(400).json({
+          error:
+            "Equipe, emplacement et joueur remplaçant obligatoires.",
+        });
+      }
+
+      const tournaments =
+        await orchestrator.listTournaments();
+
+      const tournament =
+        tournaments.find(
+          (item) =>
+            String(item.id) === tournamentId
+        );
+
+      if (!tournament) {
+        return res.status(404).json({
+          error: "Tournoi introuvable.",
+        });
+      }
+
+      if (
+        tournament.status === "finished" ||
+        tournament.status === "cancelled"
+      ) {
+        return res.status(409).json({
+          error:
+            "Ce tournoi n'accepte plus de remplacement.",
+        });
+      }
+
+      const teams =
+        await orchestrator.listTournamentTeams(
+          tournamentId
+        );
+
+      const team =
+        teams.find(
+          (item) =>
+            String(item.id) === teamId
+        );
+
+      if (!team) {
+        return res.status(404).json({
+          error: "Equipe introuvable.",
+        });
+      }
+
+      const currentPlayer =
+        Array.isArray(team.players)
+          ? team.players.find(
+              (player) =>
+                Number(player.player_slot) ===
+                playerSlot
+            )
+          : null;
+
+      if (
+        String(currentPlayer?.pseudo || "") ===
+        pseudo
+      ) {
+        return res.status(400).json({
+          error:
+            "Ce joueur occupe deja cette place.",
+        });
+      }
+
+      const approvedPlayers =
+        await dbAll(
+          `
+            SELECT username
+            FROM users
+            WHERE username = ?
+              AND COALESCE(is_approved, 0) = 1
+              AND COALESCE(is_banned, 0) = 0
+          `,
+          [pseudo]
+        );
+
+      if (approvedPlayers.length !== 1) {
+        return res.status(400).json({
+          error:
+            "Le remplaçant doit etre valide et non banni.",
+        });
+      }
+
+      const alreadyRegistered =
+        teams.some((existingTeam) =>
+          Array.isArray(existingTeam.players) &&
+          existingTeam.players.some(
+            (player) =>
+              String(player.pseudo || "").trim() ===
+              pseudo
+          )
+        );
+
+      if (alreadyRegistered) {
+        return res.status(409).json({
+          error:
+            "Ce joueur appartient deja a une equipe de ce tournoi.",
+        });
+      }
+
+      const updatedTeam =
+        await orchestrator.replaceTeamPlayer({
+          tournamentId,
+          teamId,
+          playerSlot,
+          pseudo,
+        });
+
+      return res.json({
+        team:
+          adminTournamentTeamPayload(
+            updatedTeam
+          ),
+      });
+    } catch (err) {
+      console.error(
+        "Erreur /api/admin/tournaments/:tournamentId/teams/:teamId/player PATCH",
+        err
+      );
+
+      const message =
+        String(err?.message || "");
+
+      if (
+        message.includes(
+          "pendant une rencontre active"
+        ) ||
+        message.includes(
+          "appartient deja a une equipe"
+        )
+      ) {
+        return res.status(409).json({
+          error: message,
+        });
+      }
+
+      if (
+        message.includes(
+          "Equipe de tournoi introuvable"
+        )
+      ) {
+        return res.status(404).json({
+          error: message,
+        });
+      }
+
+      return res.status(500).json({
+        error: "Erreur serveur",
+      });
+    }
+  }
+);
+
 app.get(
   "/api/admin/tournaments/:tournamentId/matches",
   async (req, res) => {
@@ -1611,11 +1835,21 @@ app.post(
         });
       }
 
+      const roundMode =
+        roundNumber === 1
+          ? "classic"
+          : roundNumber === 2
+            ? "moderne"
+            : roundNumber === 3
+              ? "contree"
+              : tournament.mode;
+
       const scheduled =
         await orchestrator.scheduleMatch({
           id: tournamentAdminId("match"),
           tournamentId,
           roundNumber,
+          mode: roundMode,
           tableId: null,
           teamAId,
           teamBId,
@@ -1937,6 +2171,95 @@ function computeTrickPointsByTeam(hand, winnerSeatIndex) {
   return result;
 }
 
+function isClassicLitigeScore(scoreManche) {
+  return (
+    Number(scoreManche?.nous || 0) === 81 &&
+    Number(scoreManche?.eux || 0) === 81
+  );
+}
+
+function computeClassicHandResolution(
+  hand,
+  scoreManche,
+  tricksWon,
+  pendingLitigePoints = 0
+) {
+  const normalizedPendingLitigePoints = Math.max(
+    0,
+    Number(pendingLitigePoints || 0)
+  );
+  const capotScores = computeClassicCapotScores(tricksWon);
+
+  if (!capotScores && isClassicLitigeScore(scoreManche)) {
+    return {
+      scores: { nous: 0, eux: 0 },
+      pendingLitigePoints:
+        normalizedPendingLitigePoints + 162,
+      winningTeam: null,
+      isLitige: true,
+    };
+  }
+
+  const baseScores =
+    capotScores ||
+    computeClassicContractScores(hand, scoreManche);
+
+  const takerTeam =
+    typeof hand?.takerSeatIndex === "number"
+      ? seatTeamKey(hand.takerSeatIndex)
+      : null;
+
+  const defenderTeam =
+    takerTeam === "nous"
+      ? "eux"
+      : takerTeam === "eux"
+        ? "nous"
+        : null;
+
+  let winningTeam = null;
+
+  if (capotScores) {
+    winningTeam =
+      Number(capotScores.nous || 0) >
+      Number(capotScores.eux || 0)
+        ? "nous"
+        : "eux";
+  } else if (takerTeam && defenderTeam) {
+    winningTeam =
+      Number(scoreManche?.[takerTeam] || 0) >= 82
+        ? takerTeam
+        : defenderTeam;
+  }
+
+  if (!winningTeam) {
+    return {
+      scores: baseScores,
+      pendingLitigePoints:
+        normalizedPendingLitigePoints,
+      winningTeam: null,
+      isLitige: false,
+    };
+  }
+
+  return {
+    scores: {
+      nous:
+        Number(baseScores?.nous || 0) +
+        (winningTeam === "nous"
+          ? normalizedPendingLitigePoints
+          : 0),
+      eux:
+        Number(baseScores?.eux || 0) +
+        (winningTeam === "eux"
+          ? normalizedPendingLitigePoints
+          : 0),
+    },
+    pendingLitigePoints: 0,
+    winningTeam,
+    isLitige: false,
+  };
+}
+
 function computeClassicContractScores(hand, scoreManche) {
   const takerTeam =
     typeof hand?.takerSeatIndex === "number" ? seatTeamKey(hand.takerSeatIndex) : null;
@@ -1978,7 +2301,22 @@ function computeClassicCapotScores(tricksWon) {
   return null;
 }
 
-function computeContreeContractScores(hand, scoreManche, tricksWon) {
+function roundContreeScorePoints(points) {
+  const numericPoints = Math.max(0, Number(points || 0));
+  const lowerTen = Math.floor(numericPoints / 10) * 10;
+  const remainder = numericPoints - lowerTen;
+
+  return remainder >= 5 ? lowerTen + 10 : lowerTen;
+}
+
+function computeContreeContractScores(
+  hand,
+  scoreManche,
+  tricksWon,
+  beloteBonusesByTeam = { nous: 0, eux: 0 },
+  announcementWinningTeam = null,
+  announcementPoints = 0
+) {
   const contractValue = Number(hand?.contratValeur || 0);
   const multiplier = Number(hand?.contratMultiplicateur || 1);
   const takerTeam =
@@ -1990,6 +2328,29 @@ function computeContreeContractScores(hand, scoreManche, tricksWon) {
   const takerPoints = Number(scoreManche?.[takerTeam] || 0);
   const defenderPoints = Number(scoreManche?.[defenderTeam] || 0);
   const takerTricks = Number(tricksWon?.[takerTeam] || 0);
+  const defenderTricks = Number(tricksWon?.[defenderTeam] || 0);
+  const takerBelote = Math.max(
+    0,
+    Number(beloteBonusesByTeam?.[takerTeam] || 0)
+  );
+  const defenderBelote = Math.max(
+    0,
+    Number(beloteBonusesByTeam?.[defenderTeam] || 0)
+  );
+  const normalizedAnnouncementPoints = Math.max(
+    0,
+    Number(announcementPoints || 0)
+  );
+  const takerAnnouncement =
+    announcementWinningTeam === takerTeam
+      ? normalizedAnnouncementPoints
+      : 0;
+  const defenderAnnouncement =
+    announcementWinningTeam === defenderTeam
+      ? normalizedAnnouncementPoints
+      : 0;
+  const allAnnouncementPoints =
+    takerAnnouncement + defenderAnnouncement;
 
   if (contractValue === 500) {
     const capotSucceeded = takerTricks === 8;
@@ -1997,27 +2358,88 @@ function computeContreeContractScores(hand, scoreManche, tricksWon) {
 
     return capotSucceeded
       ? {
-          [takerTeam]: capotScore,
+          [takerTeam]:
+            capotScore + takerBelote + allAnnouncementPoints,
           [defenderTeam]: 0,
         }
       : {
           [takerTeam]: 0,
-          [defenderTeam]: capotScore,
+          [defenderTeam]:
+            capotScore +
+            takerBelote +
+            defenderBelote +
+            allAnnouncementPoints,
         };
   }
 
-  const takerSucceeded = takerPoints >= contractValue;
-  const contractBonus = contractValue * multiplier;
+  const takerSucceeded =
+    takerPoints + takerBelote + takerAnnouncement >= contractValue;
 
-  return takerSucceeded
-    ? {
-        [takerTeam]: takerPoints + contractBonus,
-        [defenderTeam]: defenderPoints,
-      }
-    : {
-        [takerTeam]: 0,
-        [defenderTeam]: 162 + contractBonus,
-      };
+  if (multiplier > 1) {
+    const multipliedScore = (160 + contractValue) * multiplier;
+
+    return takerSucceeded
+      ? {
+          [takerTeam]:
+            multipliedScore + takerBelote + takerAnnouncement,
+          [defenderTeam]:
+            defenderBelote + defenderAnnouncement,
+        }
+      : {
+          [takerTeam]: 0,
+          [defenderTeam]:
+            multipliedScore +
+            takerBelote +
+            defenderBelote +
+            allAnnouncementPoints,
+        };
+  }
+
+  if (takerTricks === 8) {
+    return {
+      [takerTeam]:
+        250 +
+        contractValue +
+        takerBelote +
+        allAnnouncementPoints,
+      [defenderTeam]: 0,
+    };
+  }
+
+  if (defenderTricks === 8) {
+    return {
+      [takerTeam]: 0,
+      [defenderTeam]:
+        250 +
+        contractValue +
+        takerBelote +
+        defenderBelote +
+        allAnnouncementPoints,
+    };
+  }
+
+  if (takerSucceeded) {
+    return {
+      [takerTeam]:
+        roundContreeScorePoints(
+          takerPoints + takerBelote + takerAnnouncement
+        ) + contractValue,
+      [defenderTeam]:
+        roundContreeScorePoints(
+          defenderPoints + defenderBelote + defenderAnnouncement
+        ),
+    };
+  }
+
+  return {
+    [takerTeam]: 0,
+    [defenderTeam]:
+      160 +
+      contractValue +
+      takerBelote +
+      defenderBelote +
+      allAnnouncementPoints,
+  };
 }
 
 function buildServerBeloteRebeloteEntry(playerId, suit) {
@@ -3136,6 +3558,8 @@ async function openTournamentMatchTable({
     typeof orchestrator.getTableMeta !==
       "function" ||
     typeof orchestrator.assignMatchTable !==
+      "function" ||
+    typeof orchestrator.listTournamentMatches !==
       "function"
   ) {
     throw tournamentOpenError(
@@ -3172,6 +3596,49 @@ async function openTournamentMatchTable({
         matchId:
           normalizedMatchId,
       });
+
+    const currentRoundNumber =
+      Number(currentMeta?.roundNumber);
+
+    if (
+      currentMeta?.tableId == null &&
+      [2, 3].includes(currentRoundNumber)
+    ) {
+      const previousRoundNumber =
+        currentRoundNumber - 1;
+
+      const tournamentMatches =
+        await orchestrator.listTournamentMatches(
+          normalizedTournamentId
+        );
+
+      const previousRoundMatches =
+        tournamentMatches.filter(
+          (match) =>
+            Number(match.round_number) ===
+            previousRoundNumber
+        );
+
+      const previousRoundComplete =
+        previousRoundMatches.length > 0 &&
+        previousRoundMatches.every(
+          (match) =>
+            ["finished", "forfeit"].includes(
+              String(match.status || "")
+                .trim()
+                .toLowerCase()
+            )
+        );
+
+      if (!previousRoundComplete) {
+        throw tournamentOpenError(
+          "TOURNAMENT_PREVIOUS_PHASE_INCOMPLETE",
+          currentRoundNumber === 2
+            ? "Terminez toutes les rencontres Classique avant d'ouvrir la Moderne"
+            : "Terminez toutes les rencontres Moderne avant d'ouvrir la Contree"
+        );
+      }
+    }
 
     const inMemoryMatchTable =
       findTournamentMatchTable(
@@ -3735,10 +4202,10 @@ function tablesArray() {
     const visitors = Array.isArray(t.visitors) ? t.visitors.filter(Boolean) : [];
     const visitorsInfo = visitors.map((pseudo) => seatInfoFromPseudo(pseudo));
     const count = seats.filter((pseudo) => pseudo && !isBotPseudo(pseudo)).length;
-    const tournamentMeta = publicTournamentTableMeta(
-      t,
-      TOURNAMENTS_ENABLED
-    );
+      const tournamentMeta = publicTournamentTableMeta(
+        t,
+        TOURNAMENTS_ENABLED
+      );
 
     return {
       id: t.id,
@@ -3748,9 +4215,9 @@ function tablesArray() {
       visitors,
       visitorsInfo,
       count,
-      ...(tournamentMeta
-        ? { tournament: tournamentMeta }
-        : {}),
+        ...(tournamentMeta
+          ? { tournament: tournamentMeta }
+          : {}),
 game: {
   status: t.game?.status || "WAITING_FOR_PLAYERS",
   players: t.game?.players || [],
@@ -5967,7 +6434,7 @@ function getPlayedTrickEntriesFromHand(hand) {
     ? hand.trickCards.filter((entry) => entry && entry.card)
     : [];
 }
-function scheduleStartNextHandAfterEnd(table, delayMs = 1500) {
+function scheduleStartNextHandAfterEnd(table, delayMs = 1000) {
   if (!table?.game?.hand) return false;
 
   const hand = {
@@ -5995,6 +6462,10 @@ function scheduleStartNextHandAfterEnd(table, delayMs = 1500) {
 
     const nextHand = buildFreshAuthoritativeHand(table, nextDealerSeatIndex);
     nextHand.scores = currentHand.scores || { nous: 0, eux: 0 };
+    nextHand.classicLitigePoints = Math.max(
+      0,
+      Number(currentHand.classicLitigePoints || 0)
+    );
     table.game = {
       ...(table.game || createEmptyServerGame()),
       dealerSeatIndex: nextHand.dealerSeatIndex,
@@ -6063,17 +6534,22 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
         trickPointsByTeam.eux +
         (winnerTeamKey === "eux" ? dixDeDerBonus : 0),
     };
-    const classicCapotScores =
+    const classicHandResolution =
       allHandsEmpty && table.mode === "classic"
-        ? computeClassicCapotScores(nextTricksWon)
+        ? computeClassicHandResolution(
+            currentHand,
+            nextScoreManche,
+            nextTricksWon,
+            currentHand.classicLitigePoints
+          )
         : null;
 
-    const nextContractScores =
-      allHandsEmpty && table.mode === "classic"
-        ? classicCapotScores || computeClassicContractScores(currentHand, nextScoreManche)
-        : allHandsEmpty && table.mode === "contree"
-          ? computeContreeContractScores(currentHand, nextScoreManche, nextTricksWon)
-          : nextScoreManche;
+    const nextClassicLitigePoints =
+      classicHandResolution?.pendingLitigePoints ??
+      Math.max(
+        0,
+        Number(currentHand.classicLitigePoints || 0)
+      );
 
     const beloteBonusesByTeam = {
       nous: 0,
@@ -6108,14 +6584,6 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
       }
     }
 
-    const nextScoreWithBelote =
-      beloteBonusesByTeam.nous > 0 || beloteBonusesByTeam.eux > 0
-        ? {
-            nous: nextContractScores.nous + beloteBonusesByTeam.nous,
-            eux: nextContractScores.eux + beloteBonusesByTeam.eux,
-          }
-        : nextContractScores;
-
     const modernAnnouncementWinningTeam =
       allHandsEmpty && (table.mode === "moderne" || table.mode === "contree")
         ? currentHand.modernAnnouncements?.winningTeam || null
@@ -6131,17 +6599,43 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           )
         : 0;
 
+    const nextContractScores =
+      allHandsEmpty && table.mode === "classic"
+        ? classicHandResolution?.scores || nextScoreManche
+        : allHandsEmpty && table.mode === "contree"
+          ? computeContreeContractScores(
+                currentHand,
+                nextScoreManche,
+                nextTricksWon,
+                beloteBonusesByTeam,
+                modernAnnouncementWinningTeam,
+                modernAnnouncementPoints
+              )
+          : nextScoreManche;
+
+    const nextScoreWithBelote =
+      table.mode === "contree"
+        ? nextContractScores
+        : beloteBonusesByTeam.nous > 0 || beloteBonusesByTeam.eux > 0
+          ? {
+              nous: nextContractScores.nous + beloteBonusesByTeam.nous,
+              eux: nextContractScores.eux + beloteBonusesByTeam.eux,
+            }
+          : nextContractScores;
+
     const nextScoreWithModernAnnouncements =
-      modernAnnouncementPoints > 0
-        ? {
-            nous:
-              nextScoreWithBelote.nous +
-              (modernAnnouncementWinningTeam === "nous" ? modernAnnouncementPoints : 0),
-            eux:
-              nextScoreWithBelote.eux +
-              (modernAnnouncementWinningTeam === "eux" ? modernAnnouncementPoints : 0),
-          }
-        : nextScoreWithBelote;
+      table.mode === "contree"
+        ? nextScoreWithBelote
+        : modernAnnouncementPoints > 0
+          ? {
+              nous:
+                nextScoreWithBelote.nous +
+                (modernAnnouncementWinningTeam === "nous" ? modernAnnouncementPoints : 0),
+              eux:
+                nextScoreWithBelote.eux +
+                (modernAnnouncementWinningTeam === "eux" ? modernAnnouncementPoints : 0),
+            }
+          : nextScoreWithBelote;
 
     const nextScores = allHandsEmpty
       ? {
@@ -6155,7 +6649,12 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
     const targetScore =
       table.mode === "contree" ? 1500 : table.mode === "classic" ? 801 : 1500;
     const winnerTeam =
-      allHandsEmpty && ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
+      allHandsEmpty &&
+      !(
+        table.mode === "classic" &&
+        nextClassicLitigePoints > 0
+      ) &&
+      ((nextScores?.nous || 0) >= targetScore || (nextScores?.eux || 0) >= targetScore)
         ? (nextScores.nous || 0) >= (nextScores.eux || 0)
           ? "nous"
           : "eux"
@@ -6169,6 +6668,13 @@ function scheduleAdvanceCompletedTrick(table, delayMs = 1000) {
           ? "FIN_DE_MANCHE"
           : "PLI_EN_COURS",
       scoreManche: allHandsEmpty ? nextScoreWithModernAnnouncements : nextScoreManche,
+      classicLitigePoints:
+        allHandsEmpty && table.mode === "classic"
+          ? nextClassicLitigePoints
+          : Math.max(
+              0,
+              Number(currentHand.classicLitigePoints || 0)
+            ),
       tricksWon: nextTricksWon,
       scores: nextScores,
       partieTerminee,
@@ -6485,6 +6991,16 @@ function removeVisitorFromAnyTable(pseudo) {
 function removePlayerFromAnyTable(pseudo) {
   const found = findPlayerTable(pseudo);
   if (!found) return null;
+
+  if (
+    pauseTournamentPlayerAtTable(
+      found.table,
+      pseudo
+    )
+  ) {
+    return found.table.id;
+  }
+
   found.table.seats[found.seatIndex] = null;
   return found.table.id;
 }
@@ -7502,6 +8018,7 @@ if (msg.type === "join_table") {
   // rattachement + installation dans la table
   clearAudioIdentity(ws);
   ws.tableId = t.id;
+  ws.tableRole = "player";
   t.seats[targetIdx] = pseudo;
   refreshServerGameForTable(t);
   broadcastTables();
@@ -7814,6 +8331,58 @@ if (leftTable) {
     if (!p) return;
 
     p.count -= 1;
+
+    const disconnectedTournamentSeat =
+      findPlayerTable(pseudo);
+
+    const disconnectedTournamentTable =
+      disconnectedTournamentSeat?.table ||
+      null;
+
+    const closedTournamentTableSocket =
+      disconnectedTournamentTable &&
+      isManagedTournamentTable(
+        disconnectedTournamentTable
+      ) &&
+      ws.tableRole !== "visitor" &&
+      Number(ws.tableId) ===
+        Number(disconnectedTournamentTable.id);
+
+    const hasOtherOpenTournamentTableSocket =
+      closedTournamentTableSocket &&
+      Array.from(wss.clients).some(
+        (client) =>
+          client !== ws &&
+          client.readyState === 1 &&
+          client.pseudo === pseudo &&
+          client.tableRole !== "visitor" &&
+          Number(client.tableId) ===
+            Number(
+              disconnectedTournamentTable.id
+            )
+      );
+
+    if (
+      closedTournamentTableSocket &&
+      !hasOtherOpenTournamentTableSocket &&
+      pauseTournamentPlayerAtTable(
+        disconnectedTournamentTable,
+        pseudo
+      )
+    ) {
+      broadcastTables();
+
+      broadcastToTable(
+        disconnectedTournamentTable.id,
+        {
+          type: "table_system",
+          tableId:
+            disconnectedTournamentTable.id,
+          text:
+            `${pseudo} est deconnecte - partie tournoi en pause`,
+        }
+      );
+    }
 
     // Laisse le temps au meme pseudo de se reconnecter pendant une navigation
     // salon -> table, pour ne pas sortir le joueur de la table trop tot.
